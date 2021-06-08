@@ -1,0 +1,7 @@
+alias d="cd ~/.local/home/downloads && ls"
+alias p="cd ~/.local/home/pictures && ls"
+alias c="cd ~/.local/home/code/ && ls"
+alias g="cd ~/.local/home/git/ && ls"
+alias h="cd ~/.local/home/ && ls"
+alias lb="cd ~/.local/bin/ && ls"
+alias s="cd ~/.local/bin/scripts/ && ls"

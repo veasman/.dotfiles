@@ -1,0 +1,10 @@
+# Reload functions
+super + Escape
+	"$XDG_CONFIG_HOME"/sxhkd/functions
+
+super + {_,shift} + w
+    feh --bg-scale ~/.local/home/wallpapers/{gruvbox/beautiful.jpg,cute/$(ls ~/.local/home/wallpapers/cute | shuf -n 1)}
+}
+
+@Print
+    flameshot gui
