@@ -20,8 +20,8 @@ luafile $HOME/.config/nvim/lua/bashls-bash.lua
 luafile $HOME/.config/nvim/lua/ccls-cpp.lua
 luafile $HOME/.config/nvim/lua/cssls-css.lua
 luafile $HOME/.config/nvim/lua/htmlls-html.lua
-"luafile $HOME/.config/nvim/lua/jedi-python.lua
 luafile $HOME/.config/nvim/lua/jsonls-json.lua
+luafile $HOME/.config/nvim/lua/pylsp-python.lua
 "luafile $HOME/.config/nvim/lua/rust-analyzer-rust.lua
 luafile $HOME/.config/nvim/lua/sumneko-lua.lua
 luafile $HOME/.config/nvim/lua/tsserver-typescript.lua
