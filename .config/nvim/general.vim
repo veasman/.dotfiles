@@ -12,7 +12,7 @@ set nu
 set nowrap
 set noswapfile
 set nobackup
-set undodir=~/.vim/undodir
+set undodir=~/.local/share/vim/undodir
 set undofile
 set incsearch
 set termguicolors
