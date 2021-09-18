@@ -14,7 +14,8 @@ Plug 'voldikss/vim-floaterm'
 "Plug 'sbdchd/neoformat'
 Plug 'mattn/emmet-vim'
 Plug 'ThePrimeagen/vim-be-good'
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-treesitter/nvim-treesitter'
+Plug 'nvim-treesitter/playground'
 
 " Intellisense
 Plug 'neovim/nvim-lspconfig'

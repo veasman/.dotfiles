@@ -1,10 +1,14 @@
-xrdb -merge ~/.Xresources
+xrdb -merge ~/.config/xorg/Xresources
+
+xrandr -s 1920x1080 -r 144
+
+~/.local/bin/setbg & # Wallpaper
+~/.local/bin/setmouseaccel & # Disable mouse accel
+
 sxhkd & # Hotkeys
 dunst & # Notifications
 picom & # Compositor
-setbg & # Wallpaper
-setres & # Resolution and Refresh Rate
 unclutter -idle 1 & # Hide idle cursor
 pulseaudio & # Audio
-emacs --daemon & # Emacs daemon for loading config
-exec dbus-launch --sh-syntax --exit-with-session ~/.local/bin/scripts/startdwm # Window Manager
+
+exec bspwm

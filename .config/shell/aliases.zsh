@@ -1,5 +1,5 @@
+alias ls="ls --color"
+alias lah="ls -lah --color"
 alias py="python3"
 alias venv="python3 -m venv venv && source venv/bin/activate"
-alias update="doas emerge -avDuN @world"
-alias nord="nordvpn"
-alias lah="ls -lah"
+alias clean="sudo pacman -Rsn $(pacman -Qdtq)"

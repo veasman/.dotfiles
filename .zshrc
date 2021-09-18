@@ -55,9 +55,6 @@ bindkey '^[[P' delete-char
 autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line
 
-# Load syntax highlighting; should be last.
-#source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
-
 # Add scripts to PATH
 export PATH=/home/veasman/.local/bin/idafree-7.6/:$PATH
 export PATH=/home/veasman/.local/bin/scripts/:$PATH
@@ -69,6 +66,3 @@ alias luamake=/home/veasman/.local/bin/lua-language-server/3rd/luamake/luamake
 
 # Load syntax highlighting
 source /usr/share/zsh/site-contrib/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
-
-# Load starship prompt
-eval "$(starship init zsh)"
