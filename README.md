@@ -16,6 +16,3 @@
 - xorg
 - xwallpaper
 - zsh
-
-## install.sh
-This script will auto-install the dotfiles
