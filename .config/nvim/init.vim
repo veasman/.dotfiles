@@ -13,7 +13,6 @@ luafile $HOME/.config/nvim/lua/treesitter-config.lua
 " Intellisense setup
 source $HOME/.config/nvim/plugins/lsp-config.vim
 luafile $HOME/.config/nvim/lua/compe-config.lua
-luafile $HOME/.config/nvim/lua/lightbulb-config.lua
 
 " Language servers
 luafile $HOME/.config/nvim/lua/bashls-bash.lua

@@ -33,6 +33,3 @@ autocmd Filetype html setlocal ts=2 sw=2 expandtab
 
 " Auto run xrdb on Xresources save
 autocmd BufWritePre .Xresources :!xrdb %
-
-" Lightbulb
-autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb()
