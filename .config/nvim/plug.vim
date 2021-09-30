@@ -7,14 +7,15 @@ Plug 'ap/vim-css-color'
 
 " Helpers
 Plug 'sheerun/vim-polyglot'
-Plug 'vim-airline/vim-airline'
+"Plug 'vim-airline/vim-airline'
 Plug 'mbbill/undotree'
 Plug 'jiangmiao/auto-pairs'
-Plug 'voldikss/vim-floaterm'
 Plug 'mattn/emmet-vim'
 Plug 'ThePrimeagen/vim-be-good'
 Plug 'nvim-treesitter/nvim-treesitter'
 Plug 'nvim-treesitter/playground'
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
+Plug 'ThePrimeagen/harpoon'
 
 " Intellisense
 Plug 'neovim/nvim-lspconfig'

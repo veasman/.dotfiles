@@ -5,7 +5,8 @@ source $HOME/.config/nvim/misc.vim
 
 " Plugin config
 source $HOME/.config/nvim/plugins/emmet.vim
-source $HOME/.config/nvim/plugins/floaterm.vim
+source $HOME/.config/nvim/plugins/harpoon.vim
+source $HOME/.config/nvim/plugins/markdown-preview.vim
 source $HOME/.config/nvim/plugins/telescope.vim
 source $HOME/.config/nvim/plugins/undotree.vim
 luafile $HOME/.config/nvim/lua/treesitter-config.lua
