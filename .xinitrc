@@ -8,7 +8,7 @@ xrandr -s 1920x1080 -r 144
 sxhkd & # Hotkeys
 dunst & # Notifications
 picom & # Compositor
-unclutter -idle 1 & # Hide idle cursor
+unclutter -idle 2 & # Hide idle cursor
 pulseaudio & # Audio
 
-exec bspwm
+exec dwm
