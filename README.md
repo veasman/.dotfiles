@@ -5,6 +5,7 @@
 ### Misc
 
 misc/.config goes in /usr/src/linux/
+
 misc/make.conf goes in /etc/portage/
 
 ### Everything else
