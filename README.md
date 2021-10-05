@@ -2,11 +2,13 @@
 
 ## Installation
 
-### Misc
+### Portage
 
-misc/.config goes in /usr/src/linux/
+These files will go in /etc/portage/
 
-misc/make.conf goes in /etc/portage/
+### Linux
+
+These files will go in /usr/src/linux/
 
 ### Everything else
 
