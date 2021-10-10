@@ -40,7 +40,4 @@ colorscheme gruvbox
 
 highlight Normal guibg=none
 
-" General workflow remaps
 let mapleader = " "
-vnoremap J :m '>+1<CR>gv=gv
-vnoremap K :m '>-2<CR>gv=gv

@@ -1,2 +1,5 @@
 @Print
     flameshot gui
+
+alt + w
+    setbg ~/.local/home/wallpapers/
