@@ -1,7 +1,0 @@
-alias s="cd ~/.local/share && ls"
-alias con="cd ~/.config/ && ls"
-alias d="cd ~/.local/home/downloads && ls"
-alias p="cd ~/.local/home/pictures && ls"
-alias c="cd ~/.local/home/code/ && ls"
-alias h="cd ~/.local/home/ && ls"
-alias lb="cd ~/.local/bin/ && ls"

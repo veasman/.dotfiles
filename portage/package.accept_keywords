@@ -1,8 +1,0 @@
-app-editors/neovim ~amd64
-app-shells/oh-my-zsh ~amd64
-net-im/discord ~amd64
-
-# LibreWolf
-www-client/librewolf ~amd64
-dev-libs/nss ~amd64
-dev-libs/nspr ~amd64
