@@ -22,7 +22,7 @@
 (scroll-bar-mode -1)
 (tool-bar-mode -1)
 (tooltip-mode -1)
-(set-fringe-mode 0)
+(set-fringe-mode 10)
 
 (menu-bar-mode -1)
 
@@ -47,9 +47,15 @@
     :global-prefix "C-SPC")
 
   (cvm/leader-key
+    ; Buffer
     "b"  '(:ignore t :which-key "buffer")
     "bf" '(counsel-switch-buffer :which-key "switch buffer")
     "bi" '(ibuffer :which-key "ibuffer")
+    ; Git
+    "g"  '(:ignore t :which-key "git")
+    "gg" '(magit-status :which-key "magit-status")
+    ;"gw" '(:ignore t :which-key "worktree")
+    ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
 
@@ -95,7 +101,7 @@
 (use-package doom-modeline
   :ensure t
   :init (doom-modeline-mode 1)
-  :custom ((doom-modeline-height 40)))
+  :custom ((doom-modeline-height 45)))
 
 (use-package which-key
   :init (which-key-mode)
@@ -158,3 +164,24 @@
 
 (use-package rainbow-delimiters
   :hook (prog-mode . rainbow-delimiters-mode))
+
+(use-package projectile
+  :diminish
+  :config (projectile-mode)
+  :custom ((projectile-completion-system 'ivy))
+  :bind-keymap
+  ("C-c p" . projectile-command-map)
+  :init
+  (when (file-directory-p "~/code")
+    (setq projectile-project-search-path '("~/code")))
+  (setq projectile-switch-project-action #'projectile-dired))
+
+(use-package counsel-projectile
+  :config (counsel-projectile-mode))
+
+(use-package magit
+  :custom
+  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+(use-package evil-magit
+  :after magit)
