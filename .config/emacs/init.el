@@ -117,7 +117,7 @@
 (use-package doom-modeline
   :ensure t
   :init (doom-modeline-mode 1)
-  :custom ((doom-modeline-height 45)))
+  :custom ((doom-modeline-height 40)))
 
 (use-package which-key
   :init (which-key-mode)
