@@ -32,8 +32,13 @@
 		eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-
 (set-face-attribute 'default nil :font "Fira Code NF" :height 120)
+
+;; Fixed pitch face
+(set-face-attribute 'fixed-pitch nil :font "Fira Code NF" :height 120)
+
+;; Variable pitch face
+(set-face-attribute 'variable-pitch nil :font "Cantarell" :height 160 :weight 'regular)
 
 ;; Make ESC quit prompts
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
@@ -49,12 +54,23 @@
   (cvm/leader-key
     ; Buffer
     "b"  '(:ignore t :which-key "buffer")
-    "bf" '(counsel-switch-buffer :which-key "switch buffer")
+    "bf" '(counsel-switch-buffer :which-key "find buffer")
     "bi" '(ibuffer :which-key "ibuffer")
+    "bk" '(kill-buffer :which-key "kill")
+    ; File
+    "f"  '(:ignore t :which-key "file")
+    "ff" '(counsel-find-file :which-key "find")
     ; Git
     "g"  '(:ignore t :which-key "git")
     "gg" '(magit-status :which-key "magit-status")
     ;"gw" '(:ignore t :which-key "worktree")
+    ; Org
+    "o"  '(:ignore t :which-key "org")
+    "oa" '(org-agenda :which-key "agenda")
+    "oi" '(:ignore t :which-key "insert")
+    "oil" '(org-insert-link :which-key "link")
+    "ot" '(:ignore t :which-key "toggle")
+    "otc" '(org-toggle-checkbox :which-key "checkbox")
     ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
@@ -183,5 +199,58 @@
   :custom
   (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
 
-(use-package evil-magit
-  :after magit)
+(defun cvm/org-mode-setup ()
+  (org-indent-mode)
+  (variable-pitch-mode 1)
+  (visual-line-mode 1))
+
+(defun cvm/org-font-setup ()
+  ;; Replace list hyphen with dot
+  (font-lock-add-keywords 'org-mode
+                          '(("^ *\\([-]\\) "
+                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+  ;; Set faces for heading levels
+  (dolist (face '((org-level-1 . 1.2)
+                  (org-level-2 . 1.1)
+                  (org-level-3 . 1.05)
+                  (org-level-4 . 1.0)
+                  (org-level-5 . 1.1)
+                  (org-level-6 . 1.1)
+                  (org-level-7 . 1.1)
+                  (org-level-8 . 1.1)))
+    (set-face-attribute (car face) nil :font "Cantarell" :weight 'regular :height (cdr face)))
+
+  ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+  (set-face-attribute 'org-block nil    :foreground nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-table nil    :inherit 'fixed-pitch)
+  (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
+  (set-face-attribute 'org-code nil     :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-table nil    :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-checkbox nil  :inherit 'fixed-pitch)
+  (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
+  (set-face-attribute 'line-number-current-line nil :inherit 'fixed-pitch))
+
+(use-package org
+  :hook (org-mode . cvm/org-mode-setup)
+  :config
+  (setq org-ellipsis " ▾"
+	org-hide-emphasis-markers t)
+  (cvm/org-font-setup))
+
+(use-package org-bullets
+  :after org
+  :hook (org-mode . org-bullets-mode)
+  :custom
+  (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
+
+(defun cvm/org-mode-visual-fill ()
+  (setq visual-fill-column-width 100
+	visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(use-package visual-fill-column
+  :hook (org-mode . cvm/org-mode-visual-fill))
