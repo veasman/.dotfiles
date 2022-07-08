@@ -33,6 +33,7 @@
   - [[Eshell]]
   - [[Kubernetes]]
   - [[File Tree]]
+- [[Applications]]
 - [[Misc]]
   
 * Performance
@@ -656,6 +657,26 @@
 
 (cvm/leader-key
   "tn" '(neotree-toggle :which-key "neotree"))
+
+#+end_src
+
+* Applications
+
+** sxhkd
+
+#+begin_src sh :tangle .config/sxhkd/sxhkdrc
+
+@Print
+    flameshot gui
+
+alt + w
+    setbg ~/Pictures/
+
+alt + e
+    emacsclient -c -a 'emacs'
+
+alt + t
+    emacsclient -c -a '' --eval '(eshell)'
 
 #+end_src
 
