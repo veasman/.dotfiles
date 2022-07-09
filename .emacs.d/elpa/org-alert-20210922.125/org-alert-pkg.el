@@ -1,2 +1,0 @@
-;;; Generated package description from /home/cvm/.emacs.d/elpa/org-alert-20210922.125/org-alert.el  -*- no-byte-compile: t -*-
-(define-package "org-alert" "20210922.125" "Notify org deadlines via notify-send" '((org "9.0") (alert "1.2")) :commit "c039d0121d21e4558c0f5433135c839679b556d7" :authors '(("Stephen Pegoraro" . "spegoraro@tutive.com")) :maintainer '("Stephen Pegoraro" . "spegoraro@tutive.com") :keywords '("org" "org-mode" "notify" "notifications" "calendar") :url "https://github.com/spegoraro/org-alert")

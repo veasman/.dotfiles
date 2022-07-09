@@ -1,0 +1,11 @@
+@Print
+    flameshot gui
+
+alt + w
+    setbg ~/Pictures/
+
+alt + e
+    emacsclient -c -a 'emacs'
+
+alt + t
+    emacsclient -c -a '' --eval '(eshell)'
