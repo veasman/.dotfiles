@@ -119,6 +119,7 @@
     "f"  '(:ignore t :which-key "file")
     "ff" '(counsel-find-file :which-key "find")
     "fc" '((lambda () (interactive) (find-file (expand-file-name "~/Emacs.org"))) :which-key "edit config")
+    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/OrgFiles/"))) :which-key "find orgfiles")
     ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
@@ -258,7 +259,7 @@
                   (org-level-8 . 1.1)))
     (set-face-attribute (car face) nil
 			:font "Cantarell"
-			;:font "Iosevka Aile"
+			:font "Iosevka Aile"
 			:weight 'regular
 			:height (cdr face)))
 
@@ -431,5 +432,64 @@
 
 (cvm/leader-key
   "tn" '(neotree-toggle :which-key "neotree"))
+
+(defun cvm/exwm-update-class ()
+  (exwm-workspace-rename-buffer exwm-class-name))
+
+(use-package exwm
+  :config
+  ;; Set the default number of workspaces
+  (setq exwm-workspace-number 9)
+
+  (exwm-enable)
+
+  ;; When window "class" updates, use it to set the buffer name
+  (add-hook 'exwm-update-class-hook #'cvm/exwm-update-class)
+
+  ;; These keys should always pass through to Emacs
+  (setq exwm-input-prefix-keys
+    '(?\C-x
+      ?\C-u
+      ?\C-d
+      ?\C-h
+      ?\M-`
+      ?\M-&
+      ?\M-:
+      ?\C-\M-j ;; Buffer list
+      ?\C-\ )) ;; Ctrl+SPC
+
+  ;; Ctrl+Q will enable the next key to be sent directly
+  (define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
+
+  ;; Set up global key bindings. These always work, no matter the input state
+  ;; Keep in mind that changing this list after EXWM initalizes has no effect
+  (setq exwm-input-global-keys
+      `(
+        ;; Reset to line-mode C-c C-k switches to char-mode via exwm-input-release-keyboard
+        ([?\s-r] . exwm-reset)
+
+        ;; Move between windows
+        ([?\s-h] . windmove-left)
+        ([?\s-l] . windmove-right)
+        ([?\s-k] . windmove-up)
+        ([?\s-j] . windmove-down)
+
+        ;; Launch applications with shell command
+        ([?\s-&] . (lambda (command)
+                      (interactive (list (read-shell-command "$ ")))
+                      (start-process-shell-command command nil command)))
+
+        ;; Switch workspace
+        ([?\s-w] . exwm-workspace-switch)
+
+        ;; 's-N': Switch to workspace at N
+        ,@(mapcar (lambda (i)
+                    `(,(kbd (format "s-%d" i)) .
+                      (lambda ()
+                        (interactive)
+                        (exwm-workspace-switch-create ,i))))
+                  (number-sequence 0 9))))
+
+  (exwm-enable))
 
 (use-package snow)

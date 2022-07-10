@@ -157,12 +157,12 @@
 #+begin_src emacs-lisp
 
 (set-face-attribute 'default nil
-		    :font "Fira Code Retina"
+		    :font "Fira Code NF"
 		    :height cvm/default-font-size)
 
 ;; Fixed pitch face
 (set-face-attribute 'fixed-pitch nil
-		    :font "Fira Code Retina"
+		    :font "Fira Code NF"
 		    :height 130)
 
 ;; Variable pitch face
@@ -211,6 +211,7 @@
     "f"  '(:ignore t :which-key "file")
     "ff" '(counsel-find-file :which-key "find")
     "fc" '((lambda () (interactive) (find-file (expand-file-name "~/Emacs.org"))) :which-key "edit config")
+    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/OrgFiles/"))) :which-key "find orgfiles")
     ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
@@ -391,7 +392,8 @@
 
   ;; Increase the size of various headings
   (set-face-attribute 'org-document-title nil
-		      :font "Iosevka Aile"
+		      :font "Cantarell"
+		      ;:font "Iosevka Aile"
 		      :weight 'bold
 		      :height 1.3)
 
@@ -405,7 +407,7 @@
                   (org-level-7 . 1.1)
                   (org-level-8 . 1.1)))
     (set-face-attribute (car face) nil
-			;:font "Cantarell"
+			:font "Cantarell"
 			:font "Iosevka Aile"
 			:weight 'regular
 			:height (cdr face)))
@@ -732,7 +734,7 @@
 
 ** sxhkd
 
-#+begin_src sh :tangle .config/sxhkd/sxhkdrc
+#+begin_src sh :tangle ../../sxhkd/.config/sxhkd/sxhdrc
 
 @Print
     flameshot gui
