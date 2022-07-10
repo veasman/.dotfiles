@@ -120,8 +120,8 @@
     "f"  '(:ignore t :which-key "file")
     "fa" '(counsel-file-jump-from-find :which-key "find all")
     "ff" '(counsel-find-file :which-key "find")
-    "fc" '((lambda () (interactive) (find-file (expand-file-name "~/Emacs.org"))) :which-key "config")
-    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/OrgFiles/"))) :which-key "orgfiles")
+    "fc" '((lambda () (interactive) (find-file (expand-file-name "~/.emacs.d/Emacs.org"))) :which-key "config")
+    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/.emacs.d/OrgFiles/"))) :which-key "orgfiles")
     ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
