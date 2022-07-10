@@ -70,10 +70,15 @@
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
+(dolist (mode '(text-mode-hook
+                prog-mode-hook
+                conf-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
+
 (dolist (mode '(org-mode-hook
-		term-mode-hook
-		shell-mode-hook
-		eshell-mode-hook))
+                term-mode-hook
+                shell-mode-hook
+                eshell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 (set-face-attribute 'default nil
@@ -91,10 +96,6 @@
 		    ;:font "Iosevka Aile"
 		    :height 150
 		    :weight 'regular)
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)))
 
 ;; Make ESC quit prompts
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
@@ -117,9 +118,10 @@
     "d"  '(dired :which-key "dired")
     ; File
     "f"  '(:ignore t :which-key "file")
+    "fa" '(counsel-file-jump-from-find :which-key "find all")
     "ff" '(counsel-find-file :which-key "find")
-    "fc" '((lambda () (interactive) (find-file (expand-file-name "~/Emacs.org"))) :which-key "edit config")
-    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/OrgFiles/"))) :which-key "find orgfiles")
+    "fc" '((lambda () (interactive) (find-file (expand-file-name "~/Emacs.org"))) :which-key "config")
+    "fo" '((lambda () (interactive) (find-file (expand-file-name "~/OrgFiles/"))) :which-key "orgfiles")
     ; Toggle
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
@@ -177,31 +179,32 @@
 (use-package ivy
   :diminish
   :bind (("C-s" . swiper)
-	 :map ivy-minibuffer-map
-	 ("TAB" . ivy-alt-done)
-	 ("C-l" . ivy-alt-done)
-	 ("C-j" . ivy-next-line)
-	 ("C-k" . ivy-previous-line)
-	 :map ivy-switch-buffer-map
-	 ("C-k" . ivy-previous-line)
-	 ("C-l" . ivy-done)
-	 ("C-d" . ivy-switch-buffer-kill)
-	 :map ivy-reverse-i-search-map
-	 ("C-k" . ivy-previous-line)
-	 ("C-d" . ivy-reverse-i-search-kill))
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
   :config
   (ivy-mode 1))
 
 (use-package ivy-rich
+  :after counsel
   :init
   (ivy-rich-mode 1))
 
 (use-package counsel
   :bind (("M-x" . counsel-M-x)
-	 ("C-x b" . counsel-ibuffer)
-	 ("C-x C-f" . 'counsel-find-file)
-	 :map minibuffer-local-map
-	 ("C-r" . 'counsel-minibuffer-history))
+         ("C-x b" . counsel-ibuffer)
+         ("C-x C-f" . 'counsel-find-file)
+         :map minibuffer-local-map
+         ("C-r" . 'counsel-minibuffer-history))
   :config
   (setq ivy-initial-inputs-alist nil))
 
@@ -292,9 +295,9 @@
   (setq org-log-into-drawer t)
 
   (setq org-agenda-files
-	'("~/.local/share/emacs/Index.org"
-	  "~/.local/share/emacs/Agenda.org"
-	  "~/.local/share/emacs/Birthdays.org"))
+	'("~/.emacs.d/OrgFiles/Index.org"
+	  "~/.emacs.d/OrgFiles/Agenda.org"
+	  "~/.emacs.d/OrgFiles/Birthdays.org"))
 
   (cvm/org-font-setup))
 
@@ -342,13 +345,55 @@
 ;; Automatically tangle our Emacs.org config file when we save it
 (defun cvm/org-babel-tangle-config ()
   (when (string-equal (file-name-directory (buffer-file-name))
-                      ;(expand-file-name user-emacs-directory))
-                      (expand-file-name "~/Emacs.org"))
+                      (expand-file-name "~/.emacs.d/Emacs.org"))
     ;; Dynamic scoping to the rescue
     (let ((org-confirm-babel-evaluate nil))
       (org-babel-tangle))))
 
 (add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'cvm/org-babel-tangle-config)))
+
+(use-package lsp-mode
+  :hook ((lsp-mode . lsp-enable-which-key-integration))
+  :config
+  (setq lsp-completion-enable-addtional-text-edit nil))
+
+(use-package lsp-ui)
+
+(use-package lsp-java
+  :config (add-hook 'java-mode-hook 'lsp))
+
+(use-package lsp-ivy
+  :after lsp)
+
+(use-package company
+  :after lsp-mode
+  :hook (lsp-mode . company-mode)
+  :bind
+  (:map company-active-map
+	("<tab>" . companhy-complete-selection))
+  (:map lsp-mode-map
+	("<tab>" . company-indent-or-complete-common)
+	("M-RET" . lsp-execute-code-action))
+  :custom
+  (companhy-minimum-prefix-length 1)
+  (company-idle-delay 0.0))
+
+(use-package company-box
+  :hook (company-mode . company-box-mode))
+
+(use-package yasnippet
+  :config (yas-global-mode))
+
+(use-package flycheck
+  :hook (fly-check-mode . lsp-mode))
+
+(use-package lsp-treemacs
+  :after lsp)
+
+  (cvm/leader-key
+    "ft" '(:ignore t :which-key "tree")
+    "fto" '(treemacs :which-key "open/close")
+    "ftf" '(treemacs-find-file :which-key "find"))
 
 (use-package projectile
   :diminish
@@ -371,6 +416,21 @@
 (cvm/leader-key
   "g"  '(:ignore t :which-key "git")
   "gg" '(magit-status :which-key "magit-status"))
+
+(defun cvm/disable-git-gutter ()
+  (setq git-gutter-mode nil))
+
+(use-package git-gutter
+  :hook (org-mode . cvm/disable-git-gutter)
+  :config
+  (global-git-gutter-mode t)
+  (setq
+    git-gutter:update-interval 0
+    git-gutter:window-width 2
+    git-gutter:modified-sign "▎"
+    git-gutter:added-sign "▎"
+    git-gutter:deleted-sign "▎"
+    git-gutter:visual-line t))
 
 (use-package evil-nerd-commenter
   :bind ("M-/" . evilnc-comment-or-uncomment-lines))
@@ -423,16 +483,6 @@
   "kn" '(kubernetes-set-namespace :which-key "set namespace")
   "ko" '(kubernetes-overview :which-key "overview"))
 
-(use-package neotree
-  :config
-  (setq neo-smart-open t
-	neo-window-fixed-size nil
-	neo-window-width 35
-	neo-show-hidden-files t))
-
-(cvm/leader-key
-  "tn" '(neotree-toggle :which-key "neotree"))
-
 (defun cvm/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
 
@@ -475,7 +525,7 @@
         ([?\s-j] . windmove-down)
 
         ;; Launch applications with shell command
-        ([?\s-&] . (lambda (command)
+        ([?\s-p] . (lambda (command)
                       (interactive (list (read-shell-command "$ ")))
                       (start-process-shell-command command nil command)))
 
@@ -493,3 +543,5 @@
   (exwm-enable))
 
 (use-package snow)
+
+(use-package typit)
