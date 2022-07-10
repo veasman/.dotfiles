@@ -1,0 +1,45 @@
+* Links
+** Internal
+    - [[Projects]]
+      - [[BioT]]
+        - [[Web UI]]
+        - [[App]]
+        - [[Gateway]]
+        - [[EchoLock]]
+      - [[PangaeAPI]]
+        - [[UI]]
+        - [[Web UI]]
+        - [[Gateway]]
+    - [[Diary]]
+      - [[June]] 
+** External
+    - [[file:Agenda.org][Agenda]] 
+* Projects
+** BioT
+*** Web UI
+**** QA
+        - "Dashbard -> Administrators/Roles -> View" buttons lead to nothing
+        - Voice auth requests don't log location
+*** App
+**** QA
+        - Sidebar voice indicator non-functional
+        - Setting locked_out doesn't keep the user from logging in, or give any indication they are locked out
+        - "User Guide" opens a blank page
+        - In-App web browser not positioned correctly
+*** Gateway
+*** EchoLock
+** PangaeAPI
+*** UI
+*** Web UI
+*** Gateway
+* Diary
+** June
+*** Fri 08
+        - Finished ticket cleanup for BioT, and Papi (thank you Zach)
+*** Thu 07
+        - Going over bugs w/ Zach
+        - QA, mostly in BioT, some in old PangaeAPI, none in new PangaeAPI
+        - Made some sub-bugs
+*** Wed 06
+        - Whole lotta QA
+        - Stuck trying to authenticate voice biometrics on app
