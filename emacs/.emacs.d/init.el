@@ -126,12 +126,19 @@
     "t"  '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")))
 
+(use-package undo-tree
+  :config
+  (setq undo-tree-auto-save-history nil)
+  (global-undo-tree-mode 1))
+
 (use-package evil
   :init
   (setq evil-want-integration t)
   (setq evil-want-keybinding nil)
   (setq evil-want-C-u-scroll t)
   (setq evil-want-C-d-scroll t)
+  (setq respect-visual-line-mode t)
+  (setq evil-undo-system 'undo-tree)
   :config
   (evil-mode 1)
 
