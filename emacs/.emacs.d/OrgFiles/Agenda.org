@@ -1,0 +1,9 @@
+* Meetings
+** Scrum
+SCHEDULED: <2022-07-08 Fri 09:30-09:45 +1d>
+** Grooming
+SCHEDULED: <2022-07-08 Fri 9:45-11:00 +1w>
+** All Hands meeting - Wyatt
+SCHEDULED: <2022-07-08 Fri 11:00-11:30>
+* OOO - Vacation Day
+SCHEDULED: <2022-08-15 Mon>
