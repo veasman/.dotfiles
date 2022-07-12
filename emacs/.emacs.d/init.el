@@ -174,7 +174,7 @@
   :custom
   (doom-modeline-height 32)
   (doom-modeline-bar-width 6)
-  (doom-modeline-persp-name nil)
+  (doom-modeline-persp-name t)
   (doom-modeline-major-mode-icon nil))
 
 (use-package which-key
@@ -269,7 +269,7 @@
                   (org-level-8 . 1.1)))
     (set-face-attribute (car face) nil
 			:font "Cantarell"
-			:font "Iosevka Aile"
+			;:font "Iosevka Aile"
 			:weight 'regular
 			:height (cdr face)))
 
@@ -369,6 +369,12 @@
 (use-package lsp-java
   :config (add-hook 'java-mode-hook 'lsp))
 
+(use-package typescript-mode
+  :mode "\\.ts\\'"
+  :hook (typescript-mode . lsp)
+  :config
+  (setq typescript-indent-level 4))
+
 (use-package lsp-ivy
   :after lsp)
 
@@ -395,12 +401,15 @@
   :hook (fly-check-mode . lsp-mode))
 
 (use-package lsp-treemacs
-  :after lsp)
+  :after lsp
+  :config
+  (setq treemacs-project-follow-mode t)
+  (setq treemacs-display-current-project-exclusively t))
 
-  (cvm/leader-key
-    "ft" '(:ignore t :which-key "tree")
-    "fto" '(treemacs :which-key "open/close")
-    "ftf" '(treemacs-find-file :which-key "find"))
+(cvm/leader-key
+  "ft" '(:ignore t :which-key "tree")
+  "fto" '(treemacs :which-key "open/close")
+  "ftf" '(treemacs-find-file :which-key "find"))
 
 (use-package projectile
   :diminish
@@ -546,6 +555,17 @@
                         (interactive)
                         (exwm-workspace-switch-create ,i))))
                   (number-sequence 0 9))))
+
+  (require 'exwm-randr)
+  (exwm-randr-enable)
+  (start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 1920x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 0x0 --rotate normal")
+
+  (setq exwm-randr-workspace-monitor-plist '(2 "Virtual2"))
+
+  (setq exwm-workspace-warp-cursor t)
+
+  (setq mouse-autoselect-window t
+	focus-follows-mouse t)
 
   (exwm-enable))
 
