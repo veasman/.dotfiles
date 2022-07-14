@@ -36,11 +36,11 @@
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
-(setq display-line-numbers-type t)
+(setq display-line-numbers-type 'relative)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
-(setq org-directory "~/org/")
+(setq org-directory "~/.doom.d/OrgFiles")
 
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
@@ -76,20 +76,20 @@
 ;; they are implemented.
 
 ;; Set frame transparency
-(set-frame-parameter (selected-frame) 'alpha '(90 . 90))
-(add-to-list 'default-frame-alist `(alpha . ,'(90 . 90)))
+(set-frame-parameter (selected-frame) 'alpha '(92 . 92))
+(add-to-list 'default-frame-alist `(alpha . ,'(92 . 92)))
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Line numbers enable when needed
 (dolist (mode '(text-mode-hook
-                prog-mode-hook
-                conf-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
+               prog-mode-hook
+               conf-mode-hook))
+ (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
 
 ;; Line numbers disable when needed
 (dolist (mode '(org-mode-hook
-                term-mode-hook
-                shell-mode-hook
-                eshell-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+               term-mode-hook
+               shell-mode-hook
+               eshell-mode-hook))
+ (add-hook mode (lambda () (display-line-numbers-mode 0))))
