@@ -97,6 +97,12 @@
 		    :height 150
 		    :weight 'regular)
 
+(use-package good-scroll
+  :config
+  (good-scroll-mode 1)
+  (global-set-key [next] #'good-scroll-up-full-screen)
+  (global-set-key [prior] #'good-scroll-down-full-screen))
+
 ;; Make ESC quit prompts
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -111,7 +117,7 @@
   (cvm/leader-key
     ; Buffer
     "b"  '(:ignore t :which-key "buffer")
-    "bf" '(counsel-switch-buffer :which-key "find buffer")
+    "bs" '(counsel-switch-buffer :which-key "search")
     "bi" '(ibuffer :which-key "ibuffer")
     "bk" '(kill-buffer :which-key "kill")
     ; Dired
@@ -174,8 +180,19 @@
   :custom
   (doom-modeline-height 32)
   (doom-modeline-bar-width 6)
-  (doom-modeline-persp-name t)
-  (doom-modeline-major-mode-icon nil))
+  (doom-modeline-persp-name nil)
+  (doom-modeline-major-mode-icon nil)
+  (doom-modeline-buffer-file-name-style 'file-name))
+
+(use-package centaur-tabs
+  :demand
+  :config
+  (centaur-tabs-mode t)
+  (setq centaur-tabs-style "wave")
+  (setq centaur-tabs-set-icons t)
+  :bind
+  ("C-<prior>" . centaur-tabs-backward)
+  ("C-<next>" . centaur-tabs-forward))
 
 (use-package which-key
   :init (which-key-mode)
@@ -560,7 +577,7 @@
   (exwm-randr-enable)
   (start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 1920x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 0x0 --rotate normal")
 
-  (setq exwm-randr-workspace-monitor-plist '(2 "Virtual2"))
+  (setq exwm-randr-workspace-monitor-plist '(1 "Virtual2" 2 "Virtual2" 3 "Virtual2" 4 "Virtual2" 5 "Virtual2"))
 
   (setq exwm-workspace-warp-cursor t)
 

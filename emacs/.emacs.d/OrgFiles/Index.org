@@ -18,14 +18,10 @@
 ** BioT
 *** Web UI
 **** QA
-        - "Dashbard -> Administrators/Roles -> View" buttons lead to nothing
-        - Voice auth requests don't log location
 *** App
 **** QA
-        - Sidebar voice indicator non-functional
-        - Setting locked_out doesn't keep the user from logging in, or give any indication they are locked out
-        - "User Guide" opens a blank page
         - In-App web browser not positioned correctly
+        - Email sending multiple times for device registration(?)
 *** Gateway
 *** EchoLock
 ** PangaeAPI
@@ -34,8 +30,15 @@
 *** Gateway
 * Diary
 ** June
+*** Tue 12
+    - Fixing of voice location
+*** Mon 11
+        - Wrote up some bugs
+        - Started work on BIOT-205 (voice auth location log)
+        - DevOps meeting with Jack
 *** Fri 08
         - Finished ticket cleanup for BioT, and Papi (thank you Zach)
+        - Need some work
 *** Thu 07
         - Going over bugs w/ Zach
         - QA, mostly in BioT, some in old PangaeAPI, none in new PangaeAPI
