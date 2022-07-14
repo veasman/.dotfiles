@@ -1,6 +1,4 @@
-[submodule "OrgFiles"]
-	path = OrgFiles
-	url = git@github.com:veasman/OrgFiles.git
-[submodule "emacs/OrgFiles"]
-	path = emacs/OrgFiles
+
+[submodule "emacs/.doom.d/OrgFiles"]
+	path = emacs/.doom.d/OrgFiles
 	url = git@github.com:veasman/OrgFiles.git
