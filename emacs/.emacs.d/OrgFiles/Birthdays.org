@@ -1,7 +1,0 @@
-* Birthdays
-** Jack
-<2022-05-29 Sun +1y>
-** Zach
-<2022-03-18 Fri +1y>
-** Denise
-<2022-03-11 Fri +1y>
