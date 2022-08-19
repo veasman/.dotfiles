@@ -1,12 +1,47 @@
+#+title: Config
+#+PROPERTY: header-args:emacs-lisp :tangle ./config.el
+
+* TABLE OF CONTENTS
+** [[BASIC UI]]
+*** [[THEME]]
+*** [[FRAME TRANSPARENCY]]
+*** [[LINE NUMBERS]]
+*** [[SCROLL ACCELERATION]]
+*** [[FONTS]]
+** [[TREEMACS]]
+** [[ORG MODE]]
+*** [[ORG FONTS]]
+*** [[CENTER ORG BUFFERS]]
+*** [[ORG AUTO TANGLE]]
+** [[EXWM]]
+
+* BASIC Ui
+
+** THEME
+
+#+begin_src elisp
+
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-one)
 
+#+end_src
+
+** FRAME TRANSPARENCY
+
+#+begin_src elisp
+
 (set-frame-parameter (selected-frame) 'alpha '(90 . 90))
 (add-to-list 'default-frame-alist `(alpha . ,'(90 . 90)))
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+#+end_src
+
+** LINE NUMBERS
+
+#+begin_src elisp
 
 (setq display-line-numbers-type 'relative)
 
@@ -23,7 +58,18 @@
                eshell-mode-hook))
  (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
+#+end_src
+
+** SCROLL ACCELERATION
+
+#+begin_src elisp
+
 (setq mouse-wheel-progressive-speed nil)
+
+#+end_src
+
+** FONTS
+#+begin_src elisp
 
 (setq doom-font (font-spec :family "Fira Code NF" :size 13 :weight 'medium))
 
@@ -39,11 +85,23 @@
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 
+#+end_src
+
+* TREEMACS
+
+#+begin_src elisp
+
 (after! treemacs
   (setq treemacs-follow-mode t))
 
 (after! doom-themes
   (setq doom-themes-treemacs-enable-variable-pitch t))
+
+#+end_src
+
+* ORG MODE
+
+#+begin_src elisp
 
 (setq org-directory "~/.doom.d/OrgFiles")
 
@@ -74,6 +132,20 @@
 
 (add-hook 'org-mode-hook #'org-superstar-mode)
 
+#+end_src
+
+** ORG FONTS
+
+#+begin_src elisp
+
+
+
+#+end_src
+
+** CENTER ORG BUFFERS
+
+#+begin_src elisp
+
 (defun cvm/org-mode-visual-fill ()
   (setq visual-fill-column-width 100
     visual-fill-column-center-text t)
@@ -81,8 +153,91 @@
 
 (add-hook! org-mode #'cvm/org-mode-visual-fill)
 
+
+#+end_src
+
+** ORG AUTO TANGLE
+
+#+begin_src elisp
+
 (use-package! org-auto-tangle
   :defer t
   :hook (org-mode . org-auto-tangle-mode)
   :config
   (setq org-auto-tangle-default t))
+
+#+end_src
+
+* EXWM
+
+#+begin_src elisp
+
+;; (defun cvm/exwm-update-class ()
+;;   (exwm-workspace-rename-buffer exwm-class-name))
+
+;; ;; Set the default number of workspaces
+;; (setq exwm-workspace-number 9)
+
+;; (exwm-enable)
+
+;; ;; When window "class" updates, use it to set the buffer name
+;; (add-hook 'exwm-update-class-hook #'cvm/exwm-update-class)
+
+;; ;; These keys should always pass through to Emacs
+;; (setq exwm-input-prefix-keys
+;;   '(?\C-x
+;;     ?\C-u
+;;     ?\C-d
+;;     ?\C-h
+;;     ?\M-`
+;;     ?\M-&
+;;     ?\M-:
+;;     ?\C-\M-j ;; Buffer list
+;;     ?\C-\ )) ;; Ctrl+SPC
+
+;; ;; Ctrl+Q will enable the next key to be sent directly
+;; (define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
+
+;; ;; Set up global key bindings. These always work, no matter the input state
+;; ;; Keep in mind that changing this list after EXWM initalizes has no effect
+;; (setq exwm-input-global-keys
+;;     `(
+;;       ;; Reset to line-mode C-c C-k switches to char-mode via exwm-input-release-keyboard
+;;       ([?\s-r] . exwm-reset)
+
+;;       ;; Move between windows
+;;       ([?\s-h] . windmove-left)
+;;       ([?\s-l] . windmove-right)
+;;       ([?\s-k] . windmove-up)
+;;       ([?\s-j] . windmove-down)
+
+;;       ;; Launch applications with shell command
+;;       ([?\s-p] . (lambda (command)
+;;                     (interactive (list (read-shell-command "$ ")))
+;;                     (start-process-shell-command command nil command)))
+
+;;       ;; Switch workspace
+;;       ([?\s-w] . exwm-workspace-switch)
+
+;;       ;; 's-N': Switch to workspace at N
+;;       ,@(mapcar (lambda (i)
+;;                   `(,(kbd (format "s-%d" i)) .
+;;                     (lambda ()
+;;                       (interactive)
+;;                       (exwm-workspace-switch-create ,i))))
+;;                 (number-sequence 0 9))))
+
+;; (require 'exwm-randr)
+;; (exwm-randr-enable)
+;; (start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 1920x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 0x0 --rotate normal")
+
+;; (setq exwm-randr-workspace-monitor-plist '(1 "Virtual2" 2 "Virtual2" 3 "Virtual2" 4 "Virtual2" 5 "Virtual2"))
+
+;; (setq exwm-workspace-warp-cursor t)
+
+;; (setq mouse-autoselect-window t
+;;       focus-follows-mouse t)
+
+;; (exwm-enable)
+
+#+end_src
