@@ -9,3 +9,6 @@ alt + e
 
 alt + t
     emacsclient -c -a '' --eval '(eshell)'
+
+alt + shift + t
+    emacs
