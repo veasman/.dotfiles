@@ -54,7 +54,6 @@
 (package! emmet-mode)
 (package! exwm)
 (package! exwm-modeline)
-(package! kubernetes)
 (package! org-auto-tangle)
 (package! org-superstar)
 (package! snow)
