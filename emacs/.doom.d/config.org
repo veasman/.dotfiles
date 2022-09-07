@@ -14,6 +14,7 @@
 *** [[CENTER ORG BUFFERS]]
 *** [[ORG AUTO TANGLE]]
 ** [[EXWM]]
+*** [[MODELINE]]
 
 * BASIC Ui
 
@@ -239,5 +240,23 @@
 ;;       focus-follows-mouse t)
 
 ;; (exwm-enable)
+
+#+end_src
+
+** MODELINE
+
+#+begin_src elisp
+
+(use-package exwm-modeline
+  :after (exwm)
+  :config
+  (setq exwm-modeline-dividers '("[" "] " "|"))
+  (setq exwm-modeline-short t))
+
+(add-hook 'exwm-init-hook #'exwm-modeline-mode)
+
+(add-hook 'exwm-init-hook #'display-time-mode)
+
+(setq doom-modeline-height 32)
 
 #+end_src

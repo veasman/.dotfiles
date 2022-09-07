@@ -50,6 +50,7 @@
 ;(unpin! t)
 
 (package! exwm)
+(package! exwm-modeline)
 (package! org-auto-tangle)
 (package! org-superstar)
 (package! visual-fill-column)
