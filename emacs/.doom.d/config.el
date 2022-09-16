@@ -28,7 +28,7 @@
 (setq doom-font (font-spec :family "Fira Code NF" :size 13 :weight 'medium))
 
 (setq doom-font (font-spec :family "Fira Code NF" :size 15)
-      doom-variable-pitch-font (font-spec :family "Cantarell" :size 15)
+      doom-variable-pitch-font (font-spec :family "Cantarell" :size 16)
       doom-big-font (font-spec :family "Fira Code NF" :size 24))
 
 (after! doom-themes
@@ -43,7 +43,7 @@
   :init      ;; tweak dashboard config before loading it
   (setq dashboard-set-heading-icons t)
   (setq dashboard-set-file-icons t)
-  (setq dashboard-banner-logo-title
+  ;; (setq dashboard-banner-logo-title
 ;; "\nKEYBINDINGS:\
 ;; \nFind file               (SPC .)     \
 ;; Open buffer list    (SPC b i)\
