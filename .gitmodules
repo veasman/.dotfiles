@@ -2,3 +2,6 @@
 [submodule "emacs/.doom.d/OrgFiles"]
 	path = emacs/.doom.d/OrgFiles
 	url = git@github.com:veasman/OrgFiles.git
+[submodule "/home/cvm/.dotfiles/emacs/.emacs.d"]
+	path = /home/cvm/.dotfiles/emacs/.emacs.d
+	url = git@github.com:doomemacs/doomemacs.git
