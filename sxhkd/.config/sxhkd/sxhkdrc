@@ -2,7 +2,7 @@
     flameshot gui
 
 alt + w
-    setbg ~/Pictures/
+    setbg ~/.local/wallpapers/
 
 alt + e
     emacsclient -c -a 'emacs'
