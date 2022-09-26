@@ -80,18 +80,14 @@ keymap("n", "<leader>S", "<cmd>lua require('spectre').open()<cr>", opts)
 keymap("n", "<leader>Sw", "<cmd>lua require('spectre').open_visual({select_word=true})<cr>", opts)
 keymap("n", "<leader>Sf", "<cmd>lua require('spectre').open_file_search()<cr>", opts)
 
-
--- Sidebar --
-keymap("n", "<leader>st", "<cmd>SidebarNvimToggle<cr>", opts)
-
 -- Renamer --
 keymap("i", "<C-R>", "<cmd>lua require('renamer').rename()<cr>", opts)
 keymap("n", "<leader>rn", "<cmd>lua require('renamer').rename()<cr>", opts)
 keymap("v", "<leader>rn", "<cmd>lua require('renamer').rename()<cr>", opts)
 
 -- NvimTree --
-keymap("n", "<leader>nt", ":NvimTreeToggle<cr>", opts)
-keymap("n", "<leader>nf", ":NvimTreeFindFile<cr>", opts)
+keymap("n", "<leader>op", ":NvimTreeToggle<cr>", opts)
+keymap("n", "<leader>tf", ":NvimTreeFindFile<cr>", opts)
 
 -- Intellisense --
 keymap("n", "gd", "<cmd>lua vim.lsp.buf.definition()<cr>", opts)
@@ -124,8 +120,8 @@ keymap("n", "<leader>d", "<cmd>lua require('harpoon.ui').nav_file(3)<cr>", opts)
 keymap("n", "<leader>f", "<cmd>lua require('harpoon.ui').nav_file(4)<cr>", opts)
 
 -- Telescope --
-keymap("n", "<leader>fi", "<cmd>lua require('telescope.builtin').find_files()<cr>", opts)
-keymap("n", "<leader>fo", "<cmd>lua require('telescope.builtin').live_grep()<cr>", opts)
+keymap("n", "<leader><leader>", "<cmd>lua require('telescope.builtin').find_files()<cr>", opts)
+keymap("n", "<leader>sp", "<cmd>lua require('telescope.builtin').live_grep()<cr>", opts)
 keymap("n", "<leader>fb", "<cmd>lua require('telescope.builtin').git_branches()<cr>", opts)
 keymap("n", "<leader>fc", "<cmd>lua require('telescope.builtin').git_commits()<cr>", opts)
 keymap("n", "<leader>hh", "<cmd>lua require('telescope.builtin').commands()<cr>", opts)

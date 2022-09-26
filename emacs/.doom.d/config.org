@@ -1,5 +1,5 @@
 #+title: Config
-#+PROPERTY: header-args:emacs-lisp :tangle ./config.el
+#+PROPERTY: header-args:elisp :tangle ./config.el
 
 * TABLE OF CONTENTS
 ** [[BASIC UI]]
@@ -16,6 +16,7 @@
 *** [[ORG AUTO TANGLE]]
 ** [[EXWM]]
 *** [[MODELINE]]
+** [[BLAMER]]
 
 * BASIC UI
 
@@ -139,6 +140,7 @@
 #+begin_src elisp
 
 (setq org-directory "~/.doom.d/OrgFiles")
+(setq org-agenda-files (list "~/.doom.d/OrgFiles/Agenda.org"))
 
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
@@ -156,19 +158,19 @@
             :height 1.3)
 
 ;; Set faces for heading levels
-(dolist (face '((org-level-1 . 1.2)
-                (org-level-2 . 1.1)
-                (org-level-3 . 1.05)
-                (org-level-4 . 1.0)
-                (org-level-5 . 1.1)
-                (org-level-6 . 1.1)
-                (org-level-7 . 1.1)
-                (org-level-8 . 1.1)))
+(dolist (face '((org-level-1 . 1.3)
+                (org-level-2 . 1.2)
+                (org-level-3 . 1.1)
+                (org-level-4 . 1.05)
+                (org-level-5 . 1.05)
+                (org-level-6 . 1.05)
+                (org-level-7 . 1.05)
+                (org-level-8 . 1.05)))
     (set-face-attribute (car face) nil
                         :font "Cantarell"
                         ;:font "Iosevka Aile"
                         :weight 'regular
-                        :height (cdr face)))
+                        :height (cdr face))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil    :foreground nil :inherit 'fixed-pitch)
@@ -324,23 +326,6 @@
 (use-package exwm-modeline
   :after (exwm)
   :config
-  (setq exwm-modeline-dividers (" " "  " "|")))
-
-(add-hook 'exwm-init-hook #'exwm-modeline-mode)
-
-(add-hook 'exwm-init-hook #'display-time-mode)
-
-(setq doom-modeline-height 32)
-
-#+end_src
-
-** MODELINE
-
-#+begin_src elisp
-
-(use-package exwm-modeline
-  :after (exwm)
-  :config
   (setq exwm-modeline-dividers '("[" "] " "|"))
   (setq exwm-modeline-short t))
 
@@ -348,6 +333,29 @@
 
 (add-hook 'exwm-init-hook #'display-time-mode)
 
+(setq display-time-24hr-format t
+      display-time-day-and-date t)
+
 (setq doom-modeline-height 32)
+
+#+end_src
+
+* BLAMER
+
+#+begin_src elisp
+
+(use-package blamer
+  :ensure t
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 70)
+  :custom-face
+  (blamer-face ((t :foreground "#7a88cf"
+                    :background nil
+                    :height 140
+                    :italic t)))
+  :config
+  (global-blamer-mode 1))
 
 #+end_src

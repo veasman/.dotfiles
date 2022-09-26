@@ -43,7 +43,7 @@
   :init      ;; tweak dashboard config before loading it
   (setq dashboard-set-heading-icons t)
   (setq dashboard-set-file-icons t)
-  ;; (setq dashboard-banner-logo-title
+;;   (setq dashboard-banner-logo-title
 ;; "\nKEYBINDINGS:\
 ;; \nFind file               (SPC .)     \
 ;; Open buffer list    (SPC b i)\
@@ -52,7 +52,7 @@
 ;; \nOpen dired file manager (SPC d d)   \
 ;; List of keybindings (SPC h b b)")
   (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
-  (setq dashboard-startup-banner "/home/cvm/.doom.d/doom-emacs-dash.png")  ;; use custom image as banner
+  (setq dashboard-startup-banner "~/.doom.d/doom-emacs-dash.png")  ;; use custom image as banner
   (setq dashboard-center-content t) ;; set to 't' for centered content
   (setq dashboard-items '((recents . 5)
                           (agenda . 5 )
@@ -66,7 +66,6 @@
 
 (setq doom-fallback-buffer-name "*dashboard*")
 
-
 (after! treemacs
   (setq treemacs-follow-mode t))
 
@@ -74,9 +73,50 @@
   (setq doom-themes-treemacs-enable-variable-pitch t))
 
 (setq org-directory "~/.doom.d/OrgFiles")
+(setq org-agenda-files (list "~/.doom.d/OrgFiles/Agenda.org"))
 
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
+
+;; Replace list hyphen with dot
+(font-lock-add-keywords 'org-mode
+                        '(("^ *\\([-]\\) "
+                            (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+
+;; Increase the size of various headings
+(set-face-attribute 'org-document-title nil
+            :font "Cantarell"
+            ;:font "Iosevka Aile"
+            :weight 'bold
+            :height 1.3)
+
+;; Set faces for heading levels
+(dolist (face '((org-level-1 . 1.3)
+                (org-level-2 . 1.2)
+                (org-level-3 . 1.1)
+                (org-level-4 . 1.05)
+                (org-level-5 . 1.05)
+                (org-level-6 . 1.05)
+                (org-level-7 . 1.05)
+                (org-level-8 . 1.05)))
+    (set-face-attribute (car face) nil
+                        :font "Cantarell"
+                        ;:font "Iosevka Aile"
+                        :weight 'regular
+                        :height (cdr face))
+
+  ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+  (set-face-attribute 'org-block nil    :foreground nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-table nil    :inherit 'fixed-pitch)
+  (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
+  (set-face-attribute 'org-code nil     :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-table nil    :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+  (set-face-attribute 'org-checkbox nil  :inherit 'fixed-pitch)
+  (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
+  (set-face-attribute 'line-number-current-line nil :inherit 'fixed-pitch))
 
 (after! org
   (setq org-directory "~/nc/Org/"
@@ -102,54 +142,14 @@
 
 (add-hook 'org-mode-hook #'org-superstar-mode)
 
+
+
 (defun cvm/org-mode-visual-fill ()
   (setq visual-fill-column-width 100
     visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
 
-(defun cvm/org-font-setup ()
-  ;; Replace list hyphen with dot
-  (font-lock-add-keywords 'org-mode
-                          '(("^ *\\([-]\\) "
-                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
-  ;; Increase the size of various headings
-  (set-face-attribute 'org-document-title nil
-		      :font "Cantarell"
-		      ;:font "Iosevka Aile"
-		      :weight 'bold
-		      :height 1.3)
-
-  ;; Set faces for heading levels
-  (dolist (face '((org-level-1 . 1.2)
-                  (org-level-2 . 1.1)
-                  (org-level-3 . 1.05)
-                  (org-level-4 . 1.0)
-                  (org-level-5 . 1.1)
-                  (org-level-6 . 1.1)
-                  (org-level-7 . 1.1)
-                  (org-level-8 . 1.1)))
-    (set-face-attribute (car face) nil
-			:font "Cantarell"
-			;:font "Iosevka Aile"
-			:weight 'regular
-			:height (cdr face)))
-
-  ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-  (set-face-attribute 'org-block nil    :foreground nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-table nil    :inherit 'fixed-pitch)
-  (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
-  (set-face-attribute 'org-code nil     :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-table nil    :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-  (set-face-attribute 'org-checkbox nil  :inherit 'fixed-pitch)
-  (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
-  (set-face-attribute 'line-number-current-line nil :inherit 'fixed-pitch))
-
 (add-hook! org-mode #'cvm/org-mode-visual-fill)
-(add-hook! org-mode #'cvm/org-font-setup)
 
 (use-package! org-auto-tangle
   :defer t
@@ -235,4 +235,21 @@
 
 (add-hook 'exwm-init-hook #'display-time-mode)
 
+(setq display-time-24hr-format t
+      display-time-day-and-date t)
+
 (setq doom-modeline-height 32)
+
+(use-package blamer
+  :ensure t
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 70)
+  :custom-face
+  (blamer-face ((t :foreground "#7a88cf"
+                    :background nil
+                    :height 140
+                    :italic t)))
+  :config
+  (global-blamer-mode 1))
