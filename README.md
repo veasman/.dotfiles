@@ -14,3 +14,9 @@ git clone --recurse-submodules git@github.com:veasman/.dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 stow *
 ```
+
+## Dependencies and packages
+
+Here is a list of all of the required packages
+
+`alacritty`
