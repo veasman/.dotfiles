@@ -513,7 +513,7 @@
   :custom
   (blamer-idle-time 0.3)
   (blamer-min-offset 0)
-  (blamer-author-formatter "פֿ  %s ")
+  (blamer-author-formatter "%s ")
   (blamer-commit-formatter "● %s")
   (blamer-prettify-time-p t)
   :custom-face
