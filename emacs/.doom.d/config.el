@@ -66,14 +66,37 @@
 
 (setq doom-fallback-buffer-name "*dashboard*")
 
+(setq centaur-tabs-set-bar 'over
+      centaur-tabs-set-icons t
+      centaur-tabs-gray-out-icons 'buffer
+      centaur-tabs-height 24
+      centaur-tabs-set-modified-marker t
+      centaur-tabs-style "bar"
+      centaur-tabs-modified-marker "•")
+(map! :leader
+      :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
+      :desc "Toggle tabs local display" "t C" #'centaur-tabs-local-mode)
+(evil-define-key 'normal centaur-tabs-mode-map (kbd "g <right>") 'centaur-tabs-forward        ; default Doom binding is 'g t'
+                                               (kbd "g <left>")  'centaur-tabs-backward       ; default Doom binding is 'g T'
+                                               (kbd "g <down>")  'centaur-tabs-forward-group
+                                               (kbd "g <up>")    'centaur-tabs-backward-group)
+
+(after! neotree
+  (setq neo-smart-open t
+        neo-window-fixed-size nil))
+
+(after! doom-themes
+  (setq doom-neotree-enable-variable-pitch t))
+
+(map! :leader
+      :desc "Toggle neotree file viewer" "t n" #'neotree-toggle
+      :desc "Open directory in neotree" "d n" #'neotree-dir)
+
 (after! treemacs
   (setq treemacs-follow-mode t))
 
 (after! doom-themes
   (setq doom-themes-treemacs-enable-variable-pitch t))
-
-(setq org-directory "~/.doom.d/OrgFiles")
-(setq org-agenda-files (list "~/.doom.d/OrgFiles/Agenda.org"))
 
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
@@ -84,8 +107,8 @@
                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
 (after! org
-  (setq org-directory "~/nc/Org/"
-        org-agenda-files '("~/nc/Org/agenda.org")
+  (setq org-directory "~/.doom.d/OrgFiles/"
+        org-agenda-files '("~/.doom.d/OrgFiles/Agenda.org")
         org-default-notes-file (expand-file-name "notes.org" org-directory)
         org-ellipsis " ▼ "
         org-superstar-headline-bullets-list '("◉" "●" "○" "◆" "●" "○" "◆")
@@ -399,9 +422,9 @@
 (add-hook 'exwm-init-hook #'display-time-mode)
 
 (setq display-time-24hr-format t
-      display-time-day-and-date t)
-
-(setq doom-modeline-height 32)
+      display-time-day-and-date t
+      doom-modeline-height 32
+      doom-modeline-buffer-file-name-style 'file-name)
 
 (use-package blamer
   :bind (("s-i" . blamer-show-commit-info))
@@ -409,7 +432,8 @@
   :custom
   (blamer-idle-time 0.3)
   (blamer-min-offset 0)
-  (blamer-author-formatter "%s ")
+  (blamer-author-formatter "%s")
+  (blamer-datetime-formatter ", %s ")
   (blamer-commit-formatter "● %s")
   (blamer-prettify-time-p t)
   :custom-face
