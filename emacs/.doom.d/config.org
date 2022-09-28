@@ -9,7 +9,10 @@
 *** [[SCROLL ACCELERATION]]
 *** [[FONTS]]
 *** [[DASHBOARD]]
-** [[TREEMACS]]
+** [[CENTAUR TABS]]
+** [[FILE TREE]]
+*** [[NEOTREE]]
+*** [[TREEMACS]]
 ** [[ORG MODE]]
 *** [[ORG FONTS]]
 *** [[CENTER ORG BUFFERS]]
@@ -123,7 +126,65 @@
 
 #+end_src
 
-* TREEMACS
+* CENTAUR TABS
+
+To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el.  Displays tabs at the top of the window similar to tabbed web browsers such as Firefox.  I don’t actually use tabs in Emacs.  I placed this in my config to help others who may want tabs.  In the default configuration of Doom Emacs, ‘SPC t’ is used for “toggle” keybindings, so I choose ‘SPC t c’ to toggle centaur-tabs.  The “g” prefix for keybindings is used for a bunch of evil keybindings in Doom, but “g” plus the arrow keys were not used, so I thought I would bind those for tab navigation.  But I did leave the default “g t” and “g T” intact if you prefer to use those for centaur-tabs-forward/backward.
+
+| COMMAND                     | DESCRIPTION               | KEYBINDING       |
+|-----------------------------+---------------------------+------------------|
+| centaur-tabs-mode           | /Toggle tabs globally/      | SPC t c          |
+| centaur-tabs-local-mode     | /Toggle tabs local display/ | SPC t C          |
+| centaur-tabs-forward        | /Next tab/                  | g <right> or g t |
+| centaur-tabs-backward       | /Previous tab/              | g <left> or g T  |
+| centaur-tabs-forward-group  | /Next tab group/            | g <down>         |
+| centaur-tabs-backward-group | /Previous tab group/        | g <up>           |
+
+#+begin_src elisp
+
+(setq centaur-tabs-set-bar 'over
+      centaur-tabs-set-icons t
+      centaur-tabs-gray-out-icons 'buffer
+      centaur-tabs-height 24
+      centaur-tabs-set-modified-marker t
+      centaur-tabs-style "bar"
+      centaur-tabs-modified-marker "•")
+(map! :leader
+      :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
+      :desc "Toggle tabs local display" "t C" #'centaur-tabs-local-mode)
+(evil-define-key 'normal centaur-tabs-mode-map (kbd "g <right>") 'centaur-tabs-forward        ; default Doom binding is 'g t'
+                                               (kbd "g <left>")  'centaur-tabs-backward       ; default Doom binding is 'g T'
+                                               (kbd "g <down>")  'centaur-tabs-forward-group
+                                               (kbd "g <up>")    'centaur-tabs-backward-group)
+
+#+end_src
+
+* FILE TREE
+
+** NEOTREE
+
+Neotree is a file tree viewer.  When you open neotree, it jumps to the current file thanks to neo-smart-open.  The neo-window-fixed-size setting makes the neotree width be adjustable.  Doom Emacs had no keybindings set for neotree.  Since Doom Emacs uses ‘SPC t’ for ‘toggle’ keybindings, I used ‘SPC t n’ for toggle-neotree.
+
+| COMMAND        | DESCRIPTION               | KEYBINDING |
+|----------------+---------------------------+------------|
+| neotree-toggle | /Toggle neotree/            | SPC t n    |
+| neotree- dir   | /Open directory in neotree/ | SPC d n    |
+
+#+begin_src elisp
+
+(after! neotree
+  (setq neo-smart-open t
+        neo-window-fixed-size nil))
+
+(after! doom-themes
+  (setq doom-neotree-enable-variable-pitch t))
+
+(map! :leader
+      :desc "Toggle neotree file viewer" "t n" #'neotree-toggle
+      :desc "Open directory in neotree" "d n" #'neotree-dir)
+
+#+end_src
+
+** TREEMACS
 
 #+begin_src elisp
 
@@ -139,9 +200,6 @@
 
 #+begin_src elisp
 
-(setq org-directory "~/.doom.d/OrgFiles")
-(setq org-agenda-files (list "~/.doom.d/OrgFiles/Agenda.org"))
-
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
 
@@ -151,8 +209,8 @@
                             (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
 (after! org
-  (setq org-directory "~/nc/Org/"
-        org-agenda-files '("~/nc/Org/agenda.org")
+  (setq org-directory "~/.doom.d/OrgFiles/"
+        org-agenda-files '("~/.doom.d/OrgFiles/Agenda.org")
         org-default-notes-file (expand-file-name "notes.org" org-directory)
         org-ellipsis " ▼ "
         org-superstar-headline-bullets-list '("◉" "●" "○" "◆" "●" "○" "◆")
@@ -497,9 +555,9 @@
 (add-hook 'exwm-init-hook #'display-time-mode)
 
 (setq display-time-24hr-format t
-      display-time-day-and-date t)
-
-(setq doom-modeline-height 32)
+      display-time-day-and-date t
+      doom-modeline-height 32
+      doom-modeline-buffer-file-name-style 'file-name)
 
 #+end_src
 
@@ -513,7 +571,8 @@
   :custom
   (blamer-idle-time 0.3)
   (blamer-min-offset 0)
-  (blamer-author-formatter "%s ")
+  (blamer-author-formatter "%s")
+  (blamer-datetime-formatter ", %s ")
   (blamer-commit-formatter "● %s")
   (blamer-prettify-time-p t)
   :custom-face
