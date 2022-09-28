@@ -141,16 +141,20 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
 
 #+begin_src elisp
 
-(setq centaur-tabs-set-bar 'over
+(setq centaur-tabs-set-bar nil
+      x-underline-at-descent-line t
       centaur-tabs-set-icons t
       centaur-tabs-gray-out-icons 'buffer
-      centaur-tabs-height 24
+      centaur-tabs-height 28
       centaur-tabs-set-modified-marker t
-      centaur-tabs-style "bar"
-      centaur-tabs-modified-marker "•")
+      centaur-tabs-show-navigation-buttons t
+      centaur-tabs-style "wave"
+      centaur-tabs-modified-marker t)
+
 (map! :leader
       :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
       :desc "Toggle tabs local display" "t C" #'centaur-tabs-local-mode)
+
 (evil-define-key 'normal centaur-tabs-mode-map (kbd "g <right>") 'centaur-tabs-forward        ; default Doom binding is 'g t'
                                                (kbd "g <left>")  'centaur-tabs-backward       ; default Doom binding is 'g T'
                                                (kbd "g <down>")  'centaur-tabs-forward-group
@@ -237,42 +241,6 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
 ** ORG FONTS
 
 #+begin_src elisp
-
-;; Increase the size of various headings
-;; (set-face-attribute 'org-document-title nil
-;;             :font "Cantarell"
-;;             ;:font "Iosevka Aile"
-;;             :weight 'bold
-;;             :height 1.3)
-
-;; Set faces for heading levels
-
-;; (dolist (face '((org-level-1 . 1.3)
-;;                 (org-level-2 . 1.2)
-;;                 (org-level-3 . 1.1)
-;;                 (org-level-4 . 1.05)
-;;                 (org-level-5 . 1.05)
-;;                 (org-level-6 . 1.05)
-;;                 (org-level-7 . 1.05)
-;;                 (org-level-8 . 1.05)))
-;;     (set-face-attribute (car face) nil
-;;                         :font "Cantarell"
-;;                         ;:font "Iosevka Aile"
-;;                         :weight 'regular
-;;                         :height (cdr face))
-
-;;   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-;;   (set-face-attribute 'org-block nil    :foreground nil :inherit 'fixed-pitch)
-;;   (set-face-attribute 'org-table nil    :inherit 'fixed-pitch)
-;;   (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
-;;   (set-face-attribute 'org-code nil     :inherit '(shadow fixed-pitch))
-;;   (set-face-attribute 'org-table nil    :inherit '(shadow fixed-pitch))
-;;   (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-;;   (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-;;   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-;;   (set-face-attribute 'org-checkbox nil  :inherit 'fixed-pitch)
-;;   (set-face-attribute 'line-number nil :inherit 'fixed-pitch)
-;;   (set-face-attribute 'line-number-current-line nil :inherit 'fixed-pitch))
 
 (defun cvm/org-colors-doom-one ()
   "Enable Doom One colors for Org headers."
@@ -556,6 +524,7 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
 
 (setq display-time-24hr-format t
       display-time-day-and-date t
+      doom-modeline-time-icon nil
       doom-modeline-height 32
       doom-modeline-buffer-file-name-style 'file-name)
 
