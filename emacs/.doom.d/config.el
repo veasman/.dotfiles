@@ -25,11 +25,17 @@
 
 (setq mouse-wheel-progressive-speed nil)
 
-(setq doom-font (font-spec :family "Fira Code NF" :size 13 :weight 'medium))
+;; CODE ;;
+;; Fira Code NF
+;; DejaVuSansMono
 
-(setq doom-font (font-spec :family "Fira Code NF" :size 15)
-      doom-variable-pitch-font (font-spec :family "Cantarell" :size 16)
-      doom-big-font (font-spec :family "Fira Code NF" :size 24))
+;; ORG ;;
+;; DejaVuSans
+;; Cantarell
+
+(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
+      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16)
+      doom-big-font (font-spec :family "DejaVuSansMono" :size 24))
 
 (after! doom-themes
   (setq doom-themes-enable-bold t
@@ -51,7 +57,7 @@
 ;; Open the eshell     (SPC e s)\
 ;; \nOpen dired file manager (SPC d d)   \
 ;; List of keybindings (SPC h b b)")
-  (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
+  ;; (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
   (setq dashboard-startup-banner "~/.doom.d/doom-emacs-dash.png")  ;; use custom image as banner
   (setq dashboard-center-content t) ;; set to 't' for centered content
   (setq dashboard-items '((recents . 5)
@@ -66,15 +72,33 @@
 
 (setq doom-fallback-buffer-name "*dashboard*")
 
-(setq centaur-tabs-set-bar nil
-      x-underline-at-descent-line t
-      centaur-tabs-set-icons t
+(beacon-mode 1)
+
+(use-package blamer
+  :bind (("s-i" . blamer-show-commit-info))
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 0)
+  (blamer-author-formatter "%s")
+  (blamer-datetime-formatter ", %s ")
+  (blamer-commit-formatter "● %s")
+  (blamer-prettify-time-p t)
+  :custom-face
+  (blamer-face ((t :foreground "#505050"
+                   :background nil
+                   :italic t)))
+  :config
+  (global-blamer-mode 1))
+
+(setq centaur-tabs-set-bar 'under
       centaur-tabs-gray-out-icons 'buffer
-      centaur-tabs-height 28
-      centaur-tabs-set-modified-marker t
+      centaur-tabs-height 32
+      ;; centaur-tabs-modified-marker "●"
+      centaur-tabs-set-icons t
       centaur-tabs-show-navigation-buttons t
-      centaur-tabs-style "wave"
-      centaur-tabs-modified-marker t)
+      centaur-tabs-style "slant"
+      x-underline-at-descent-line t)
 
 (map! :leader
       :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
@@ -85,16 +109,15 @@
                                                (kbd "g <down>")  'centaur-tabs-forward-group
                                                (kbd "g <up>")    'centaur-tabs-backward-group)
 
-(after! neotree
-  (setq neo-smart-open t
-        neo-window-fixed-size nil))
+;; Insert name of current branch into start of commit message
+;; Ex: master:
+;; Or: JIT-899:
+(defun cvm/commit-insert-ticket-name ()
+  (insert (shell-command-to-string
+           "git rev-parse --symbolic-full-name --abbrev-ref HEAD | tr -d '\n' | sed 's/$/: /'")))
 
-(after! doom-themes
-  (setq doom-neotree-enable-variable-pitch t))
 
-(map! :leader
-      :desc "Toggle neotree file viewer" "t n" #'neotree-toggle
-      :desc "Open directory in neotree" "d n" #'neotree-dir)
+(add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
 
 (after! treemacs
   (setq treemacs-follow-mode t))
@@ -303,7 +326,7 @@
     visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
 
-(add-hook! org-mode #'cvm/org-mode-visual-fill)
+(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
 
 (use-package! org-auto-tangle
   :defer t
@@ -382,32 +405,16 @@
 (use-package exwm-modeline
   :after (exwm)
   :config
-  (setq exwm-modeline-dividers '("[" "] " "|"))
-  (setq exwm-modeline-short t))
+  (setq exwm-modeline-dividers '("[" "] " "|")
+        exwm-modeline-short t))
 
 (add-hook 'exwm-init-hook #'exwm-modeline-mode)
 
 (add-hook 'exwm-init-hook #'display-time-mode)
 
-(setq display-time-24hr-format t
-      display-time-day-and-date t
-      doom-modeline-time-icon nil
+(setq display-time-24hr-format t ;; 24hr time format
+      display-time-day-and-date t ;; Show date and time
+      doom-modeline-buffer-file-name-style 'auto
       doom-modeline-height 32
-      doom-modeline-buffer-file-name-style 'file-name)
-
-(use-package blamer
-  :bind (("s-i" . blamer-show-commit-info))
-  :defer 20
-  :custom
-  (blamer-idle-time 0.3)
-  (blamer-min-offset 0)
-  (blamer-author-formatter "%s")
-  (blamer-datetime-formatter ", %s ")
-  (blamer-commit-formatter "● %s")
-  (blamer-prettify-time-p t)
-  :custom-face
-  (blamer-face ((t :foreground "#7a88cf"
-                   :background nil
-                   :italic t)))
-  :config
-  (global-blamer-mode 1))
+      doom-modeline-lsp nil ;; Disable LSP indicator
+      doom-modeline-time-icon nil) ;; Disable calendar icon next to time
