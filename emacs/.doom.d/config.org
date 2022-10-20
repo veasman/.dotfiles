@@ -9,8 +9,12 @@
 *** [[SCROLL ACCELERATION]]
 *** [[FONTS]]
 *** [[DASHBOARD]]
+** [[BEACON]]
+** [[BLAMER]]
 ** [[CENTAUR TABS]]
-** [[FILE TREE]]
+** [[MAGIT]]
+** [[PERSPECTIVE]]
+** [[TREEMACS]]
 *** [[NEOTREE]]
 *** [[TREEMACS]]
 ** [[ORG MODE]]
@@ -19,7 +23,6 @@
 *** [[ORG AUTO TANGLE]]
 ** [[EXWM]]
 *** [[MODELINE]]
-** [[BLAMER]]
 
 * BASIC UI
 
@@ -75,13 +78,20 @@
 #+end_src
 
 ** FONTS
+
 #+begin_src elisp
 
-(setq doom-font (font-spec :family "Fira Code NF" :size 13 :weight 'medium))
+;; CODE ;;
+;; Fira Code NF
+;; DejaVuSansMono
 
-(setq doom-font (font-spec :family "Fira Code NF" :size 15)
-      doom-variable-pitch-font (font-spec :family "Cantarell" :size 16)
-      doom-big-font (font-spec :family "Fira Code NF" :size 24))
+;; ORG ;;
+;; DejaVuSans
+;; Cantarell
+
+(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
+      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16)
+      doom-big-font (font-spec :family "DejaVuSansMono" :size 24))
 
 (after! doom-themes
   (setq doom-themes-enable-bold t
@@ -109,7 +119,7 @@
 ;; Open the eshell     (SPC e s)\
 ;; \nOpen dired file manager (SPC d d)   \
 ;; List of keybindings (SPC h b b)")
-  (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
+  ;; (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
   (setq dashboard-startup-banner "~/.doom.d/doom-emacs-dash.png")  ;; use custom image as banner
   (setq dashboard-center-content t) ;; set to 't' for centered content
   (setq dashboard-items '((recents . 5)
@@ -123,6 +133,39 @@
                                     (bookmarks . "book"))))
 
 (setq doom-fallback-buffer-name "*dashboard*")
+
+#+end_src
+
+* BEACON
+
+Never lose your cursor.  When you scroll, your cursor will shine!  This is a global minor-mode. Turn it on everywhere with:
+
+#+begin_src elisp
+
+(beacon-mode 1)
+
+#+end_src
+
+* BLAMER
+
+#+begin_src elisp
+
+(use-package blamer
+  :bind (("s-i" . blamer-show-commit-info))
+  :defer 20
+  :custom
+  (blamer-idle-time 0.3)
+  (blamer-min-offset 0)
+  (blamer-author-formatter "%s")
+  (blamer-datetime-formatter ", %s ")
+  (blamer-commit-formatter "● %s")
+  (blamer-prettify-time-p t)
+  :custom-face
+  (blamer-face ((t :foreground "#505050"
+                   :background nil
+                   :italic t)))
+  :config
+  (global-blamer-mode 1))
 
 #+end_src
 
@@ -141,15 +184,14 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
 
 #+begin_src elisp
 
-(setq centaur-tabs-set-bar nil
-      x-underline-at-descent-line t
-      centaur-tabs-set-icons t
+(setq centaur-tabs-set-bar 'under
       centaur-tabs-gray-out-icons 'buffer
-      centaur-tabs-height 28
-      centaur-tabs-set-modified-marker t
+      centaur-tabs-height 32
+      ;; centaur-tabs-modified-marker "●"
+      centaur-tabs-set-icons t
       centaur-tabs-show-navigation-buttons t
-      centaur-tabs-style "wave"
-      centaur-tabs-modified-marker t)
+      centaur-tabs-style "slant"
+      x-underline-at-descent-line t)
 
 (map! :leader
       :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
@@ -162,33 +204,49 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
 
 #+end_src
 
-* FILE TREE
-
-** NEOTREE
-
-Neotree is a file tree viewer.  When you open neotree, it jumps to the current file thanks to neo-smart-open.  The neo-window-fixed-size setting makes the neotree width be adjustable.  Doom Emacs had no keybindings set for neotree.  Since Doom Emacs uses ‘SPC t’ for ‘toggle’ keybindings, I used ‘SPC t n’ for toggle-neotree.
-
-| COMMAND        | DESCRIPTION               | KEYBINDING |
-|----------------+---------------------------+------------|
-| neotree-toggle | /Toggle neotree/            | SPC t n    |
-| neotree- dir   | /Open directory in neotree/ | SPC d n    |
+* MAGIT
 
 #+begin_src elisp
 
-(after! neotree
-  (setq neo-smart-open t
-        neo-window-fixed-size nil))
+;; Insert name of current branch into start of commit message
+;; Ex: master:
+;; Or: JIT-899:
+(defun cvm/commit-insert-ticket-name ()
+  (insert (shell-command-to-string
+           "git rev-parse --symbolic-full-name --abbrev-ref HEAD | tr -d '\n' | sed 's/$/: /'")))
 
-(after! doom-themes
-  (setq doom-neotree-enable-variable-pitch t))
 
-(map! :leader
-      :desc "Toggle neotree file viewer" "t n" #'neotree-toggle
-      :desc "Open directory in neotree" "d n" #'neotree-dir)
+(add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
 
 #+end_src
 
-** TREEMACS
+* PERSPECTIVE
+
+Perspective provides multiple named workspaces (or "perspectives") in Emacs, similar to having multiple desktops in window managers like Awesome and XMonad.  Each perspective has its own buffer list and its own window layout, making it easy to work on many separate projects without getting lost in all the buffers.  Switching to a perspective activates its window configuration, and when in a perspective, only its buffers are available (by default).  Doom Emacs uses 'SPC some_key' for binding some of the perspective commands, so I used this binging format for the perspective bindings that I created..
+
+| COMMAND                    | DESCRIPTION                         | KEYBINDING |
+|----------------------------+-------------------------------------+------------|
+| persp-switch               | Switch to perspective NAME          | SPC DEL    |
+| persp-switch-to-buffer     | Switch to buffer in perspective     | SPC ,      |
+| persp-next                 | Switch to next perspective          | SPC ]      |
+| persp-prev                 | Switch to previous perspective      | SPC [      |
+| persp-add-buffer           | Add a buffer to current perspective | SPC +      |
+| persp-remove-by-name       | Remove perspective by name          | SPC -      |
+| +workspace/switch-to-{0-9} | Switch to workspace /n/               | SPC 0-9    |
+
+#+begin_src emacs-lisp
+
+(map! :leader
+      :desc "Switch to perspective NAME" "DEL" #'persp-switch
+      :desc "Switch to buffer in perspective" "," #'persp-switch-to-buffer
+      :desc "Switch to next perspective" "]" #'persp-next
+      :desc "Switch to previous perspective" "[" #'persp-prev
+      :desc "Add a buffer current perspective" "+" #'persp-add-buffer
+      :desc "Remove perspective by name" "-" #'persp-remove-by-name)
+
+#+end_src
+
+* TREEMACS
 
 #+begin_src elisp
 
@@ -417,7 +475,7 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
     visual-fill-column-center-text t)
   (visual-fill-column-mode 1))
 
-(add-hook! org-mode #'cvm/org-mode-visual-fill)
+(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
 
 
 #+end_src
@@ -515,40 +573,18 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
 (use-package exwm-modeline
   :after (exwm)
   :config
-  (setq exwm-modeline-dividers '("[" "] " "|"))
-  (setq exwm-modeline-short t))
+  (setq exwm-modeline-dividers '("[" "] " "|")
+        exwm-modeline-short t))
 
 (add-hook 'exwm-init-hook #'exwm-modeline-mode)
 
 (add-hook 'exwm-init-hook #'display-time-mode)
 
-(setq display-time-24hr-format t
-      display-time-day-and-date t
-      doom-modeline-time-icon nil
+(setq display-time-24hr-format t ;; 24hr time format
+      display-time-day-and-date t ;; Show date and time
+      doom-modeline-buffer-file-name-style 'auto
       doom-modeline-height 32
-      doom-modeline-buffer-file-name-style 'file-name)
-
-#+end_src
-
-* BLAMER
-
-#+begin_src elisp
-
-(use-package blamer
-  :bind (("s-i" . blamer-show-commit-info))
-  :defer 20
-  :custom
-  (blamer-idle-time 0.3)
-  (blamer-min-offset 0)
-  (blamer-author-formatter "%s")
-  (blamer-datetime-formatter ", %s ")
-  (blamer-commit-formatter "● %s")
-  (blamer-prettify-time-p t)
-  :custom-face
-  (blamer-face ((t :foreground "#7a88cf"
-                   :background nil
-                   :italic t)))
-  :config
-  (global-blamer-mode 1))
+      doom-modeline-lsp nil ;; Disable LSP indicator
+      doom-modeline-time-icon nil) ;; Disable calendar icon next to time
 
 #+end_src

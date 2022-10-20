@@ -50,6 +50,7 @@
 ;(unpin! t)
 
 (package! ac-emmet)
+(package! beacon)
 (package! blamer)
 (package! dashboard)
 (package! emmet-mode)
