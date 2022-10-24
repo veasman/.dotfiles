@@ -2,7 +2,7 @@
     flameshot gui
 
 alt + w
-    setbg ~/.local/wallpapers/
+    set-seasonal-wallpaper
 
 alt + e
     emacsclient -c -a 'emacs'

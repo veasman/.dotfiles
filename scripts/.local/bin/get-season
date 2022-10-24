@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+
+MONTH=$(date +%b)
+HOLLIDAY=""
+
+case "${MONTH}" in
+    "Jan")
+        HOLLIDAY="NONE"
+        ;;
+    "Feb")
+        HOLLIDAY="NONE"
+        ;;
+    "Mar")
+        HOLLIDAY="NONE"
+        ;;
+    "Apr")
+        HOLLIDAY="Easter"
+        ;;
+    "May")
+        HOLLIDAY="NONE"
+        ;;
+    "Jun")
+        HOLLIDAY="NONE"
+        ;;
+    "Jul")
+        HOLLIDAY="NONE"
+        ;;
+    "Aug")
+        HOLLIDAY="NONE"
+        ;;
+    "Sep")
+        HOLLIDAY="Halloween"
+        ;;
+    "Oct")
+        HOLLIDAY="Halloween"
+        ;;
+    "Nov")
+        HOLLIDAY="Thanksgiving"
+        ;;
+    "Dec")
+        HOLLIDAY="Christmas"
+        ;;
+esac
+
+echo "${HOLLIDAY}"
