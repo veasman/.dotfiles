@@ -91,14 +91,11 @@
   :config
   (global-blamer-mode 1))
 
-(setq centaur-tabs-set-bar 'under
-      centaur-tabs-gray-out-icons 'buffer
-      centaur-tabs-height 32
-      ;; centaur-tabs-modified-marker "●"
+(setq centaur-tabs-set-bar 'left
+      centaur-tabs-gray-out-icons nil
+      centaur-tabs-height 24
       centaur-tabs-set-icons t
-      centaur-tabs-show-navigation-buttons t
-      centaur-tabs-style "slant"
-      x-underline-at-descent-line t)
+      centaur-tabs-style "bar")
 
 (map! :leader
       :desc "Toggle tabs globally" "t c" #'centaur-tabs-mode
@@ -124,6 +121,11 @@
 
 (after! doom-themes
   (setq doom-themes-treemacs-enable-variable-pitch t))
+
+;; (defun cvm/treemacs-switch ()
+;;   treemacs-display-current-project-exclusively)
+
+;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
 
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
@@ -340,8 +342,6 @@
 ;; Set the default number of workspaces
 (setq exwm-workspace-number 9)
 
-(exwm-enable)
-
 ;; When window "class" updates, use it to set the buffer name
 (add-hook 'exwm-update-class-hook #'cvm/exwm-update-class)
 
@@ -358,7 +358,7 @@
     ?\C-\ )) ;; Ctrl+SPC
 
 ;; Ctrl+Q will enable the next key to be sent directly
-(define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
+;;(define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
 
 ;; Set up global key bindings. These always work, no matter the input state
 ;; Keep in mind that changing this list after EXWM initalizes has no effect
@@ -393,11 +393,19 @@
 (exwm-randr-enable)
 (start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 0x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 1920x0 --rotate normal")
 
-(setq exwm-randr-workspace-monitor-plist '(1 "Virtual1" 2 "Virtual1" 3 "Virtual1" 4 "Virtual1" 5 "Virtual1" 6 "Virtual2" 7 "Virtual2" 8 "Virtual2" 9 "Virtual2" 0 "Virtual2"))
-
-(setq exwm-workspace-warp-cursor t)
-
-(setq mouse-autoselect-window t
+(setq exwm-randr-workspace-monitor-plist
+      '(1 "Virtual1"
+        2 "Virtual1"
+        3 "Virtual1"
+        4 "Virtual1"
+        5 "Virtual1"
+        6 "Virtual2"
+        7 "Virtual2"
+        8 "Virtual2"
+        9 "Virtual2"
+        0 "Virtual2")
+      exwm-workspace-warp-cursor t
+      mouse-autoselect-window t
       focus-follows-mouse t)
 
 (exwm-enable)
