@@ -391,7 +391,7 @@
 
 (require 'exwm-randr)
 (exwm-randr-enable)
-(start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 0x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 1920x0 --rotate normal")
+(start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 --pos 0x372 --rotate normal --output Virtual2 --mode 1920x1080 --pos 1920x0 --rotate right --output Virtual3 --off --output Virtual4 --off --output Virtual5 --off --output Virtual6 --off --output Virtual7 --off --output Virtual8 --off")
 
 (setq exwm-randr-workspace-monitor-plist '(1 "Virtual1" 2 "Virtual1" 3 "Virtual1" 4 "Virtual1" 5 "Virtual1" 6 "Virtual2" 7 "Virtual2" 8 "Virtual2" 9 "Virtual2" 0 "Virtual2"))
 
