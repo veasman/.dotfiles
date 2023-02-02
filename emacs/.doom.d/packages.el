@@ -60,3 +60,4 @@
 (package! org-superstar)
 (package! snow)
 (package! visual-fill-column)
+(package! synosaurus)
