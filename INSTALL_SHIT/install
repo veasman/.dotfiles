@@ -1,0 +1,5 @@
+#/bin/sh
+
+apt install $@ -y
+
+echo $@ >> install.txt
