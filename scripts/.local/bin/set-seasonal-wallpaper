@@ -18,4 +18,4 @@ case "${MONTH}" in
     "Dec") HOLLIDAY="christmas" ;;
 esac
 
-setbg "$HOME/.local/wallpapers/${HOLLIDAY}"
+~/.local/bin/setbg "$HOME/.local/wallpapers/${HOLLIDAY}"

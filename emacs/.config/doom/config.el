@@ -1,54 +1,12 @@
-#+title: Config
-#+PROPERTY: header-args:elisp :tangle ./config.el
-
-* TABLE OF CONTENTS
-** [[BASIC UI]]
-*** [[THEME]]
-*** [[FRAME TRANSPARENCY]]
-*** [[LINE NUMBERS]]
-*** [[SCROLL ACCELERATION]]
-*** [[FONTS]]
-*** [[DASHBOARD]]
-** [[BEACON]]
-** [[BLAMER]]
-** [[CENTAUR TABS]]
-** [[MAGIT]]
-** [[PERSPECTIVE]]
-** [[TREEMACS]]
-** [[ORG MODE]]
-*** [[ORG FONTS]]
-*** [[CENTER ORG BUFFERS]]
-*** [[ORG AUTO TANGLE]]
-** [[EXWM]]
-*** [[MODELINE]]
-
-* BASIC UI
-
-** THEME
-
-#+begin_src elisp
-
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-one)
 
-#+end_src
-
-** FRAME TRANSPARENCY
-
-#+begin_src elisp
-
 (set-frame-parameter (selected-frame) 'alpha '(90 . 90))
 (add-to-list 'default-frame-alist `(alpha . ,'(90 . 90)))
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-#+end_src
-
-** LINE NUMBERS
-
-#+begin_src elisp
 
 (setq display-line-numbers-type 'relative)
 
@@ -64,20 +22,6 @@
                shell-mode-hook
                eshell-mode-hook))
  (add-hook mode (lambda () (display-line-numbers-mode 0))))
-
-#+end_src
-
-** SCROLL ACCELERATION
-
-#+begin_src elisp
-
-(setq mouse-wheel-progressive-speed nil)
-
-#+end_src
-
-** FONTS
-
-#+begin_src elisp
 
 ;; CODE ;;
 ;; Fira Code NF
@@ -99,54 +43,15 @@
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 
-#+end_src
+(setq fancy-splash-image "/home/cvm/.config/doom/emacs.svg")
 
-** DASHBOARD
+;; Turn off scroll accel
+(setq mouse-wheel-progressive-speed nil)
 
-#+begin_src elisp
-
-(use-package dashboard
-  :init      ;; tweak dashboard config before loading it
-  (setq dashboard-set-heading-icons t)
-  (setq dashboard-set-file-icons t)
-;;   (setq dashboard-banner-logo-title
-;; "\nKEYBINDINGS:\
-;; \nFind file               (SPC .)     \
-;; Open buffer list    (SPC b i)\
-;; \nFind recent files       (SPC f r)   \
-;; Open the eshell     (SPC e s)\
-;; \nOpen dired file manager (SPC d d)   \
-;; List of keybindings (SPC h b b)")
-  ;; (setq dashboard-startup-banner 'logo) ;; use standard emacs logo as banner
-  (setq dashboard-startup-banner "~/.doom.d/doom-emacs-dash.png")  ;; use custom image as banner
-  (setq dashboard-center-content t) ;; set to 't' for centered content
-  (setq dashboard-items '((recents . 5)
-                          (agenda . 5 )
-                          (bookmarks . 5)
-                          (projects . 5)
-                          (registers . 5)))
-  :config
-  (dashboard-setup-startup-hook)
-  (dashboard-modify-heading-icons '((recents . "file-text")
-                                    (bookmarks . "book"))))
-
-(setq doom-fallback-buffer-name "*dashboard*")
-
-#+end_src
-
-* BEACON
-
-Never lose your cursor.  When you scroll, your cursor will shine!  This is a global minor-mode. Turn it on everywhere with:
-
-#+begin_src elisp
+;; Scrolloff cursor distance
+(setq scroll-margin 8)
 
 (beacon-mode 1)
-
-#+end_src
-
-* BLAMER
-
-#+begin_src elisp
 
 (use-package blamer
   :bind (("s-i" . blamer-show-commit-info))
@@ -165,23 +70,6 @@ Never lose your cursor.  When you scroll, your cursor will shine!  This is a glo
   :config
   (global-blamer-mode 1))
 
-#+end_src
-
-* CENTAUR TABS
-
-To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el.  Displays tabs at the top of the window similar to tabbed web browsers such as Firefox.  I don’t actually use tabs in Emacs.  I placed this in my config to help others who may want tabs.  In the default configuration of Doom Emacs, ‘SPC t’ is used for “toggle” keybindings, so I choose ‘SPC t c’ to toggle centaur-tabs.  The “g” prefix for keybindings is used for a bunch of evil keybindings in Doom, but “g” plus the arrow keys were not used, so I thought I would bind those for tab navigation.  But I did leave the default “g t” and “g T” intact if you prefer to use those for centaur-tabs-forward/backward.
-
-| COMMAND                     | DESCRIPTION               | KEYBINDING       |
-|-----------------------------+---------------------------+------------------|
-| centaur-tabs-mode           | /Toggle tabs globally/      | SPC t c          |
-| centaur-tabs-local-mode     | /Toggle tabs local display/ | SPC t C          |
-| centaur-tabs-forward        | /Next tab/                  | g <right> or g t |
-| centaur-tabs-backward       | /Previous tab/              | g <left> or g T  |
-| centaur-tabs-forward-group  | /Next tab group/            | g <down>         |
-| centaur-tabs-backward-group | /Previous tab group/        | g <up>           |
-
-#+begin_src elisp
-
 (setq centaur-tabs-set-bar 'left
       centaur-tabs-gray-out-icons nil
       centaur-tabs-height 24
@@ -197,11 +85,47 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
                                                (kbd "g <down>")  'centaur-tabs-forward-group
                                                (kbd "g <up>")    'centaur-tabs-backward-group)
 
-#+end_src
+(when (featurep! :tools lsp)
+  (setq lsp-ui-doc-show-with-cursor nil)
 
-* MAGIT
+  (setq-hook! 'lsp-mode-hook
+    company-minimum-prefix-length 1
+    company-idle-delay 0.1)
 
-#+begin_src elisp
+  (after! (lsp-ui doom-themes)
+    (setq lsp-ui-imenu-colors `(,(doom-color 'dark-blue)
+                                ,(doom-color 'cyan)))))
+
+;; Enforce Google Java Code Style
+;; See https://google.github.io/styleguide/javaguide.html
+(when (featurep! :lang java)
+  (when (featurep! :lang java +lsp)
+    (setq lsp-java-format-settings-url "http://google.github.io/styleguide/eclipse-java-google-style.xml"))
+  (set-formatter! 'google-java-format
+    '("google-java-format" "-")
+    :modes 'java-mode)
+  (setq-hook! 'java-mode-hook
+    tab-width 2
+    fill-column 100))
+
+(when (featurep! :lang java +lsp)
+  (setq lsp-java-maven-download-sources t
+        lsp-java-autobuild-enabled nil
+        lsp-java-selection-enabled nil
+        lsp-java-code-generation-use-blocks t
+        lsp-java-code-generation-generate-comments t
+        lsp-java-code-generation-to-string-code-style "STRING_BUILDER")
+
+  ;; Lombok support
+  ;; See https://github.com/redhat-developer/vscode-java/wiki/Lombok-support
+  (after! lsp-java
+    (push (concat "-javaagent:"
+                  (expand-file-name (concat doom-private-dir
+                                            "etc/lombok.jar")))
+          lsp-java-vmargs))
+
+  ;; Groovy
+  (add-hook 'groovy-mode-local-vars-hook #'lsp!))
 
 ;; Insert name of current branch into start of commit message
 ;; Ex: master:
@@ -213,38 +137,6 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
 
 (add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
 
-#+end_src
-
-* PERSPECTIVE
-
-Perspective provides multiple named workspaces (or "perspectives") in Emacs, similar to having multiple desktops in window managers like Awesome and XMonad.  Each perspective has its own buffer list and its own window layout, making it easy to work on many separate projects without getting lost in all the buffers.  Switching to a perspective activates its window configuration, and when in a perspective, only its buffers are available (by default).  Doom Emacs uses 'SPC some_key' for binding some of the perspective commands, so I used this binging format for the perspective bindings that I created..
-
-| COMMAND                    | DESCRIPTION                         | KEYBINDING |
-|----------------------------+-------------------------------------+------------|
-| persp-switch               | Switch to perspective NAME          | SPC DEL    |
-| persp-switch-to-buffer     | Switch to buffer in perspective     | SPC ,      |
-| persp-next                 | Switch to next perspective          | SPC ]      |
-| persp-prev                 | Switch to previous perspective      | SPC [      |
-| persp-add-buffer           | Add a buffer to current perspective | SPC +      |
-| persp-remove-by-name       | Remove perspective by name          | SPC -      |
-| +workspace/switch-to-{0-9} | Switch to workspace /n/               | SPC 0-9    |
-
-#+begin_src emacs-lisp
-
-(map! :leader
-      :desc "Switch to perspective NAME" "DEL" #'persp-switch
-      :desc "Switch to buffer in perspective" "," #'persp-switch-to-buffer
-      :desc "Switch to next perspective" "]" #'persp-next
-      :desc "Switch to previous perspective" "[" #'persp-prev
-      :desc "Add a buffer current perspective" "+" #'persp-add-buffer
-      :desc "Remove perspective by name" "-" #'persp-remove-by-name)
-
-#+end_src
-
-* TREEMACS
-
-#+begin_src elisp
-
 (after! treemacs
   (setq treemacs-follow-mode t))
 
@@ -255,12 +147,6 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 ;;   treemacs-display-current-project-exclusively)
 
 ;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
-
-#+end_src
-
-* ORG MODE
-
-#+begin_src elisp
 
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
@@ -293,12 +179,6 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
              "CANCELLED(c)" )))) ; Task has been cancelled
 
 (add-hook 'org-mode-hook #'org-superstar-mode)
-
-#+end_src
-
-** ORG FONTS
-
-#+begin_src elisp
 
 (defun cvm/org-colors-doom-one ()
   "Enable Doom One colors for Org headers."
@@ -464,12 +344,6 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 (after! org
   (cvm/org-colors-doom-one))
 
-#+end_src
-
-** CENTER ORG BUFFERS
-
-#+begin_src elisp
-
 (defun cvm/org-mode-visual-fill ()
   (setq visual-fill-column-width 100
     visual-fill-column-center-text t)
@@ -477,24 +351,11 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 
 (add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
 
-
-#+end_src
-
-** ORG AUTO TANGLE
-
-#+begin_src elisp
-
 (use-package! org-auto-tangle
   :defer t
   :hook (org-mode . org-auto-tangle-mode)
   :config
   (setq org-auto-tangle-default t))
-
-#+end_src
-
-* EXWM
-
-#+begin_src elisp
 
 (defun cvm/exwm-update-class ()
   (exwm-workspace-rename-buffer exwm-class-name))
@@ -518,7 +379,7 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
     ?\C-\ )) ;; Ctrl+SPC
 
 ;; Ctrl+Q will enable the next key to be sent directly
-(define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
+;; (define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
 
 ;; Set up global key bindings. These always work, no matter the input state
 ;; Keep in mind that changing this list after EXWM initalizes has no effect
@@ -534,16 +395,16 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
       ([?\s-j] . windmove-down)
 
       ;; Launch applications with shell command
-      ([?\s-p] . (lambda (command)
+      ([?\M-p] . (lambda (command)
                     (interactive (list (read-shell-command "$ ")))
                     (start-process-shell-command command nil command)))
 
       ;; Switch workspace
       ([?\s-w] . exwm-workspace-switch)
 
-      ;; 's-N': Switch to workspace at N
+      ;; 'C-N': Switch to workspace at N
       ,@(mapcar (lambda (i)
-                  `(,(kbd (format "s-%d" i)) .
+                  `(,(kbd (format "C-%d" i)) .
                     (lambda ()
                       (interactive)
                       (exwm-workspace-switch-create ,i))))
@@ -551,30 +412,25 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 
 (require 'exwm-randr)
 (exwm-randr-enable)
-(start-process-shell-command "xrandr" nil "xrandr --output Virtual1 --primary --mode 1920x1080 -pos 0x0 --rotate normal --output Virtual2 --mode 1920x1080 --pos 1920x0 --rotate normal")
+
+(start-process-shell-command "xrandr" nil "xrandr --output default --mode 1080x1920 --primary --pos 1920x0")
 
 (setq exwm-randr-workspace-monitor-plist
-      '(1 "Virtual1"
-        2 "Virtual1"
-        3 "Virtual1"
-        4 "Virtual1"
-        5 "Virtual1"
-        6 "Virtual2"
-        7 "Virtual2"
-        8 "Virtual2"
-        9 "Virtual2"
-        0 "Virtual2")
+      '(1 "default"
+        2 "default"
+        3 "default"
+        4 "default"
+        5 "default"
+        6 "default"
+        7 "default"
+        8 "default"
+        9 "default"
+        0 "default")
       exwm-workspace-warp-cursor t
       mouse-autoselect-window t
       focus-follows-mouse t)
 
 (exwm-enable)
-
-#+end_src
-
-** MODELINE
-
-#+begin_src elisp
 
 (use-package exwm-modeline
   :after (exwm)
@@ -584,13 +440,11 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 
 (add-hook 'exwm-init-hook #'exwm-modeline-mode)
 
-(add-hook 'exwm-init-hook #'display-time-mode)
+;; (add-hook 'exwm-init-hook #'display-time-mode)
 
-(setq display-time-24hr-format t ;; 24hr time format
-      display-time-day-and-date t ;; Show date and time
-      doom-modeline-buffer-file-name-style 'auto
-      doom-modeline-height 32
-      doom-modeline-lsp nil ;; Disable LSP indicator
-      doom-modeline-time-icon nil) ;; Disable calendar icon next to time
-
-#+end_src
+;; (setq display-time-24hr-format t ;; 24hr time format
+      ;; display-time-day-and-date t ;; Show date and time
+(setq doom-modeline-buffer-file-name-style 'auto
+      doom-modeline-height 32)
+      ;; doom-modeline-lsp nil ;; Disable LSP indicator
+      ;; doom-modeline-time-icon nil) ;; Disable calendar icon next to time
