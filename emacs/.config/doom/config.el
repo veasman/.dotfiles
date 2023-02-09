@@ -3,8 +3,8 @@
 ;; `load-theme' function. This is the default:
 (setq doom-theme 'doom-one)
 
-(set-frame-parameter (selected-frame) 'alpha '(90 . 90))
-(add-to-list 'default-frame-alist `(alpha . ,'(90 . 90)))
+(set-frame-parameter (selected-frame) 'alpha '(92 . 92))
+(add-to-list 'default-frame-alist `(alpha . ,'(92 . 92)))
 (set-frame-parameter (selected-frame) 'fullscreen 'maximized)
 (add-to-list 'default-frame-alist '(fullscreen . maximized))
 
@@ -122,10 +122,10 @@
     (push (concat "-javaagent:"
                   (expand-file-name (concat doom-private-dir
                                             "etc/lombok.jar")))
-          lsp-java-vmargs))
+          lsp-java-vmargs)))
 
   ;; Groovy
-  (add-hook 'groovy-mode-local-vars-hook #'lsp!))
+  ;; (add-hook 'groovy-mode-local-vars-hook #'lsp!))
 
 ;; Insert name of current branch into start of commit message
 ;; Ex: master:
