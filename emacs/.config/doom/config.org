@@ -3,12 +3,12 @@
 
 * TABLE OF CONTENTS
 ** [[#basic-ui][BASIC UI]]
-*** [[#theme][THEME]]
+*** [[#dashboard][DASHBOARD]]
+*** [[#fonts][FONTS]]
 *** [[#frame-transparency][FRAME TRANSPARENCY]]
 *** [[#line-numbers][LINE NUMBERS]]
-*** [[#fonts][FONTS]]
-*** [[#dashboard][DASHBOARD]]
 *** [[#misc-ui][MISC]]
+*** [[#theme][THEME]]
 ** [[#beacon][BEACON]]
 ** [[#blamer][BLAMER]]
 ** [[#centaur-tabs][CENTAUR TABS]]
@@ -18,23 +18,46 @@
 *** [[#java][JAVA]]
 ** [[#magit][MAGIT]]
 ** [[#misc][MISC]]
+** [[#org-mode][ORG MODE]]
+*** [[#center-org-buffers][CENTER ORG BUFFERS]]
+*** [[#org-fonts][ORG FONTS]]
+*** [[#org-auto-tangle][ORG AUTO TANGLE]]
 ** [[#perspective][PERSPECTIVE]]
 ** [[#treemacs][TREEMACS]]
-** [[#org-mode][ORG MODE]]
-*** [[#org-fonts][ORG FONTS]]
-*** [[#center-org-buffers][CENTER ORG BUFFERS]]
-*** [[#org-auto-tangle][ORG AUTO TANGLE]]
 
 * BASIC UI
 
-** THEME
+** DASHBOARD
 
 #+begin_src elisp
 
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-one)
+(setq fancy-splash-image "/home/cvm/.config/doom/emacs.svg")
+
+#+end_src
+
+** FONTS
+
+#+begin_src elisp
+
+;; CODE ;;
+;; Fira Code NF
+;; DejaVuSansMono
+
+;; ORG ;;
+;; DejaVuSans
+;; Cantarell
+
+(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
+      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16)
+      doom-big-font (font-spec :family "DejaVuSansMono" :size 24))
+
+(after! doom-themes
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t))
+
+(custom-set-faces!
+  '(font-lock-comment-face :slant italic)
+  '(font-lock-keyword-face :slant italic))
 
 #+end_src
 
@@ -70,40 +93,6 @@
 
 #+end_src
 
-** FONTS
-
-#+begin_src elisp
-
-;; CODE ;;
-;; Fira Code NF
-;; DejaVuSansMono
-
-;; ORG ;;
-;; DejaVuSans
-;; Cantarell
-
-(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
-      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16)
-      doom-big-font (font-spec :family "DejaVuSansMono" :size 24))
-
-(after! doom-themes
-  (setq doom-themes-enable-bold t
-        doom-themes-enable-italic t))
-
-(custom-set-faces!
-  '(font-lock-comment-face :slant italic)
-  '(font-lock-keyword-face :slant italic))
-
-#+end_src
-
-** DASHBOARD
-
-#+begin_src elisp
-
-(setq fancy-splash-image "/home/cvm/.config/doom/emacs.svg")
-
-#+end_src
-
 ** MISC
 
 #+begin_src elisp
@@ -113,6 +102,17 @@
 
 ;; Scrolloff cursor distance
 (setq scroll-margin 8)
+
+#+end_src
+
+** THEME
+
+#+begin_src elisp
+
+;; There are two ways to load a theme. Both assume the theme is installed and
+;; available. You can either set `doom-theme' or manually load a theme with the
+;; `load-theme' function. This is the default:
+(setq doom-theme 'doom-one)
 
 #+end_src
 
@@ -361,49 +361,6 @@ To use tabs in Doom Emacs, be sure to uncomment “tabs” in Doom’s init.el. 
 
 #+end_src
 
-* PERSPECTIVE
-
-Perspective provides multiple named workspaces (or "perspectives") in Emacs, similar to having multiple desktops in window managers like Awesome and XMonad.  Each perspective has its own buffer list and its own window layout, making it easy to work on many separate projects without getting lost in all the buffers.  Switching to a perspective activates its window configuration, and when in a perspective, only its buffers are available (by default).  Doom Emacs uses 'SPC some_key' for binding some of the perspective commands, so I used this binging format for the perspective bindings that I created..
-
-| COMMAND                    | DESCRIPTION                         | KEYBINDING |
-|----------------------------+-------------------------------------+------------|
-| persp-switch               | Switch to perspective NAME          | SPC DEL    |
-| persp-switch-to-buffer     | Switch to buffer in perspective     | SPC ,      |
-| persp-next                 | Switch to next perspective          | SPC ]      |
-| persp-prev                 | Switch to previous perspective      | SPC [      |
-| persp-add-buffer           | Add a buffer to current perspective | SPC +      |
-| persp-remove-by-name       | Remove perspective by name          | SPC -      |
-| +workspace/switch-to-{0-9} | Switch to workspace /n/               | SPC 0-9    |
-
-#+begin_src emacs-lisp
-
-(map! :leader
-      :desc "Switch to perspective NAME" "DEL" #'persp-switch
-      :desc "Switch to buffer in perspective" "," #'persp-switch-to-buffer
-      :desc "Switch to next perspective" "]" #'persp-next
-      :desc "Switch to previous perspective" "[" #'persp-prev
-      :desc "Add a buffer current perspective" "+" #'persp-add-buffer
-      :desc "Remove perspective by name" "-" #'persp-remove-by-name)
-
-#+end_src
-
-* TREEMACS
-
-#+begin_src elisp
-
-(after! treemacs
-  (setq treemacs-follow-mode t))
-
-(after! doom-themes
-  (setq doom-themes-treemacs-enable-variable-pitch t))
-
-;; (defun cvm/treemacs-switch ()
-;;   treemacs-display-current-project-exclusively)
-
-;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
-
-#+end_src
-
 * ORG MODE
 
 #+begin_src elisp
@@ -439,6 +396,32 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
              "CANCELLED(c)" )))) ; Task has been cancelled
 
 (add-hook 'org-mode-hook #'org-superstar-mode)
+
+#+end_src
+
+** CENTER ORG BUFFERS
+
+#+begin_src elisp
+
+(defun cvm/org-mode-visual-fill ()
+  (setq visual-fill-column-width 100
+    visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
+
+
+#+end_src
+
+** ORG AUTO TANGLE
+
+#+begin_src elisp
+
+(use-package! org-auto-tangle
+  :defer t
+  :hook (org-mode . org-auto-tangle-mode)
+  :config
+  (setq org-auto-tangle-default t))
 
 #+end_src
 
@@ -612,29 +595,46 @@ Perspective provides multiple named workspaces (or "perspectives") in Emacs, sim
 
 #+end_src
 
-** CENTER ORG BUFFERS
+* PERSPECTIVE
 
-#+begin_src elisp
+Perspective provides multiple named workspaces (or "perspectives") in Emacs, similar to having multiple desktops in window managers like Awesome and XMonad.  Each perspective has its own buffer list and its own window layout, making it easy to work on many separate projects without getting lost in all the buffers.  Switching to a perspective activates its window configuration, and when in a perspective, only its buffers are available (by default).  Doom Emacs uses 'SPC some_key' for binding some of the perspective commands, so I used this binging format for the perspective bindings that I created..
 
-(defun cvm/org-mode-visual-fill ()
-  (setq visual-fill-column-width 100
-    visual-fill-column-center-text t)
-  (visual-fill-column-mode 1))
+| COMMAND                    | DESCRIPTION                         | KEYBINDING |
+|----------------------------+-------------------------------------+------------|
+| persp-switch               | Switch to perspective NAME          | SPC DEL    |
+| persp-switch-to-buffer     | Switch to buffer in perspective     | SPC ,      |
+| persp-next                 | Switch to next perspective          | SPC ]      |
+| persp-prev                 | Switch to previous perspective      | SPC [      |
+| persp-add-buffer           | Add a buffer to current perspective | SPC +      |
+| persp-remove-by-name       | Remove perspective by name          | SPC -      |
+| +workspace/switch-to-{0-9} | Switch to workspace /n/               | SPC 0-9    |
 
-(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
+#+begin_src emacs-lisp
 
+(map! :leader
+      :desc "Switch to perspective NAME" "DEL" #'persp-switch
+      :desc "Switch to buffer in perspective" "," #'persp-switch-to-buffer
+      :desc "Switch to next perspective" "]" #'persp-next
+      :desc "Switch to previous perspective" "[" #'persp-prev
+      :desc "Add a buffer current perspective" "+" #'persp-add-buffer
+      :desc "Remove perspective by name" "-" #'persp-remove-by-name)
 
 #+end_src
 
-** ORG AUTO TANGLE
+* TREEMACS
 
 #+begin_src elisp
 
-(use-package! org-auto-tangle
-  :defer t
-  :hook (org-mode . org-auto-tangle-mode)
-  :config
-  (setq org-auto-tangle-default t))
+(after! treemacs
+  (setq treemacs-follow-mode t))
+
+(after! doom-themes
+  (setq doom-themes-treemacs-enable-variable-pitch t))
+
+;; (defun cvm/treemacs-switch ()
+;;   treemacs-display-current-project-exclusively)
+
+;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
 
 #+end_src
 

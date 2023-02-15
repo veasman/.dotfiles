@@ -1,27 +1,4 @@
-;; There are two ways to load a theme. Both assume the theme is installed and
-;; available. You can either set `doom-theme' or manually load a theme with the
-;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-one)
-
-(set-frame-parameter (selected-frame) 'alpha '(92 . 92))
-(add-to-list 'default-frame-alist `(alpha . ,'(92 . 92)))
-(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
-(add-to-list 'default-frame-alist '(fullscreen . maximized))
-
-(setq display-line-numbers-type 'relative)
-
-;; Line numbers enable when needed
-(dolist (mode '(text-mode-hook
-               prog-mode-hook
-               conf-mode-hook))
- (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
-
-;; Line numbers disable when needed
-(dolist (mode '(org-mode-hook
-               term-mode-hook
-               shell-mode-hook
-               eshell-mode-hook))
- (add-hook mode (lambda () (display-line-numbers-mode 0))))
+(setq fancy-splash-image "/home/cvm/.config/doom/emacs.svg")
 
 ;; CODE ;;
 ;; Fira Code NF
@@ -43,13 +20,36 @@
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 
-(setq fancy-splash-image "/home/cvm/.config/doom/emacs.svg")
+(set-frame-parameter (selected-frame) 'alpha '(92 . 92))
+(add-to-list 'default-frame-alist `(alpha . ,'(92 . 92)))
+(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+(setq display-line-numbers-type 'relative)
+
+;; Line numbers enable when needed
+(dolist (mode '(text-mode-hook
+               prog-mode-hook
+               conf-mode-hook))
+ (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
+
+;; Line numbers disable when needed
+(dolist (mode '(org-mode-hook
+               term-mode-hook
+               shell-mode-hook
+               eshell-mode-hook))
+ (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 ;; Turn off scroll accel
 (setq mouse-wheel-progressive-speed nil)
 
 ;; Scrolloff cursor distance
 (setq scroll-margin 8)
+
+;; There are two ways to load a theme. Both assume the theme is installed and
+;; available. You can either set `doom-theme' or manually load a theme with the
+;; `load-theme' function. This is the default:
+(setq doom-theme 'doom-one)
 
 (beacon-mode 1)
 
@@ -230,17 +230,6 @@
       (let ((text (buffer-substring-no-properties start end)))
         (shell-command (concat "echo '" text "' | clip.exe")))))
 
-(after! treemacs
-  (setq treemacs-follow-mode t))
-
-(after! doom-themes
-  (setq doom-themes-treemacs-enable-variable-pitch t))
-
-;; (defun cvm/treemacs-switch ()
-;;   treemacs-display-current-project-exclusively)
-
-;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
-
 (map! :leader
       :desc "Org babel tangle" "m B" #'org-babel-tangle)
 
@@ -272,6 +261,19 @@
              "CANCELLED(c)" )))) ; Task has been cancelled
 
 (add-hook 'org-mode-hook #'org-superstar-mode)
+
+(defun cvm/org-mode-visual-fill ()
+  (setq visual-fill-column-width 100
+    visual-fill-column-center-text t)
+  (visual-fill-column-mode 1))
+
+(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
+
+(use-package! org-auto-tangle
+  :defer t
+  :hook (org-mode . org-auto-tangle-mode)
+  :config
+  (setq org-auto-tangle-default t))
 
 (defun cvm/org-colors-doom-one ()
   "Enable Doom One colors for Org headers."
@@ -437,15 +439,13 @@
 (after! org
   (cvm/org-colors-doom-one))
 
-(defun cvm/org-mode-visual-fill ()
-  (setq visual-fill-column-width 100
-    visual-fill-column-center-text t)
-  (visual-fill-column-mode 1))
+(after! treemacs
+  (setq treemacs-follow-mode t))
 
-(add-hook 'org-mode-hook #'cvm/org-mode-visual-fill)
+(after! doom-themes
+  (setq doom-themes-treemacs-enable-variable-pitch t))
 
-(use-package! org-auto-tangle
-  :defer t
-  :hook (org-mode . org-auto-tangle-mode)
-  :config
-  (setq org-auto-tangle-default t))
+;; (defun cvm/treemacs-switch ()
+;;   treemacs-display-current-project-exclusively)
+
+;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
