@@ -2,13 +2,13 @@
 #+PROPERTY: header-args:elisp :tangle ./config.el
 
 * TABLE OF CONTENTS
-** [#basic-ui][BASIC UI]]
-*** [#theme][THEME]]
-*** [#frame-transparency][FRAME TRANSPARENCY]]
-*** [#line-numbers][LINE NUMBERS]]
-*** [#fonts][FONTS]]
-*** [#dashboard][DASHBOARD]]
-*** [#misc-ui][MISC]]
+** [[#basic-ui][BASIC UI]]
+*** [[#theme][THEME]]
+*** [[#frame-transparency][FRAME TRANSPARENCY]]
+*** [[#line-numbers][LINE NUMBERS]]
+*** [[#fonts][FONTS]]
+*** [[#dashboard][DASHBOARD]]
+*** [[#misc-ui][MISC]]
 ** [[#beacon][BEACON]]
 ** [[#blamer][BLAMER]]
 ** [[#centaur-tabs][CENTAUR TABS]]
