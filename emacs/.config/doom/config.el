@@ -85,7 +85,94 @@
                                                (kbd "g <down>")  'centaur-tabs-forward-group
                                                (kbd "g <up>")    'centaur-tabs-backward-group)
 
-(when (featurep! :tools lsp)
+(defun cvm/exwm-update-class ()
+  (exwm-workspace-rename-buffer exwm-class-name))
+
+;; Set the default number of workspaces
+(setq exwm-workspace-number 9)
+
+;; When window "class" updates, use it to set the buffer name
+(add-hook 'exwm-update-class-hook #'cvm/exwm-update-class)
+
+;; These keys should always pass through to Emacs
+(setq exwm-input-prefix-keys
+  '(?\C-x
+    ?\C-u
+    ?\C-d
+    ?\C-h
+    ?\M-`
+    ?\M-&
+    ?\M-:
+    ?\C-\M-j ;; Buffer list
+    ?\C-\ )) ;; Ctrl+SPC
+
+;; Ctrl+Q will enable the next key to be sent directly
+;; (define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
+
+;; Set up global key bindings. These always work, no matter the input state
+;; Keep in mind that changing this list after EXWM initalizes has no effect
+(setq exwm-input-global-keys
+    `(
+      ;; Reset to line-mode C-c C-k switches to char-mode via exwm-input-release-keyboard
+      ([?\s-r] . exwm-reset)
+
+      ;; Move between windows
+      ([?\s-h] . windmove-left)
+      ([?\s-l] . windmove-right)
+      ([?\s-k] . windmove-up)
+      ([?\s-j] . windmove-down)
+
+      ;; Launch applications with shell command
+      ([?\M-p] . (lambda (command)
+                    (interactive (list (read-shell-command "$ ")))
+                    (start-process-shell-command command nil command)))
+
+      ;; Switch workspace
+      ([?\s-w] . exwm-workspace-switch)
+
+      ;; 'C-N': Switch to workspace at N
+      ,@(mapcar (lambda (i)
+                  `(,(kbd (format "C-%d" i)) .
+                    (lambda ()
+                      (interactive)
+                      (exwm-workspace-switch-create ,i))))
+                (number-sequence 0 9))))
+
+(require 'exwm-randr)
+(exwm-randr-enable)
+
+;; (start-process-shell-command "xrandr" nil "xrandr --output default --mode 1080x1920 --primary --pos 1920x0")
+
+(setq exwm-randr-workspace-monitor-plist
+      '(1 "XWAYLAND0"
+        2 "XWAYLAND0"
+        3 "XWAYLAND0"
+        4 "XWAYLAND0"
+        5 "XWAYLAND0"
+        6 "XWAYLAND0"
+        7 "XWAYLAND0"
+        8 "XWAYLAND0"
+        9 "XWAYLAND0"
+        0 "XWAYLAND0")
+      exwm-workspace-warp-cursor t
+      mouse-autoselect-window t
+      focus-follows-mouse t)
+
+(exwm-enable)
+
+(use-package exwm-modeline
+  :after (exwm)
+  :config
+  (setq exwm-modeline-dividers '("[" "] " "|")
+        exwm-modeline-short t))
+
+(add-hook 'exwm-init-hook #'exwm-modeline-mode)
+
+(setq doom-modeline-buffer-file-name-style 'auto
+      doom-modeline-height 32)
+      ;; doom-modeline-lsp nil) ;; Disable LSP indicator
+
+(when (modulep! :tools lsp)
   (setq lsp-ui-doc-show-with-cursor nil)
 
   (setq-hook! 'lsp-mode-hook
@@ -98,8 +185,8 @@
 
 ;; Enforce Google Java Code Style
 ;; See https://google.github.io/styleguide/javaguide.html
-(when (featurep! :lang java)
-  (when (featurep! :lang java +lsp)
+(when (modulep! :lang java)
+  (when (modulep! :lang java +lsp)
     (setq lsp-java-format-settings-url "http://google.github.io/styleguide/eclipse-java-google-style.xml"))
   (set-formatter! 'google-java-format
     '("google-java-format" "-")
@@ -108,7 +195,7 @@
     tab-width 2
     fill-column 100))
 
-(when (featurep! :lang java +lsp)
+(when (modulep! :lang java +lsp)
   (setq lsp-java-maven-download-sources t
         lsp-java-autobuild-enabled nil
         lsp-java-selection-enabled nil
@@ -120,11 +207,10 @@
   ;; See https://github.com/redhat-developer/vscode-java/wiki/Lombok-support
   (after! lsp-java
     (push (concat "-javaagent:"
-                  (expand-file-name (concat doom-private-dir
+                  (expand-file-name (concat doom-user-dir
                                             "etc/lombok.jar")))
           lsp-java-vmargs)))
 
-  ;; Groovy
   ;; (add-hook 'groovy-mode-local-vars-hook #'lsp!))
 
 ;; Insert name of current branch into start of commit message
@@ -136,6 +222,13 @@
 
 
 (add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
+
+;; WSLG clipboard fix
+(defun cvm/copy-selected-text(start end)
+  (interactive "r")
+  (if (use-region-p)
+      (let ((text (buffer-substring-no-properties start end)))
+        (shell-command (concat "echo '" text "' | clip.exe")))))
 
 (after! treemacs
   (setq treemacs-follow-mode t))
@@ -356,95 +449,3 @@
   :hook (org-mode . org-auto-tangle-mode)
   :config
   (setq org-auto-tangle-default t))
-
-(defun cvm/exwm-update-class ()
-  (exwm-workspace-rename-buffer exwm-class-name))
-
-;; Set the default number of workspaces
-(setq exwm-workspace-number 9)
-
-;; When window "class" updates, use it to set the buffer name
-(add-hook 'exwm-update-class-hook #'cvm/exwm-update-class)
-
-;; These keys should always pass through to Emacs
-(setq exwm-input-prefix-keys
-  '(?\C-x
-    ?\C-u
-    ?\C-d
-    ?\C-h
-    ?\M-`
-    ?\M-&
-    ?\M-:
-    ?\C-\M-j ;; Buffer list
-    ?\C-\ )) ;; Ctrl+SPC
-
-;; Ctrl+Q will enable the next key to be sent directly
-;; (define-key exwm-mode-map [?\C-q] 'exwm-input-send-next-key)
-
-;; Set up global key bindings. These always work, no matter the input state
-;; Keep in mind that changing this list after EXWM initalizes has no effect
-(setq exwm-input-global-keys
-    `(
-      ;; Reset to line-mode C-c C-k switches to char-mode via exwm-input-release-keyboard
-      ([?\s-r] . exwm-reset)
-
-      ;; Move between windows
-      ([?\s-h] . windmove-left)
-      ([?\s-l] . windmove-right)
-      ([?\s-k] . windmove-up)
-      ([?\s-j] . windmove-down)
-
-      ;; Launch applications with shell command
-      ([?\M-p] . (lambda (command)
-                    (interactive (list (read-shell-command "$ ")))
-                    (start-process-shell-command command nil command)))
-
-      ;; Switch workspace
-      ([?\s-w] . exwm-workspace-switch)
-
-      ;; 'C-N': Switch to workspace at N
-      ,@(mapcar (lambda (i)
-                  `(,(kbd (format "C-%d" i)) .
-                    (lambda ()
-                      (interactive)
-                      (exwm-workspace-switch-create ,i))))
-                (number-sequence 0 9))))
-
-(require 'exwm-randr)
-(exwm-randr-enable)
-
-(start-process-shell-command "xrandr" nil "xrandr --output default --mode 1080x1920 --primary --pos 1920x0")
-
-(setq exwm-randr-workspace-monitor-plist
-      '(1 "default"
-        2 "default"
-        3 "default"
-        4 "default"
-        5 "default"
-        6 "default"
-        7 "default"
-        8 "default"
-        9 "default"
-        0 "default")
-      exwm-workspace-warp-cursor t
-      mouse-autoselect-window t
-      focus-follows-mouse t)
-
-(exwm-enable)
-
-(use-package exwm-modeline
-  :after (exwm)
-  :config
-  (setq exwm-modeline-dividers '("[" "] " "|")
-        exwm-modeline-short t))
-
-(add-hook 'exwm-init-hook #'exwm-modeline-mode)
-
-;; (add-hook 'exwm-init-hook #'display-time-mode)
-
-;; (setq display-time-24hr-format t ;; 24hr time format
-      ;; display-time-day-and-date t ;; Show date and time
-(setq doom-modeline-buffer-file-name-style 'auto
-      doom-modeline-height 32)
-      ;; doom-modeline-lsp nil ;; Disable LSP indicator
-      ;; doom-modeline-time-icon nil) ;; Disable calendar icon next to time
