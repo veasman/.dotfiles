@@ -8,7 +8,7 @@
 ;; DejaVuSans
 ;; Cantarell
 
-(setq doom-font (font-spec :family "Fira Code NF" :size 16)
+(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
       doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16))
 
 (after! doom-themes
@@ -43,6 +43,12 @@
 ;; Enable beacon
 (beacon-mode 1)
 
+(after! treemacs
+  (setq treemacs-follow-mode t))
+
+(after! doom-themes
+  (setq doom-themes-treemacs-enable-variable-pitch t))
+
 (use-package blamer
   :bind (("s-i" . blamer-show-commit-info))
   :defer 20
@@ -60,16 +66,31 @@
   :config
   (global-blamer-mode 1))
 
-(when (modulep! :tools lsp)
-  (setq lsp-ui-doc-show-with-cursor nil)
+;; Insert name of current branch into start of commit message
+;; Ex: master:
+;; Or: JIT-899:
+(defun cvm/commit-insert-ticket-name ()
+  (insert (shell-command-to-string
+           "git rev-parse --symbolic-full-name --abbrev-ref HEAD | tr -d '\n' | sed 's/$/: /'")))
 
-  (setq-hook! 'lsp-mode-hook
-    company-minimum-prefix-length 1
-    company-idle-delay 0.1)
 
-  (after! (lsp-ui doom-themes)
+(add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
+
+;; Better defaults
+(after! (lsp-ui doom-themes)
+  (when (modulep! :tools lsp)
+    (setq lsp-ui-doc-show-with-cursor nil)
+    (add-hook 'lsp-mode-hook
+              (lambda ()
+                (setq-local company-minimum-prefix-length 2)
+                (setq-local company-idle-delay 0.0)))
     (setq lsp-ui-imenu-colors `(,(doom-color 'dark-blue)
                                 ,(doom-color 'cyan)))))
+
+(map! :map typescript-mode-map
+      :leader
+      :prefix "c"
+      :desc "Execute code action" "a" #'lsp-execute-code-action)
 
 ;; Fix for NVM not loading
 (setq exec-path (append exec-path '("~/.nvm/versions/node/v16.19.0/bin")))
@@ -83,7 +104,7 @@
     '("google-java-format" "-")
     :modes 'java-mode)
   (setq-hook! 'java-mode-hook
-    tab-width 2
+    tab-width 4
     fill-column 100))
 
 (when (modulep! :lang java +lsp)
@@ -103,23 +124,6 @@
           lsp-java-vmargs)))
 
   ;; (add-hook 'groovy-mode-local-vars-hook #'lsp!))
-
-;; Insert name of current branch into start of commit message
-;; Ex: master:
-;; Or: JIT-899:
-(defun cvm/commit-insert-ticket-name ()
-  (insert (shell-command-to-string
-           "git rev-parse --symbolic-full-name --abbrev-ref HEAD | tr -d '\n' | sed 's/$/: /'")))
-
-
-(add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
-
-;; WSLG clipboard fix
-(defun cvm/copy-selected-text(start end)
-  (interactive "r")
-  (if (use-region-p)
-      (let ((text (buffer-substring-no-properties start end)))
-        (shell-command (concat "echo '" text "' | clip.exe")))))
 
 ;; Replace list hyphen with dot
 (font-lock-add-keywords 'org-mode
@@ -180,13 +184,9 @@
 (after! org
   (cvm/org-colors-doom-one))
 
-(after! treemacs
-  (setq treemacs-follow-mode t))
-
-(after! doom-themes
-  (setq doom-themes-treemacs-enable-variable-pitch t))
-
-;; (defun cvm/treemacs-switch ()
-;;   treemacs-display-current-project-exclusively)
-
-;; (add-hook projectile-after-switch-project-hook #'cvm/treemacs-switch)
+;; Sync clipboard
+(defun cvm/copy-selected-text(start end)
+  (interactive "r")
+  (if (use-region-p)
+      (let ((text (buffer-substring-no-properties start end)))
+        (shell-command (concat "echo '" text "' | clip.exe")))))
