@@ -8,8 +8,9 @@
 ;; DejaVuSans
 ;; Cantarell
 
-(setq doom-font (font-spec :family "DejaVuSansMono" :size 16)
-      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16))
+(setq doom-font (font-spec :family "Fira Code NF" :size 16)
+      doom-variable-pitch-font (font-spec :family "DejaVuSans" :size 16)
+      doom-big-font (font-spec :family "Fira Code NF" :size 24))
 
 (after! doom-themes
   (setq doom-themes-enable-bold t
@@ -19,19 +20,35 @@
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 
+(defun cvm/org-colors-doom-one ()
+  "Enable Doom One colors for Org headers."
+  (interactive)
+  (dolist
+      (face
+       '((org-level-1 1.7 "#51afef" extra-bold)
+         (org-level-2 1.6 "#c678dd" bold)
+         (org-level-3 1.5 "#98be65" semi-bold)
+         (org-level-4 1.4 "#da8548" normal)
+         (org-level-5 1.3 "#5699af" normal)
+         (org-level-6 1.2 "#a9a1e1" normal)
+         (org-level-7 1.1 "#46d9ff" normal)
+         (org-level-8 1.0 "#ff6c6b" normal)))
+    (set-face-attribute (nth 0 face) nil :font doom-variable-pitch-font :weight (nth 3 face) :height (nth 1 face) :foreground (nth 2 face)))
+    (set-face-attribute 'org-table nil :font doom-font :weight 'normal :height 1.0 :foreground "#bfafdf"))
+
+(after! org
+  (cvm/org-colors-doom-one))
+
 (setq display-line-numbers-type 'relative)
 
 ;; Line numbers enable when needed
 (dolist (mode '(text-mode-hook
-               prog-mode-hook
-               conf-mode-hook))
+               prog-mode-hook))
  (add-hook mode (lambda () (display-line-numbers-mode 'relative))))
 
 ;; Line numbers disable when needed
 (dolist (mode '(org-mode-hook
-               term-mode-hook
-               shell-mode-hook
-               eshell-mode-hook))
+               shell-mode-hook))
  (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 ;; Turn off scroll accel
@@ -66,6 +83,18 @@
   :config
   (global-blamer-mode 1))
 
+;; (custom-set-variables
+;;  '(git-gutter:modified-sign " ")
+;;  '(git-gutter:added-sign " ")
+;;  '(git-gutter:deleted-sign "-"))
+
+;; (set-face-background 'git-gutter:modified "orange")
+;; (set-face-foreground 'git-gutter:modified "orange")
+;; (set-face-background 'git-gutter:added "green")
+;; (set-face-foreground 'git-gutter:added "green")
+;; (set-face-background 'git-gutter:deleted "red")
+;; (set-face-foreground 'git-gutter:deleted "red")
+
 ;; Insert name of current branch into start of commit message
 ;; Ex: master:
 ;; Or: JIT-899:
@@ -97,15 +126,15 @@
 
 ;; Enforce Google Java Code Style
 ;; See https://google.github.io/styleguide/javaguide.html
-(when (modulep! :lang java)
-  (when (modulep! :lang java +lsp)
-    (setq lsp-java-format-settings-url "http://google.github.io/styleguide/eclipse-java-google-style.xml"))
-  (set-formatter! 'google-java-format
-    '("google-java-format" "-")
-    :modes 'java-mode)
-  (setq-hook! 'java-mode-hook
-    tab-width 4
-    fill-column 100))
+;; (when (modulep! :lang java)
+;;   (when (modulep! :lang java +lsp)
+;;     (setq lsp-java-format-settings-url "http://google.github.io/styleguide/eclipse-java-google-style.xml"))
+;;   (set-formatter! 'google-java-format
+;;     '("google-java-format" "-")
+;;     :modes 'java-mode)
+;;   (setq-hook! 'java-mode-hook
+;;     tab-width 4
+;;     fill-column 100))
 
 (when (modulep! :lang java +lsp)
   (setq lsp-java-maven-download-sources t
@@ -124,6 +153,24 @@
           lsp-java-vmargs)))
 
   ;; (add-hook 'groovy-mode-local-vars-hook #'lsp!))
+
+(when (modulep! :lang javascript)
+  (add-hook 'html-mode-hook 'emmet-mode))
+
+(use-package! lsp-tailwindcss)
+
+(defvar cvm-nvm-dir (getenv "NVM_DIR"))
+(defvar cvm-node-version "<your-chosen-version>")
+
+(defun cvm-set-nvm-version ()
+  "Set the correct environment variables for the chosen Node.js version."
+  (interactive)
+  (let ((path (concat cvm-nvm-dir "/versions/node/v" cvm-node-version "/bin")))
+    (setenv "PATH" (concat path ":" (getenv "PATH")))
+    (setq exec-path (cons path exec-path))))
+
+(add-hook 'js-mode-hook 'cvm-set-nvm-version)
+(add-hook 'typescript-mode-hook 'cvm-set-nvm-version)
 
 ;; Replace list hyphen with dot
 (font-lock-add-keywords 'org-mode
@@ -164,25 +211,6 @@
   :hook (org-mode . org-auto-tangle-mode)
   :config
   (setq org-auto-tangle-default t))
-
-(defun cvm/org-colors-doom-one ()
-  "Enable Doom One colors for Org headers."
-  (interactive)
-  (dolist
-      (face
-       '((org-level-1 1.7 "#51afef" extra-bold)
-         (org-level-2 1.6 "#c678dd" bold)
-         (org-level-3 1.5 "#98be65" semi-bold)
-         (org-level-4 1.4 "#da8548" normal)
-         (org-level-5 1.3 "#5699af" normal)
-         (org-level-6 1.2 "#a9a1e1" normal)
-         (org-level-7 1.1 "#46d9ff" normal)
-         (org-level-8 1.0 "#ff6c6b" normal)))
-    (set-face-attribute (nth 0 face) nil :font doom-variable-pitch-font :weight (nth 3 face) :height (nth 1 face) :foreground (nth 2 face)))
-    (set-face-attribute 'org-table nil :font doom-font :weight 'normal :height 1.0 :foreground "#bfafdf"))
-
-(after! org
-  (cvm/org-colors-doom-one))
 
 ;; Sync clipboard
 (defun cvm/copy-selected-text(start end)

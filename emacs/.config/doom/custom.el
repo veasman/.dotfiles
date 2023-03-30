@@ -3,7 +3,11 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages '(blamer rainbow-delimiters exwm-modeline exwm)))
+ '(git-gutter:added-sign " ")
+ '(git-gutter:deleted-sign "-")
+ '(git-gutter:modified-sign " ")
+ '(package-selected-packages
+   '(auto-complete emmet-mode org-superstar rainbow-delimiters exwm-modeline blamer)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
