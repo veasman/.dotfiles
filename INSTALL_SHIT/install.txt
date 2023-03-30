@@ -21,7 +21,6 @@ dbus-x11
 sxhkd
 libvterm-bin
 cmake
-funst
 dunst
 libnotify-bin
 pcmanfm
