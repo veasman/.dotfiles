@@ -1,0 +1,91 @@
+#!/bin/bash
+
+get_running_instances() {
+  aws ec2 describe-instances \
+    --filters "Name=instance-state-name,Values=running" \
+    --query "Reservations[].Instances[].[Tags[?Key=='Name'].Value|[0], Platform, InstanceId, InstanceType, PublicIpAddress, PublicDnsName, ImageId]" \
+    --output text
+}
+
+get_keypair_files() {
+  find ~/.ssh/keypairs -type f
+}
+
+guess_username() {
+  local ami_id="$1"
+  local username=""
+
+  case "$ami_id" in
+    *amazon*|*amzn*)
+      username="ec2-user"
+      ;;
+    *ubuntu*)
+      username="ubuntu"
+      ;;
+    *centos*)
+      username="centos"
+      ;;
+    *)
+      username="ec2-user"
+      ;;
+  esac
+
+  echo "$username"
+}
+
+if ! command -v fzf >/dev/null 2>&1; then
+  echo "fzf is not installed. Please install it and try again."
+  exit 1
+fi
+
+selected_instance=$(get_running_instances | awk -F'\t' '{print $1, $2, $3, $4}' | fzf --header="Select an instance:")
+
+if [ -z "$selected_instance" ]; then
+  echo "No instance selected. Exiting."
+  exit 1
+fi
+
+instance_name=$(echo "$selected_instance" | awk '{print $1}')
+instance_id=$(echo "$selected_instance" | awk '{print $2}')
+instance_public_ip=$(echo "$selected_instance" | awk '{print $3}')
+instance_public_dns=$(echo "$selected_instance" | awk '{print $5}')
+instance_ami_id=$(echo "$selected_instance" | awk '{print $6}')
+
+instance_username=$(guess_username "$instance_ami_id")
+
+selected_keypair=$(get_keypair_files | fzf --header="Select a keypair file:")
+
+if [ -z "$selected_keypair" ]; then
+  echo "No keypair file selected. Exiting."
+  exit 1
+fi
+
+connection_methods=("SSH" "SSHFS")
+selected_connection=$(printf '%s\n' "${connection_methods[@]}" | fzf --header="Select a connection method:")
+
+if [ -z "$selected_connection" ]; then
+  echo "No connection method selected. Exiting."
+  exit 1
+fi
+
+case "$selected_connection" in
+  "SSH")
+    ssh -i "$selected_keypair" "$instance_username@$instance_public_dns"
+    ;;
+  "SSHFS")
+    if ! command -v sshfs >/dev/null 2>&1; then
+      echo "sshfs is not installed. Please install it and try again."
+      exit 1
+    fi
+    remote_mount_path="/home/$instance_username"
+    local_mount_path="/mnt/ec2"
+    mkdir -p "$local_mount_path"
+    sshfs -o IdentityFile="$selected_keypair" "$instance_username@$instance_public_dns:$remote_mount_path" "$local_mount_path"
+    echo "Mounted $instance_name ($instance_id) at $local_mount_path. To unmount, run 'fusermount -u $local_mount_path' (Linux) or 'umount $local_mount_path' (macOS)."
+    ;;
+  *)
+    echo "Invalid connection method. Exiting."
+    exit 1
+    ;;
+esac
+
