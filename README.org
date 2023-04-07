@@ -1,0 +1,22 @@
+#+title: README
+#+author: veasman
+#+options: toc:t
+#+exclude_tags: notoc
+
+* veasman's dotfiles
+
+* Table of Contents :TOC:
+- [[#veasmans-dotfiles][veasman's dotfiles]]
+- [[#how-to-use][How to use]]
+
+* How to use
++ Run the right stuff in INSTALL_SHIT
++ Install and run "stow"
+
+#+begin_src shell
+
+sudo apt install stow
+
+stow .
+
+#+end_src
