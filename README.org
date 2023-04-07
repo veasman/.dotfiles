@@ -1,12 +1,9 @@
-#+title: README
+#+title: veasman's dotfiles
 #+author: veasman
 #+options: toc:t
 #+exclude_tags: notoc
 
-* veasman's dotfiles
-
 * Table of Contents :TOC:
-- [[#veasmans-dotfiles][veasman's dotfiles]]
 - [[#how-to-use][How to use]]
 
 * How to use
