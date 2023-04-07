@@ -51,6 +51,10 @@
                shell-mode-hook))
  (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
+;; Transparency
+(set-frame-parameter (selected-frame) 'alpha '(85 . 50))
+(add-to-list 'default-frame-alist '(alpha . (85 . 50)))
+
 ;; Turn off scroll accel
 (setq mouse-wheel-progressive-speed nil)
 
@@ -159,18 +163,27 @@
 
 (use-package! lsp-tailwindcss)
 
-(defvar cvm-nvm-dir (getenv "NVM_DIR"))
-(defvar cvm-node-version "<your-chosen-version>")
+(let ((node-path (expand-file-name "/home/cvm/.nvm/versions/node/v16.19.0/bin/node")))
+  (setenv "PATH" (concat node-path ":" (getenv "PATH")))
+  (setq exec-path (append `(,node-path) exec-path)))
 
-(defun cvm-set-nvm-version ()
-  "Set the correct environment variables for the chosen Node.js version."
+;; Enable image functionality
+(setq org-startup-with-inline-images t
+      org-image-actual-width nil)
+
+;; Org screenshots
+(defun cvm/org-screenshot ()
+  "Take a screenshot into a time stamped unique-named file in the same directory as the org-buffer and insert a link to this file."
   (interactive)
-  (let ((path (concat cvm-nvm-dir "/versions/node/v" cvm-node-version "/bin")))
-    (setenv "PATH" (concat path ":" (getenv "PATH")))
-    (setq exec-path (cons path exec-path))))
-
-(add-hook 'js-mode-hook 'cvm-set-nvm-version)
-(add-hook 'typescript-mode-hook 'cvm-set-nvm-version)
+  (setq filename
+        (concat
+         (make-temp-name
+          (concat (buffer-file-name)
+                  "_"
+                  (format-time-string "%Y%m%d_%H%M%S_"))) ".png"))
+  (call-process "import" nil nil nil filename)
+  (insert (concat "[[" filename "]]"))
+  (org-display-inline-images))
 
 ;; Replace list hyphen with dot
 (font-lock-add-keywords 'org-mode
