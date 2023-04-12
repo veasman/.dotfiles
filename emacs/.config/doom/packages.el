@@ -51,12 +51,15 @@
 
 (package! beacon)
 (package! blamer)
-(package! dashboard)
 (package! emmet-mode)
 (package! exwm)
 (package! exwm-modeline)
-(package! lsp-tailwindcss :recipe (:host github :repo "merrickluo/lsp-tailwindcss"))
+;; (package! oauth2)
 (package! org-auto-tangle)
+;; (package! org-jira)
 (package! org-superstar)
 (package! snow)
 (package! visual-fill-column)
+
+;; (package! chatgpt
+;;   :recipe (:host github :repo "emacs-openai/chatgpt"))

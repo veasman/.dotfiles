@@ -7,7 +7,7 @@
  '(git-gutter:deleted-sign "-")
  '(git-gutter:modified-sign " ")
  '(package-selected-packages
-   '(auto-complete emmet-mode org-superstar rainbow-delimiters exwm-modeline blamer)))
+   '(org-jira oauth2 auto-complete emmet-mode org-superstar rainbow-delimiters exwm-modeline blamer)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
