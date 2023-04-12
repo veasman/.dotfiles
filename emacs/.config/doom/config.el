@@ -71,7 +71,6 @@
   (setq doom-themes-treemacs-enable-variable-pitch t))
 
 (use-package blamer
-  :bind (("s-i" . blamer-show-commit-info))
   :defer 20
   :custom
   (blamer-idle-time 0.5)
@@ -80,12 +79,16 @@
   (blamer-datetime-formatter ", %s ")
   (blamer-commit-formatter "● %s")
   (blamer-prettify-time-p t)
-  :custom-face
-  (blamer-face ((t :foreground "#505050"
-                   :background nil
-                   :italic t)))
-  :config
-  (global-blamer-mode 1))
+  ;; :custom-face
+  ;; (blamer-face ((t :foreground "#505050"
+  ;;                  :background nil
+  ;;                  :italic t)))
+  :init
+  (setq global-blamer-mode 1)
+  (add-hook 'org-mode-hook (lambda () (blamer-mode -1)))
+  (map! :leader
+        :prefix "g"
+        :desc "Show commit info" "i" #'blamer-show-commit-info))
 
 ;; (custom-set-variables
 ;;  '(git-gutter:modified-sign " ")
@@ -108,6 +111,35 @@
 
 
 (add-hook 'git-commit-setup-hook #'cvm/commit-insert-ticket-name)
+
+;; (require 'oauth2)
+
+;; (defvar org-jira-microsoft-client-id "<YOUR_CLIENT_ID>")
+;; (defvar org-jira-microsoft-client-secret "<YOUR_CLIENT_SECRET>")
+;; (defvar org-jira-microsoft-redirect-uri "<YOUR_REDIRECT_URI>")
+;; (defvar org-jira-microsoft-token-url "https://login.microsoftonline.com/common/oauth2/token")
+;; (defvar org-jira-microsoft-resource "https://your-site.atlassian.net")
+
+;; (defun org-jira-microsoft-request-token ()
+;;   (oauth2-auth-and-store
+;;    org-jira-microsoft-token-url
+;;    "https://login.microsoftonline.com/common/oauth2/authorize"
+;;    org-jira-microsoft-redirect-uri
+;;    org-jira-microsoft-client-id
+;;    org-jira-microsoft-client-secret
+;;    org-jira-microsoft-resource))
+
+;; (defun org-jira-microsoft-get (url)
+;;   (let* ((token (org-jira-microsoft-request-token))
+;;          (url-request-method "GET")
+;;          (url-request-extra-headers
+;;           `(("Authorization" . ,(concat "Bearer " (oauth2-token-access-token token)))
+;;             ("Content-Type" . "application/json"))))
+;;     (with-current-buffer (url-retrieve-synchronously url)
+;;       (goto-char (point-min))
+;;       (re-search-forward "^$")
+;;       (delete-region (point) (point-min))
+;;       (json-read))))
 
 ;; Better defaults
 (after! (lsp-ui doom-themes)
@@ -161,7 +193,7 @@
 (when (modulep! :lang javascript)
   (add-hook 'html-mode-hook 'emmet-mode))
 
-(use-package! lsp-tailwindcss)
+;; (use-package! lsp-tailwindcss)
 
 (let ((node-path (expand-file-name "/home/cvm/.nvm/versions/node/v16.19.0/bin/node")))
   (setenv "PATH" (concat node-path ":" (getenv "PATH")))
