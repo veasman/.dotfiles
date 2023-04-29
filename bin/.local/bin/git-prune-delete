@@ -1,0 +1,5 @@
+#!/bin/sh
+# The purpose of this script is to delete all local branches with deleted remotes
+
+git checkout dev
+git branch -D $($(git remote prune origin) | tail -n +3 | awk '{print $3}' | sed -e "s/origin\///" | tr '\n' ' ')

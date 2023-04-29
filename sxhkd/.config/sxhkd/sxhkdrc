@@ -1,14 +1,20 @@
-@Print
-    flameshot gui
+# Ubuntu may have a screenshot tool
+#@Print
+    #flameshot gui
 
+# Set a wallpaper at random from a given dir
 alt + w
-    ~/.local/bin/set-seasonal-wallpaper
+    setbg ~/.local/wallpapers/normal/
 
+# Open an emacs client, or open emacs if no daemon running
 alt + e
     emacsclient -c -a 'emacs'
 
-alt + t
-    emacsclient -c -a '' --eval '(eshell)'
+# Open an emacs shell instance
+# This will most likely never be uncommented
+#alt + t
+    #emacsclient -c -a '' --eval '(eshell)'
 
-alt + shift + t
-    emacs
+# Open a new instance of emacs
+#alt + shift + t
+    #emacs
