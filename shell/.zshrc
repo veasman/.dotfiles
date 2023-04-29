@@ -101,4 +101,4 @@ export NVM_DIR=~/.nvm
 nvm use lts/gallium &>/dev/null
 
 # yee
-export CHROME_BIN=$(which chromium)
+export CHROME_BIN=$(which chromium-browser)
