@@ -1,7 +1,3 @@
 [submodule "emacs/.config/doom/OrgFiles"]
 	path = emacs/.config/doom/OrgFiles
 	url = https://github.com/veasman/OrgFiles
-
-[submodule "nvim/.config/nvim"]
-	path = nvim/.config/nvim
-	url = https://github.com/AstroNvim/AstroNvim
