@@ -58,6 +58,9 @@
 ;; Turn off scroll accel
 (setq mouse-wheel-progressive-speed nil)
 
+;; Only display file name
+(setq doom-modeline-buffer-file-name-style 'file-name)
+
 ;; Scrolloff cursor distance
 (setq scroll-margin 8)
 
@@ -79,13 +82,12 @@
   (blamer-datetime-formatter ", %s ")
   (blamer-commit-formatter "● %s")
   (blamer-prettify-time-p t)
-  ;; :custom-face
-  ;; (blamer-face ((t :foreground "#505050"
-  ;;                  :background nil
-  ;;                  :italic t)))
+  :custom-face
+  (blamer-face ((t :foreground "#505050"
+                   :background nil
+                   :italic t)))
   :init
   (setq global-blamer-mode 1)
-  (add-hook 'org-mode-hook (lambda () (blamer-mode -1)))
   (map! :leader
         :prefix "g"
         :desc "Show commit info" "i" #'blamer-show-commit-info))
@@ -190,14 +192,33 @@
 
   ;; (add-hook 'groovy-mode-local-vars-hook #'lsp!))
 
+;; (after! lsp-rust
+;;   (setq lsp-rust-server 'rust-analyzer))
+
 (when (modulep! :lang javascript)
   (add-hook 'html-mode-hook 'emmet-mode))
 
 ;; (use-package! lsp-tailwindcss)
 
-(let ((node-path (expand-file-name "/home/cvm/.nvm/versions/node/v16.19.0/bin/node")))
-  (setenv "PATH" (concat node-path ":" (getenv "PATH")))
-  (setq exec-path (append `(,node-path) exec-path)))
+(defun cvm/get-nvmrc-version ()
+  (with-temp-buffer
+    (insert-file-contents ".nvmrc")
+    (goto-char (point-min))
+    (let ((version (string-trim (buffer-string))))
+      (if (string-match "^v" version)
+          version
+        (concat "v" version)))))
+
+(defun cvm/update-nvm-path ()
+  (let ((nvm-version (cvm/get-nvmrc-version)))
+    (when nvm-version
+      (let ((nvm-dir (expand-file-name "~/.nvm")))
+        (setenv "NVM_DIR" nvm-dir)
+        (let ((new-node-path (format "%s/versions/node/%s/bin" nvm-dir nvm-version)))
+          (setenv "PATH" (concat new-node-path ":" (getenv "PATH")))
+          (setq exec-path (cons new-node-path exec-path)))))))
+
+(add-hook 'magit-pre-call-git-hook 'cvm/update-nvm-path)
 
 ;; Enable image functionality
 (setq org-startup-with-inline-images t
