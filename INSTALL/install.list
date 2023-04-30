@@ -13,4 +13,5 @@ libvterm-bin
 cmake
 dunst
 libnotify-bin
+xcompmgr
 i3
