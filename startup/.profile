@@ -29,5 +29,5 @@ fi
 sxhkd&disown
 dunst&disown
 xcompmgr&disown
-setbg&disown
-xrandr --output DP-0 -mode 1920x1080 -r 120
+~/.local/bin/setbg
+xrandr --output DP-0 --mode 1920x1080 -r 120
