@@ -14,34 +14,34 @@ This install script has a helpful UI to ensure you are only installing the progr
 
 ## Config Entries
 
-###bin
+### bin
 
 This contains all my scripts.
 
-###emacs
+### emacs
 
 doom emacs config. sometimes i use this, sometimes i dont.
 
-###i3
+### i3
 
 i3 configuration
 
-###kitty
+### kitty
 
 kitty terminal emulator configuration
 
-###nvim
+### nvim
 
 the best editor
 
-###shell
+### shell
 
 contains important alias commands
 
-###startup
+### startup
 
 .profile to start crucial applications on i3 start
 
-###wallpapers
+### wallpapers
 
 cool wallpapers
