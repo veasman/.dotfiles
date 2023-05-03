@@ -1,6 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux"
+DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node"
 
 update_packages() {
     sudo apt update > /dev/null 2>&1 &
@@ -82,7 +82,7 @@ install_neovim() {
 
 install_doom_emacs() {
     whiptail --title "Doom Emacs Installer" --yesno "Would you like to install Doom Emacs?" 10 60
-    
+
     exit_status=$?
     if [ $exit_status -eq 0 ]; then
         # I think I'm missing emacs 29 install here...
@@ -143,4 +143,4 @@ install_zsh_plugins
 
 # Setup is done, let's link the config files
 rm ~/.profile
-stow bin i3 kitty nvim shell startup wallpapers
+stow bin i3 kitty nvim shell startup sxhkd wallpapers
