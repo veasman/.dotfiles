@@ -1,6 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node"
+DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node docker cargo"
 
 update_packages() {
     sudo apt update > /dev/null 2>&1 &
@@ -135,11 +135,35 @@ install_zsh_plugins() {
     sudo mv fast-syntax-highlighting /usr/share/zsh/plugins
 }
 
+install_docker() {
+    # Install deps
+    sudo apt install ca-certificates curl gnupg
+
+    # Add Docker’s official GPG key
+    sudo install -m 0755 -d /etc/apt/keyrings
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+    # Set up the repository
+    echo \
+        "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+        "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    sudo apt update
+
+    # Install docker
+    sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+}
+
 install_apt_packages
 install_fonts
 install_doom_emacs
 install_neovim
 install_zsh_plugins
+install_docker
 
 # Setup is done, let's link the config files
 rm ~/.profile
