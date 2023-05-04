@@ -1,0 +1,6 @@
+#!/bin/sh
+
+git checkout dev
+git remote prune origin > prune_log.txt
+git branch -D $(cat prune_log.txt | tail -n +3 | awk '{print $3}' | sed -e "s/origin\///" | tr '\n' ' ')
+rm prune_log.txt

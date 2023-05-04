@@ -109,6 +109,11 @@ _G.packer_plugins = {
     path = "/home/cvm/.local/share/nvim/site/pack/packer/start/friendly-snippets",
     url = "https://github.com/rafamadriz/friendly-snippets"
   },
+  ["git-worktree.nvim"] = {
+    loaded = true,
+    path = "/home/cvm/.local/share/nvim/site/pack/packer/start/git-worktree.nvim",
+    url = "https://github.com/theprimeagen/git-worktree.nvim"
+  },
   ["gruvbox.nvim"] = {
     loaded = true,
     path = "/home/cvm/.local/share/nvim/site/pack/packer/start/gruvbox.nvim",
@@ -133,11 +138,6 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/cvm/.local/share/nvim/site/pack/packer/start/mason.nvim",
     url = "https://github.com/williamboman/mason.nvim"
-  },
-  neogit = {
-    loaded = true,
-    path = "/home/cvm/.local/share/nvim/site/pack/packer/start/neogit",
-    url = "https://github.com/TimUntersberger/neogit"
   },
   ["nvim-cmp"] = {
     loaded = true,
@@ -195,6 +195,16 @@ _G.packer_plugins = {
     loaded = true,
     path = "/home/cvm/.local/share/nvim/site/pack/packer/start/undotree",
     url = "https://github.com/mbbill/undotree"
+  },
+  ["vim-fugitive"] = {
+    loaded = true,
+    path = "/home/cvm/.local/share/nvim/site/pack/packer/start/vim-fugitive",
+    url = "https://github.com/tpope/vim-fugitive"
+  },
+  ["zen-mode.nvim"] = {
+    loaded = true,
+    path = "/home/cvm/.local/share/nvim/site/pack/packer/start/zen-mode.nvim",
+    url = "https://github.com/folke/zen-mode.nvim"
   }
 }
 
