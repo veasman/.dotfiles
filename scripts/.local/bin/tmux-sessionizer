@@ -13,21 +13,22 @@ fi
 selected_name=$(basename "$selected" | tr . _)
 tmux_running=$(ps -a | grep "tmux")
 
-if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-    tmux new-session -d -s $selected_name -c $selected
-    tmux send-keys -t $selected_name 'nvim .' Enter
-    tmux new-window -t $selected_name -c $selected
-    tmux select-window -t $selected_name:1
-    tmux a -t $selected_name
-    exit 0
-fi
-
-if ! tmux has-session -t=$selected_name 2> /dev/null; then
-    tmux new-session -d -s $selected_name -c $selected
-    tmux send-keys -t $selected_name 'nvim .' Enter
-    tmux new-window -t $selected_name -c $selected
-    tmux select-window -t $selected_name:1
-    tmux a -t $selected_name
+if [[ -z $TMUX ]]; then
+    if ! tmux has-session -t=$selected_name 2> /dev/null; then
+        tmux new-session -d -s $selected_name -c $selected
+        tmux send-keys -t $selected_name 'nvim .' Enter
+        tmux new-window -t $selected_name -c $selected
+        tmux select-window -t $selected_name:1
+    fi
+    tmux attach-session -t $selected_name
 else
+    if ! tmux has-session -t=$selected_name 2> /dev/null; then
+        tmux new-session -d -s $selected_name -c $selected
+        tmux send-keys -t $selected_name 'nvim .' Enter
+        tmux new-window -t $selected_name -c $selected
+        tmux select-window -t $selected_name:1
+    fi
+    tmux switch-client -n
     tmux switch-client -t $selected_name
 fi
+

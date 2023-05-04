@@ -18,6 +18,13 @@ autocmd("BufWinEnter", {
             vim.cmd.Git('push')
         end, opts)
 
+        vim.keymap.set("n", "<leader>c", function()
+            local branch = vim.fn.trim(vim.fn.systemlist("git rev-parse --abbrev-ref HEAD"))[1]
+            local commit_message = vim.fn.input("Commit message: ", branch .. ": ")
+            vim.cmd("Git commit -m '" .. commit_message .. "' --edit")
+        end, opts)
+
+
         -- rebase always
         vim.keymap.set("n", "<leader>P", function()
             vim.cmd.Git({'pull',  '--rebase'})
