@@ -1,6 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node docker cargo"
+DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node docker"
 
 update_packages() {
     sudo apt update > /dev/null 2>&1 &
@@ -59,6 +59,10 @@ install_apt_packages() {
     wait $APT_INSTALL_PID
 
     change_shell
+}
+
+install_rustup() {
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 }
 
 install_neovim() {
@@ -156,11 +160,14 @@ install_docker() {
 
     # Install docker
     sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    sudo usermod -aG docker $USER
 }
 
 install_apt_packages
 install_fonts
 install_doom_emacs
+install_rustup
 install_neovim
 install_zsh_plugins
 install_docker
