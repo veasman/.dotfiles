@@ -1,18 +1,27 @@
 # Enable colors and change prompt:
-autoload -U colors && colors	# Load colors
-
-# This is stupid.
-function update-prompt () {
-    GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD &>/dev/null)
-    if [ ! -z $GIT_BRANCH ];
-    then
-        PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}] %{$fg[blue]%}git:(%{$fg[green]%}"$GIT_BRANCH"%{$fg[blue]%})%{$reset_color%}%b "
-    else
-        PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}]%{$reset_color%}%b "
-    fi
-}
-
+autoload -U colors && colors
 PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}]%{$reset_color%}$%b "
+#autoload -Uz vcs_info
+
+#zstyle ':vcs_info:*' enable git
+#zstyle ':vcs_info:*' formats "%F{green}%F{red}%b%m%F{reset}"
+
+# Set up the precmd function
+#precmd() {
+    #vcs_info
+    #psvar[1]="${vcs_info_msg_0_}"
+    #psvar[1]=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+#}
+
+# Use add-zsh-hook to make Zsh call precmd after each command
+#add-zsh-hook preexec precmd
+
+# Set up the prompt
+#setopt PROMPT_SUBST
+
+#ZSH_GIT_PROMPT="%{$fg_bold[blue]%}git::%{$fg_bold[red]%}%{$fg_bold[blue]%}(%{$fg_bold[red]%}${psvar[1]}%{$fg_bold[blue]%})%{$reset_color%}"
+#PROMPT=" %(?:%{$fg_bold[green]%}➜:%{$fg_bold[red]%}➜) %{$fg[cyan]%}%c "
+#PROMPT+="$ZSH_GIT_PROMPT "
 
 setopt autocd		# Automatically cd into typed directory.
 stty stop undef		# Disable ctrl-s to freeze terminal.
@@ -75,19 +84,16 @@ bindkey -M vicmd '^e' edit-command-line
 bindkey -M visual '^[[P' vi-delete
 
 # Load syntax highlighting; should be last.
-source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
+#source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh 2>/dev/null
 
 # Kubectl completion
 source <(kubectl completion zsh)
 
-# NVM
+# path stuff
+export CHROME_BIN=$(which chromium-browser)
+export PATH="$PATH:~/.local/bin:/usr/local/go/bin"
+export PATH=/home/cvm/.cache/rebar3/bin:$PATH
 export NVM_DIR=~/.nvm
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 nvm use lts/gallium &>/dev/null
-
-# yee
-export CHROME_BIN=$(which chromium-browser)
-
-# add me scripts
-export PATH="${PATH}:~/.local/bin"
