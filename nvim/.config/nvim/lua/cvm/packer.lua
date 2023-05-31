@@ -9,10 +9,10 @@ return require('packer').startup(function(use)
 
     use {
         'nvim-telescope/telescope.nvim', tag = '0.1.0',
-        -- or                            , branch = '0.1.x',
         requires = { {'nvim-lua/plenary.nvim'} }
     }
 
+    -- Colors!!!
     use({
       'rose-pine/neovim',
       as = 'rose-pine',
@@ -20,8 +20,15 @@ return require('packer').startup(function(use)
           vim.cmd('colorscheme rose-pine')
       end
     })
-
-    use {'ellisonleao/gruvbox.nvim'}
+    use('ellisonleao/gruvbox.nvim')
+    use('lunarvim/colorschemes')
+    use({
+        'marko-cerovac/material.nvim',
+        config = function ()
+            vim.g.material_style = 'deep ocean'
+        end
+    })
+    use('nyoom-engineering/oxocarbon.nvim')
 
     use({
         "folke/trouble.nvim",
@@ -42,12 +49,11 @@ return require('packer').startup(function(use)
             ts_update()
         end,
     }
-    use("nvim-treesitter/playground")
-    use("theprimeagen/harpoon")
-    -- use("theprimeagen/refactoring.nvim")
-    use("mbbill/undotree")
-    use("tpope/vim-fugitive")
-    use("nvim-treesitter/nvim-treesitter-context");
+    use('nvim-treesitter/nvim-treesitter-context');
+    use('nvim-treesitter/playground')
+    use('theprimeagen/harpoon')
+    use('mbbill/undotree')
+    use('tpope/vim-fugitive')
 
     use {
       'VonHeikemen/lsp-zero.nvim',
@@ -73,8 +79,5 @@ return require('packer').startup(function(use)
     }
 
     use("folke/zen-mode.nvim")
-    -- use("github/copilot.vim")
-    -- use("eandrju/cellular-automaton.nvim")
-    -- use("laytan/cloak.nvim")
-
+    use("eandrju/cellular-automaton.nvim")
 end)
