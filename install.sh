@@ -17,6 +17,9 @@ install_apt_packages() {
     sudo apt update
     sudo apt upgrade
 
+    # Nvidia
+    sudo ubuntu-drivers autoinstall
+
     sudo apt install $DEPS -y
     sudo snap install --classic $SNAP_DEPS
 }
@@ -73,12 +76,13 @@ install_fonts() {
     mkdir -p ~/.local/share/fonts/
 
     # There is no better font
-    wget https://github.com/ryanoasis/nerd-fonts/releases/download/v2.3.3/FiraCode.zip
+    wget https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip
     mkdir fira
-    mv FiraCode fira/
+    mv Fira_Code_v6.2.zip fira/
     cd fira/
-    unzip FiraCode
-    mv *.ttf ~/.local/share/fonts/
+    unzip Fira_Code_v6.2.zip
+    mv ttf/* ~/.local/share/fonts/
+    rm -rf Fira_Code_v6.2.zip
 
     cd ..
     rm -rf fira
@@ -121,13 +125,13 @@ install_docker() {
 }
 
 install_apt_packages
-#change_shell
-#install_fonts
+change_shell
+install_fonts
 #install_doom_emacs
-#install_rustup
-#install_neovim
-#install_zsh_plugins
-#install_docker
+install_rustup
+install_neovim
+install_zsh_plugins
+install_docker
 
 # Setup is done, let's link the config files
 #rm ~/.profile

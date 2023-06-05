@@ -73,11 +73,8 @@ lfcd () {
         [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
     fi
 }
-bindkey -s '^o' '^ulfcd\n'
 
-bindkey -s '^a' '^ubc -lq\n'
-
-bindkey -s '^f' '^ucd "$(dirname "$(fzf)")"\n'
+bindkey -s '^f' 'tmux-sessionizer\n'
 
 bindkey '^[[P' delete-char
 
@@ -92,10 +89,5 @@ bindkey -M visual '^[[P' vi-delete
 source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
 source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh 2>/dev/null
 
-# NVM
-export NVM_DIR=~/.nvm
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm use lts/gallium &>/dev/null
-
-# yee
-export CHROME_BIN=$(which chromium-browser)
+# Me scripts
+export PATH=${PATH}:~/.local/bin
