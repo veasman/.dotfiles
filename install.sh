@@ -1,35 +1,7 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 kitty tmux node docker"
-
-update_packages() {
-    sudo apt update > /dev/null 2>&1 &
-    APT_UPDATE_PID=$!
-
-    {
-        for i in {1..100}; do
-            sleep 0.1
-            echo $i
-        done
-    } | whiptail --gauge "Updating system..." 6 60 0
-
-    wait $APT_UPDATE_PID
-}
-
-upgrade_packages() {
-    sudo apt upgrade -y > /dev/null 2>&1 &
-    APT_UPGRADE_PID=$!
-
-    {
-        for i in {1..100}; do
-            sleep 0.1
-            echo $i
-        done
-    } | whiptail --gauge "Upgrading system..." 6 60 0
-
-    wait $APT_UPGRADE_PID
-}
-
+DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 tmux npm fzf"
+SNAP_DEPS="alacritty"
 
 change_shell() {
     PASSWORD=$(whiptail --passwordbox "Please enter your password to change the default shell to zsh:" 8 78 --title "Change Shell" 3>&1 1>&2 2>&3)
@@ -42,27 +14,11 @@ change_shell() {
 }
 
 install_apt_packages() {
-    update_packages
-    upgrade_packages
+    sudo apt update
+    sudo apt upgrade
 
-    sudo apt install $DEPS -y > /dev/null 2>&1 &
-
-    APT_INSTALL_PID=$!
-
-    {
-        for i in {1..100}; do
-            sleep 0.1
-            echo $i
-        done
-    } | whiptail --gauge "Installing packages..." 6 60 0
-
-    wait $APT_INSTALL_PID
-
-    change_shell
-}
-
-install_rustup() {
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    sudo apt install $DEPS -y
+    sudo snap install --classic $SNAP_DEPS
 }
 
 install_neovim() {
@@ -165,13 +121,14 @@ install_docker() {
 }
 
 install_apt_packages
-install_fonts
-install_doom_emacs
-install_rustup
-install_neovim
-install_zsh_plugins
-install_docker
+#change_shell
+#install_fonts
+#install_doom_emacs
+#install_rustup
+#install_neovim
+#install_zsh_plugins
+#install_docker
 
 # Setup is done, let's link the config files
-rm ~/.profile
-stow bin i3 kitty nvim shell startup sxhkd wallpapers
+#rm ~/.profile
+#stow bin i3 kitty nvim shell startup sxhkd wallpapers
