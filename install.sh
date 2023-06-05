@@ -1,7 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 tmux npm fzf"
-SNAP_DEPS="alacritty"
+DEPS="stow gcc curl xwallpaper zsh ripgrep sxhkd dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl"
 
 change_shell() {
     PASSWORD=$(whiptail --passwordbox "Please enter your password to change the default shell to zsh:" 8 78 --title "Change Shell" 3>&1 1>&2 2>&3)
@@ -21,7 +20,6 @@ install_apt_packages() {
     sudo ubuntu-drivers autoinstall
 
     sudo apt install $DEPS -y
-    sudo snap install --classic $SNAP_DEPS
 }
 
 install_neovim() {
@@ -136,3 +134,6 @@ install_docker
 # Setup is done, let's link the config files
 #rm ~/.profile
 #stow bin i3 kitty nvim shell startup sxhkd wallpapers
+
+echo "Please add the following line to your sudoers file:"
+echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/light"
