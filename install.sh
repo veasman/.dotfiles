@@ -1,6 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl"
+DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl xclip tree"
 
 change_shell() {
     PASSWORD=$(whiptail --passwordbox "Please enter your password to change the default shell to zsh:" 8 78 --title "Change Shell" 3>&1 1>&2 2>&3)
