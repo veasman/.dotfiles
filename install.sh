@@ -1,8 +1,9 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl xclip tree cargo"
+DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl xclip tree cargo flameshot kitty"
 
 change_shell() {
+    mkdir -p ~/.cache/zsh/history/
     PASSWORD=$(whiptail --passwordbox "Please enter your password to change the default shell to zsh:" 8 78 --title "Change Shell" 3>&1 1>&2 2>&3)
     exitstatus=$?
     if [ $exitstatus = 0 ]; then
@@ -133,7 +134,8 @@ install_docker
 
 # Setup is done, let's link the config files
 #rm ~/.profile
-#stow bin i3 kitty nvim shell startup sxhkd wallpapers
+#stow bin i3 kitty nvim shell startup wallpapers
 
+echo "[FUNNY BUG]"
 echo "Please add the following line to your sudoers file:"
 echo "$USER ALL=(ALL) NOPASSWD: /usr/bin/light"
