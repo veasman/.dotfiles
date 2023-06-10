@@ -14,6 +14,7 @@ general {
 order += "battery 0"
 order += "load"
 order += "memory"
+order += "path_exists active_memory"
 order += "disk /"
 #order += "volume_master"
 order += "tztime local"

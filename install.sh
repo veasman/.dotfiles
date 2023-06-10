@@ -1,6 +1,6 @@
 #/bin/bash
 
-DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux npm fzf light blueman playerctl xclip tree cargo flameshot kitty"
+DEPS="stow gcc curl xwallpaper zsh ripgrep dunst libnotify-bin xcompmgr i3 tmux fzf light blueman playerctl xclip tree cargo flameshot kitty"
 
 change_shell() {
     mkdir -p ~/.cache/zsh/history/
@@ -123,18 +123,25 @@ install_docker() {
     sudo usermod -aG docker $USER
 }
 
+install_nvm() {
+    curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
+    nvm install stable
+    nvm use stable
+}
+
+finalize_install() {
+    $HOME/.dotfiles/scripts/.local/bin/setbg $HOME/.dotfiles/wallpapers/Pictures/normal/bigmntn.png
+}
+
 install_apt_packages
 change_shell
 install_fonts
 #install_doom_emacs
-install_rustup
 install_neovim
 install_zsh_plugins
 install_docker
-
-# Setup is done, let's link the config files
-#rm ~/.profile
-#stow bin i3 kitty nvim shell startup wallpapers
+install_curl
+finalize_install
 
 echo "[FUNNY BUG]"
 echo "Please add the following line to your sudoers file:"
