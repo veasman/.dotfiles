@@ -11,23 +11,22 @@ LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
 LOG_FILE="$LOG_DIR/install.log"
 mkdir -p "$LOG_DIR"
 
-# Keep whiptail stdout usable.
 exec 3>&1
 
-# ----------------------------
-# Helpers
-# ----------------------------
 log() { printf "%s\n" "$*" >> "$LOG_FILE"; }
 
 die_ui() {
   local msg="$1"
+
   # Close gauge if open
   if [[ -n "${GAUGE_FD_OPEN:-}" ]]; then
     exec 4>&- || true
     GAUGE_FD_OPEN=""
   fi
-  whiptail --title "Error" --msgbox "$msg\n\nLog:\n$LOG_FILE" 14 84
-  if whiptail --title "View Log?" --yesno "Open the log now?" 10 60; then
+
+  whiptail --title "Error" --msgbox "$msg\n\nLog:\n$LOG_FILE" 16 90
+
+  if whiptail --title "View Log" --yesno "Open the install log now?" 10 60; then
     whiptail --title "Install Log" --textbox "$LOG_FILE" 28 110
   fi
   exit 1
@@ -46,9 +45,13 @@ require_ubuntu() {
 
 ensure_sudo() {
   command -v sudo >/dev/null 2>&1 || die_ui "sudo not found."
-  # You cannot avoid the sudo prompt without stealing the password. So we do it upfront.
-  whiptail --title "Privileges" --msgbox "Next, sudo may ask for your password in the terminal.\n\nThis is expected.\n\nPress OK, then enter your password if prompted." 12 80
+
+  whiptail --title "Privileges" --msgbox \
+"sudo privileges are required.\n\nYou may be prompted for your password in the terminal.\n\nPress OK to continue." \
+12 80
+
   sudo -v >>"$LOG_FILE" 2>&1
+
   ( while true; do sudo -n true; sleep 60; done ) 2>/dev/null &
   SUDO_KEEPALIVE_PID=$!
   trap 'kill "${SUDO_KEEPALIVE_PID:-0}" 2>/dev/null || true' EXIT
@@ -60,11 +63,7 @@ ensure_whiptail() {
   sudo apt-get install -y whiptail ca-certificates curl >>"$LOG_FILE" 2>&1
 }
 
-# ----------------------------
-# Persistent Gauge
-# ----------------------------
 start_gauge() {
-  # FD 4 feeds the gauge. Keep it open for the whole install.
   exec 4> >(whiptail --title "Ubuntu dwm Installer" \
     --backtitle "Installing… (log: ~/.local/state/dotfiles-installer/install.log)" \
     --gauge "Preparing…" 12 90 0)
@@ -93,34 +92,13 @@ run_cmd() {
   "$@" >>"$LOG_FILE" 2>&1
 }
 
-run_pipe_to_file() {
-  # usage: run_pipe_to_file "https://…" "/path/to/file"
-  local url="$1" out="$2"
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    log "[DRY RUN] curl -fsSL '$url' > '$out'"
-    return 0
-  fi
-  curl -fsSL "$url" | sudo tee "$out" >/dev/null 2>>"$LOG_FILE"
-}
-
-run_sh() {
-  # Convenience for complex commands
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    log "[DRY RUN] bash -c $1"
-    return 0
-  fi
-  bash -c "$1" >>"$LOG_FILE" 2>&1
-}
-
-# ----------------------------
+# --------------------------------
 # Actions
-# ----------------------------
+# --------------------------------
 install_base_packages() {
   run_cmd sudo apt-get update -y
   run_cmd sudo apt-get upgrade -y
 
-  # Core tooling + your environment + suckless build deps + startx support
-  # NOTE: Keeping picom (not xcompmgr).
   run_cmd sudo apt-get install -y \
     stow git curl ca-certificates wget unzip fontconfig \
     build-essential pkg-config gcc make \
@@ -136,6 +114,7 @@ install_base_packages() {
 
 stow_dotfiles() {
   [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
+
   run_cmd mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/code"
 
   local modules=(shell nvim tmux kitty scripts wallpapers suckless xinit-desktop)
@@ -144,24 +123,22 @@ stow_dotfiles() {
   local tmp
   tmp="$(mktemp)"
   if ! (cd "$DOTFILES_DIR" && stow -n -v -t "$HOME" "${modules[@]}") >"$tmp" 2>&1; then
-    # Conflicts or other stow issue
     whiptail --title "Stow Conflicts Detected" --msgbox \
-"Stow reports conflicts (existing files in \$HOME).\n\nYou must choose what to do next." 12 80
+"Stow reports conflicts (existing files in \$HOME).\n\nYou must choose how to proceed." 12 80
 
-    if whiptail --title "Conflict Details" --yesno "View conflict output now?" 10 60; then
+    if whiptail --title "Conflict Details" --yesno "View stow output now?" 10 60; then
       whiptail --title "Stow Output" --textbox "$tmp" 28 110
     fi
 
     if whiptail --title "Resolve Conflicts" --yesno \
-"Option A (SAFE): Abort and resolve conflicts manually.\n\nOption B (RISKY): Use --adopt to take existing files into the repo (can overwrite/move files).\n\nUse --adopt?" 16 80; then
-      # adopt
+"SAFE: Abort and fix conflicts manually.\n\nRISKY: Use --adopt to pull existing files into the stow tree (moves files).\n\nUse --adopt?" 16 90; then
+      rm -f "$tmp"
       (cd "$DOTFILES_DIR" && run_cmd stow --adopt -v -t "$HOME" "${modules[@]}")
     else
       rm -f "$tmp"
       die_ui "Aborted due to stow conflicts. Resolve conflicts and re-run."
     fi
   else
-    # No conflicts, do the real stow
     rm -f "$tmp"
     (cd "$DOTFILES_DIR" && run_cmd stow -v -t "$HOME" "${modules[@]}")
   fi
@@ -170,8 +147,8 @@ stow_dotfiles() {
 build_install_suckless() {
   for t in dwm dmenu slstatus; do
     [[ -d "$HOME/code/$t" ]] || die_ui "Missing $HOME/code/$t. Stow 'suckless' first."
-    run_sh "cd '$HOME/code/$t' && make clean && make"
-    run_sh "cd '$HOME/code/$t' && sudo make install"
+    run_cmd bash -lc "cd '$HOME/code/$t' && make clean && make"
+    run_cmd bash -lc "cd '$HOME/code/$t' && sudo make install"
   done
 }
 
@@ -206,9 +183,25 @@ install_firacode() {
   run_cmd mkdir -p "$HOME/.local/share/fonts"
   local tmp
   tmp="$(mktemp -d)"
-  run_sh "cd '$tmp' && curl -L -o Fira_Code.zip https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip && unzip -q Fira_Code.zip && cp -f ttf/*.ttf '$HOME/.local/share/fonts/'"
+  run_cmd bash -lc "cd '$tmp' && curl -L -o Fira_Code.zip https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip && unzip -q Fira_Code.zip && cp -f ttf/*.ttf '$HOME/.local/share/fonts/'"
   run_cmd rm -rf "$tmp"
   run_cmd fc-cache -f
+}
+
+install_floorp() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "[DRY RUN] install floorp repo + key + apt install floorp"
+    return 0
+  fi
+
+  run_cmd sudo install -d -m 0755 /usr/share/keyrings
+  run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
+
+  run_cmd bash -lc "curl -fsSL https://ppa.floorp.app/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/Floorp.gpg"
+  run_cmd sudo curl -sS --compressed -o /etc/apt/sources.list.d/Floorp.list "https://ppa.floorp.app/Floorp.list"
+
+  run_cmd sudo apt-get update -y
+  run_cmd sudo apt-get install -y floorp
 }
 
 set_default_shell_zsh() {
@@ -218,28 +211,6 @@ set_default_shell_zsh() {
   run_cmd chsh -s /bin/zsh "$USER" || true
 }
 
-install_floorp() {
-  # Ensure gpg exists (you already install gnupg in base packages)
-  if [[ "$DRY_RUN" -eq 1 ]]; then
-    log "[DRY RUN] install floorp repo + key + apt install floorp"
-    return 0
-  fi
-
-  run_cmd sudo install -d -m 0755 /usr/share/keyrings
-  run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
-
-  # Key
-  run_cmd bash -lc "curl -fsSL https://ppa.floorp.app/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/Floorp.gpg"
-  # Repo list
-  run_cmd sudo curl -sS --compressed -o /etc/apt/sources.list.d/Floorp.list "https://ppa.floorp.app/Floorp.list"
-
-  run_cmd sudo apt-get update -y
-  run_cmd sudo apt-get install -y floorp
-}
-
-# ----------------------------
-# UI selection
-# ----------------------------
 main_menu() {
   whiptail --title "Ubuntu dwm Installer" --checklist "Select what to install:" 20 90 10 \
     "packages" "Install required packages (X + startx + build deps)" ON \
@@ -252,9 +223,6 @@ main_menu() {
     3>&1 1>&2 2>&3
 }
 
-# ----------------------------
-# Main
-# ----------------------------
 main() {
   : >"$LOG_FILE"
   log "=== dotfiles installer start (dry_run=$DRY_RUN) ==="
@@ -268,7 +236,6 @@ main() {
 
   start_gauge
 
-  # Track what ran for final summary
   local ran=()
   local pct=0
 
@@ -346,4 +313,4 @@ $LOG_FILE" 18 90
   log "=== dotfiles installer end ==="
 }
 
-main "$@u
+main "$@"
