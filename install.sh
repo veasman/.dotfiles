@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+DRY_RUN=0
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
 LOG_FILE="$LOG_DIR/install.log"
-
 mkdir -p "$LOG_DIR"
 
-err() { printf "ERROR: %s\n" "$*" >&2; }
-die() { err "$*"; exit 1; }
-trap 'die "Failed at line $LINENO: $BASH_COMMAND (see $LOG_FILE)"' ERR
+exec 3>&1
 
-log() { printf "%s\n" "$*" | tee -a "$LOG_FILE" >/dev/null; }
+log() { printf "%s\n" "$*" >> "$LOG_FILE"; }
+
+die() {
+  whiptail --title "Error" --msgbox "$1\n\nLog:\n$LOG_FILE" 14 80
+  exit 1
+}
 
 require_ubuntu() {
   [[ -r /etc/os-release ]] || die "/etc/os-release not found."
-  # shellcheck disable=SC1091
   . /etc/os-release
   if [[ "${ID:-}" != "ubuntu" && "${ID_LIKE:-}" != *"ubuntu"* && "${ID:-}" != "debian" ]]; then
-    die "This installer supports Ubuntu/Debian-based systems only."
+    die "Unsupported distro. Ubuntu/Debian only."
   fi
 }
 
@@ -30,36 +34,26 @@ ensure_sudo() {
   trap 'kill "${SUDO_KEEPALIVE_PID:-0}" 2>/dev/null || true' EXIT
 }
 
-ensure_whiptail() {
-  if command -v whiptail >/dev/null 2>&1; then return; fi
-  sudo apt-get update -y | tee -a "$LOG_FILE"
-  sudo apt-get install -y whiptail ca-certificates curl | tee -a "$LOG_FILE"
+run_step() {
+  local percent="$1"
+  local message="$2"
+  shift 2
+
+  {
+    echo "$percent"
+    echo "# $message"
+  } | whiptail --gauge "Ubuntu dwm Installer" 8 78 "$percent" &
+
+  if [[ "$DRY_RUN" -eq 0 ]]; then
+    "$@" >> "$LOG_FILE" 2>&1
+  else
+    echo "[DRY RUN] $*" >> "$LOG_FILE"
+  fi
 }
 
-msgbox() {
-  whiptail --title "$1" --msgbox "$2" 14 80
-}
-
-checklist() {
-  whiptail --title "$1" --checklist "$2" "$3" "$4" "$5" "${@:6}" 3>&1 1>&2 2>&3
-}
-
-radiolist() {
-  whiptail --title "$1" --radiolist "$2" "$3" "$4" "$5" "${@:6}" 3>&1 1>&2 2>&3
-}
-
-ensure_dirs() {
-  mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/code"
-}
-
-stow_modules() {
-  [[ -d "$DOTFILES_DIR" ]] || die "Dotfiles dir not found: $DOTFILES_DIR"
-  (cd "$DOTFILES_DIR" && stow -t "$HOME" "$@") 2>&1 | tee -a "$LOG_FILE"
-}
-
-install_base_packages() {
-  sudo apt-get update -y | tee -a "$LOG_FILE"
-  sudo apt-get upgrade -y | tee -a "$LOG_FILE"
+install_packages() {
+  sudo apt-get update -y >> "$LOG_FILE" 2>&1
+  sudo apt-get upgrade -y >> "$LOG_FILE" 2>&1
 
   sudo apt-get install -y \
     stow git curl ca-certificates \
@@ -74,52 +68,27 @@ install_base_packages() {
     libx11-dev libxinerama-dev libxft-dev \
     x11-xserver-utils \
     dbus-x11 \
-    | tee -a "$LOG_FILE"
+    xinit xserver-xorg-core \
+    >> "$LOG_FILE" 2>&1
 }
 
-install_startx_stack() {
-  sudo apt-get install -y \
-    xinit \
-    xserver-xorg-core \
-    | tee -a "$LOG_FILE"
+stow_all() {
+  mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/code"
+  (cd "$DOTFILES_DIR" && stow -t "$HOME" shell nvim tmux kitty scripts wallpapers suckless xinit-desktop) >> "$LOG_FILE" 2>&1
 }
 
-install_fonts() {
-  mkdir -p "$HOME/.local/share/fonts"
-  tmp="$(mktemp -d)"
-  (
-    cd "$tmp"
-    curl -L -o Fira_Code.zip https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip
-    unzip -q Fira_Code.zip
-    cp -f ttf/*.ttf "$HOME/.local/share/fonts/"
-  ) 2>&1 | tee -a "$LOG_FILE"
-  rm -rf "$tmp"
-  fc-cache -f >/dev/null 2>&1 || true
-}
-
-build_install_suckless() {
-  local base="$HOME/code"
-  local targets=(dwm dmenu slstatus)
-
-  for t in "${targets[@]}"; do
-    [[ -d "$base/$t" ]] || die "Missing $base/$t. Did you stow 'suckless'?"
-  done
-
-  for t in "${targets[@]}"; do
-    log "Building $t..."
-    (cd "$base/$t" && make clean && make) 2>&1 | tee -a "$LOG_FILE"
-    log "Installing $t..."
-    (cd "$base/$t" && sudo make install) 2>&1 | tee -a "$LOG_FILE"
+build_suckless() {
+  for t in dwm dmenu slstatus; do
+    (cd "$HOME/code/$t" && make clean && make) >> "$LOG_FILE" 2>&1
+    (cd "$HOME/code/$t" && sudo make install) >> "$LOG_FILE" 2>&1
   done
 }
 
-install_dwm_session() {
+install_session() {
   local xsessions="/usr/share/xsessions"
-  [[ -d "$xsessions" ]] || { log "No $xsessions found. Skipping session registration."; return; }
-
   local dwm_bin="/usr/local/bin/dwm"
-  [[ -x "$dwm_bin" ]] || dwm_bin="$(command -v dwm || true)"
-  [[ -n "${dwm_bin:-}" ]] || die "dwm not found."
+
+  [[ -x "$dwm_bin" ]] || dwm_bin="$(command -v dwm)"
 
   sudo tee "$xsessions/dwm.desktop" >/dev/null <<EOF
 [Desktop Entry]
@@ -130,69 +99,54 @@ Type=Application
 EOF
 }
 
-set_zsh_default() {
-  [[ "${SHELL:-}" == "/bin/zsh" ]] && return
-  chsh -s /bin/zsh "$USER" || true
+install_fonts() {
+  mkdir -p "$HOME/.local/share/fonts"
+  tmp="$(mktemp -d)"
+  (
+    cd "$tmp"
+    curl -L -o Fira_Code.zip https://github.com/tonsky/FiraCode/releases/download/6.2/Fira_Code_v6.2.zip
+    unzip -q Fira_Code.zip
+    cp -f ttf/*.ttf "$HOME/.local/share/fonts/"
+  ) >> "$LOG_FILE" 2>&1
+  rm -rf "$tmp"
+  fc-cache -f >> "$LOG_FILE" 2>&1
 }
 
-pick_xinit() {
-  radiolist \
-    "Xinit (.xinitrc)" \
-    "Only choose if you use startx. If you log in via GDM, choose Skip." \
-    14 80 3 \
-    "skip" "Do not install startx stack or .xinitrc" ON \
-    "xinit-desktop" "Install startx stack + stow Ubuntu .xinitrc" OFF \
-    "xinit-gentoo" "Stow Gentoo placeholder (unused)" OFF
+set_shell() {
+  [[ "${SHELL:-}" == "/bin/zsh" ]] && return
+  chsh -s /bin/zsh "$USER" >> "$LOG_FILE" 2>&1 || true
 }
 
 main_menu() {
-  checklist \
-    "Ubuntu dwm Installer" \
-    "Select what to run:" \
-    18 90 8 \
+  whiptail --title "Ubuntu dwm Installer" \
+    --checklist "Select installation steps:" 18 80 8 \
     "packages" "Install all required packages" ON \
-    "stow" "Stow dotfiles into HOME" ON \
-    "suckless" "Build+install dwm+dmenu+slstatus" ON \
-    "session" "Register dwm in login manager (GDM)" ON \
+    "stow" "Stow dotfiles" ON \
+    "suckless" "Build and install dwm/dmenu/slstatus" ON \
+    "session" "Register dwm in login manager" ON \
     "fonts" "Install Fira Code" ON \
-    "shell" "Set default shell to zsh" OFF
+    "shell" "Set default shell to zsh" ON \
+    3>&1 1>&2 2>&3
 }
 
 main() {
   require_ubuntu
   ensure_sudo
-  ensure_whiptail
-  ensure_dirs
 
-  msgbox "Ubuntu dwm Installer" "Ubuntu-only.\n\nLog file:\n$LOG_FILE"
+  whiptail --title "Ubuntu dwm Installer" \
+    --msgbox "Ubuntu-only dwm setup.\n\nDry Run Mode: $([[ "$DRY_RUN" -eq 1 ]] && echo ENABLED || echo DISABLED)\n\nLog file:\n$LOG_FILE" 14 80
 
   selected="$(main_menu)" || exit 1
 
-  xinit_choice=""
-  if grep -q "\"stow\"" <<<"$selected"; then
-    xinit_choice="$(pick_xinit)"
-  fi
+  [[ "$selected" == *"packages"* ]] && run_step 10 "Installing packages..." install_packages
+  [[ "$selected" == *"stow"* ]] && run_step 30 "Stowing dotfiles..." stow_all
+  [[ "$selected" == *"suckless"* ]] && run_step 60 "Building suckless tools..." build_suckless
+  [[ "$selected" == *"session"* ]] && run_step 80 "Registering dwm session..." install_session
+  [[ "$selected" == *"fonts"* ]] && run_step 90 "Installing fonts..." install_fonts
+  [[ "$selected" == *"shell"* ]] && run_step 95 "Setting default shell..." set_shell
 
-  if grep -q "\"packages\"" <<<"$selected"; then install_base_packages; fi
-
-  if [[ "$xinit_choice" == "xinit-desktop" ]]; then
-    install_startx_stack
-  fi
-
-  if grep -q "\"stow\"" <<<"$selected"; then
-    modules=(shell nvim tmux kitty scripts wallpapers suckless)
-    [[ "$xinit_choice" == "xinit-desktop" ]] && modules+=(xinit-desktop)
-    [[ "$xinit_choice" == "xinit-gentoo" ]] && modules+=(xinit-gentoo)
-    stow_modules "${modules[@]}"
-  fi
-
-  if grep -q "\"fonts\"" <<<"$selected"; then install_fonts; fi
-  if grep -q "\"suckless\"" <<<"$selected"; then build_install_suckless; fi
-  if grep -q "\"session\"" <<<"$selected"; then install_dwm_session; fi
-  if grep -q "\"shell\"" <<<"$selected"; then set_zsh_default; fi
-
-  msgbox "Done" \
-    "Installation complete.\n\nTo use dwm:\n1) Log out\n2) Select 'dwm' session\n3) Log in\n\nLog:\n$LOG_FILE"
+  whiptail --title "Done" \
+    --msgbox "Installation complete.\n\nLog out and select 'dwm' session.\n\nLog:\n$LOG_FILE" 14 80
 }
 
 main
