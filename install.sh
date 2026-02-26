@@ -33,7 +33,7 @@ die_ui() {
   exit 1
 }
 
-trap 'die_ui "Failed at line $LINENO: $BASH_COMMAND"' ERR
+trap 'die_ui "Failed at line $LINENO:\n$BASH_COMMAND\n\nLast log lines:\n$(tail -n 80 "$LOG_FILE" 2>/dev/null || true)"' ERR
 
 require_ubuntu() {
   [[ -r /etc/os-release ]] || die_ui "/etc/os-release not found."
@@ -86,12 +86,21 @@ finish_gauge() {
 }
 
 run_cmd() {
-  # Logs everything; no terminal output.
   if [[ "$DRY_RUN" -eq 1 ]]; then
     log "[DRY RUN] $*"
     return 0
   fi
   "$@" >>"$LOG_FILE" 2>&1
+}
+
+run_pipe_to_file() {
+  # usage: run_pipe_to_file "https://…" "/path/to/file"
+  local url="$1" out="$2"
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "[DRY RUN] curl -fsSL '$url' > '$out'"
+    return 0
+  fi
+  curl -fsSL "$url" | sudo tee "$out" >/dev/null 2>>"$LOG_FILE"
 }
 
 run_sh() {
@@ -128,8 +137,34 @@ install_base_packages() {
 stow_dotfiles() {
   [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
   run_cmd mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/code"
-  # Always stow xinit-desktop in this Ubuntu-only setup (you set it default ON).
-  run_sh "cd '$DOTFILES_DIR' && stow -t '$HOME' shell nvim tmux kitty scripts wallpapers suckless xinit-desktop"
+
+  local modules=(shell nvim tmux kitty scripts wallpapers suckless xinit-desktop)
+
+  # Preflight dry-run to detect conflicts
+  local tmp
+  tmp="$(mktemp)"
+  if ! (cd "$DOTFILES_DIR" && stow -n -v -t "$HOME" "${modules[@]}") >"$tmp" 2>&1; then
+    # Conflicts or other stow issue
+    whiptail --title "Stow Conflicts Detected" --msgbox \
+"Stow reports conflicts (existing files in \$HOME).\n\nYou must choose what to do next." 12 80
+
+    if whiptail --title "Conflict Details" --yesno "View conflict output now?" 10 60; then
+      whiptail --title "Stow Output" --textbox "$tmp" 28 110
+    fi
+
+    if whiptail --title "Resolve Conflicts" --yesno \
+"Option A (SAFE): Abort and resolve conflicts manually.\n\nOption B (RISKY): Use --adopt to take existing files into the repo (can overwrite/move files).\n\nUse --adopt?" 16 80; then
+      # adopt
+      (cd "$DOTFILES_DIR" && run_cmd stow --adopt -v -t "$HOME" "${modules[@]}")
+    else
+      rm -f "$tmp"
+      die_ui "Aborted due to stow conflicts. Resolve conflicts and re-run."
+    fi
+  else
+    # No conflicts, do the real stow
+    rm -f "$tmp"
+    (cd "$DOTFILES_DIR" && run_cmd stow -v -t "$HOME" "${modules[@]}")
+  fi
 }
 
 build_install_suckless() {
@@ -184,12 +219,20 @@ set_default_shell_zsh() {
 }
 
 install_floorp() {
-  # Official apt repository published on Floorp download page. :contentReference[oaicite:1]{index=1}
+  # Ensure gpg exists (you already install gnupg in base packages)
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    log "[DRY RUN] install floorp repo + key + apt install floorp"
+    return 0
+  fi
+
+  run_cmd sudo install -d -m 0755 /usr/share/keyrings
+  run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
+
   # Key
-  run_sh "curl -fsSL https://ppa.floorp.app/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/Floorp.gpg"
+  run_cmd bash -lc "curl -fsSL https://ppa.floorp.app/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/Floorp.gpg"
   # Repo list
-  run_sh "sudo curl -sS --compressed -o /etc/apt/sources.list.d/Floorp.list 'https://ppa.floorp.app/Floorp.list'"
-  # Install
+  run_cmd sudo curl -sS --compressed -o /etc/apt/sources.list.d/Floorp.list "https://ppa.floorp.app/Floorp.list"
+
   run_cmd sudo apt-get update -y
   run_cmd sudo apt-get install -y floorp
 }
@@ -303,4 +346,4 @@ $LOG_FILE" 18 90
   log "=== dotfiles installer end ==="
 }
 
-main "$@"
+main "$@u
