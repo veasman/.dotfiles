@@ -1,12 +1,18 @@
-# veasman's dotfiles
+# Ubuntu dwm Dotfiles
 
-# How to use
+Ubuntu-only dotfiles using:
 
-- Run the right stuff in INSTALL_SHIT
-- Install and run "stow"
+- dwm
+- dmenu
+- slstatus
+- stow-managed configs
+
+---
+
+## Install
 
 ```bash
-sudo apt install stow
-
-stow .
-```
+git clone <repo-url> ~/.dotfiles
+cd ~/.dotfiles
+chmod +x install.sh
+./install.sh
