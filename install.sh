@@ -27,7 +27,9 @@ ensure_sudo() {
 }
 
 start_gui() {
-  exec 3> >(whiptail --title "Ubuntu dwm Installer" --gauge "Starting..." 10 80 0)
+  exec 3> >(whiptail --title "Ubuntu dwm Installer" \
+    --backtitle "Installing... Please wait" \
+    --gauge "Preparing..." 12 80 0)
 }
 
 update_gui() {
@@ -35,6 +37,12 @@ update_gui() {
   local message="$2"
   echo "$percent" >&3
   echo "# $message" >&3
+}
+
+finish_gui() {
+  update_gui 100 "Finalizing..."
+  sleep 1
+  exec 3>&-
 }
 
 run_cmd() {
@@ -125,42 +133,54 @@ main() {
 
   start_gui
 
-  [[ "$selected" == *"packages"* ]] && {
-    update_gui 10 "Installing packages..."
+  STEP=10
+
+  if [[ "$selected" == *"packages"* ]]; then
+    update_gui $STEP "Installing system packages..."
     install_packages
-  }
+    STEP=30
+  fi
 
-  [[ "$selected" == *"stow"* ]] && {
-    update_gui 30 "Stowing dotfiles..."
+  if [[ "$selected" == *"stow"* ]]; then
+    update_gui $STEP "Stowing dotfiles..."
     stow_all
-  }
+    STEP=50
+  fi
 
-  [[ "$selected" == *"suckless"* ]] && {
-    update_gui 55 "Building suckless tools..."
+  if [[ "$selected" == *"suckless"* ]]; then
+    update_gui $STEP "Building dwm, dmenu, slstatus..."
     build_suckless
-  }
+    STEP=70
+  fi
 
-  [[ "$selected" == *"session"* ]] && {
-    update_gui 75 "Registering dwm session..."
+  if [[ "$selected" == *"session"* ]]; then
+    update_gui $STEP "Registering dwm session..."
     install_session
-  }
+    STEP=85
+  fi
 
-  [[ "$selected" == *"fonts"* ]] && {
-    update_gui 85 "Installing fonts..."
+  if [[ "$selected" == *"fonts"* ]]; then
+    update_gui $STEP "Installing Fira Code..."
     install_fonts
-  }
+    STEP=95
+  fi
 
-  [[ "$selected" == *"shell"* ]] && {
-    update_gui 95 "Setting default shell..."
+  if [[ "$selected" == *"shell"* ]]; then
+    update_gui $STEP "Setting default shell..."
     set_shell
-  }
+  fi
 
-  update_gui 100 "Installation complete."
-  sleep 1
-  exec 3>&-
+  finish_gui
 
-  whiptail --title "Done" \
-    --msgbox "Installation complete.\n\nLog out and select 'dwm'.\n\nLog file:\n$LOG_FILE" 14 80
+  whiptail --title "Installation Complete" \
+    --yesno "Ubuntu dwm setup finished successfully.\n\nWould you like to view the installation log?" 14 80
+
+  if [[ $? -eq 0 ]]; then
+    whiptail --title "Installation Log" --textbox "$LOG_FILE" 24 100
+  fi
+
+  whiptail --title "Next Steps" \
+    --msgbox "To use dwm:\n\n1) Log out\n2) Select 'dwm' session\n3) Log in\n\nInstallation complete." 14 80
 }
 
 main
