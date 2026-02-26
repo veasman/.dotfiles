@@ -104,7 +104,7 @@ stow_dotfiles() {
     [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
     run_cmd mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/code"
 
-    local modules=(shell nvim tmux kitty scripts wallpapers xinit-desktop)
+    local modules=(shell nvim tmux alacritty scripts wallpapers xinit-desktop)
 
     local tmp
     tmp="$(mktemp)"
