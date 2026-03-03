@@ -1,0 +1,26 @@
+[user]
+    name = Charlton Moren
+    email = charlton.moren@gmail.com
+
+[core]
+    editor = nvim
+    pager = less -FRX
+
+[init]
+    defaultBranch = main
+
+[pull]
+    rebase = false
+
+[push]
+    autoSetupRemote = true
+
+[color]
+    ui = auto
+
+[alias]
+    st = status
+    co = checkout
+    br = branch
+    lg = log --oneline --graph --decorate
+    amend = commit --amend --no-edit

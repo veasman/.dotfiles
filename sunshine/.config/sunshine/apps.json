@@ -1,0 +1,82 @@
+{
+    "apps": [
+        {
+            "image-path": "desktop.png",
+            "name": "Desktop"
+        },
+        {
+            "image-path": "desktop.png",
+            "name": "Low Res Desktop",
+            "prep-cmd": [
+                {
+                    "do": "xrandr --output HDMI-1 --mode 1920x1080",
+                    "undo": "xrandr --output HDMI-1 --mode 1920x1200"
+                }
+            ]
+        },
+        {
+            "auto-detach": true,
+            "cmd": "steam -applaunch 3241660",
+            "elevated": false,
+            "exclude-global-prep-cmd": false,
+            "exit-timeout": 5,
+            "image-path": "/home/cvm/.config/sunshine/covers/igdb_332780.png",
+            "name": "R.E.P.O.",
+            "output": "",
+            "wait-all": true,
+            "working-dir": "/home/cvm"
+        },
+        {
+            "auto-detach": true,
+            "cmd": "steam -applaunch 413150",
+            "elevated": false,
+            "exclude-global-prep-cmd": false,
+            "exit-timeout": 5,
+            "image-path": "/home/cvm/.config/sunshine/covers/igdb_17000.png",
+            "name": "Stardew Valley",
+            "output": "",
+            "wait-all": true,
+            "working-dir": "/home/cvm"
+        },
+        {
+            "detached": [
+                "setsid steam steam://open/bigpicture"
+            ],
+            "image-path": "steam.png",
+            "name": "Steam Big Picture",
+            "prep-cmd": [
+                {
+                    "do": "",
+                    "undo": "setsid steam steam://close/bigpicture"
+                }
+            ]
+        },
+        {
+            "auto-detach": true,
+            "cmd": "steam -applaunch 105600",
+            "elevated": false,
+            "exclude-global-prep-cmd": false,
+            "exit-timeout": 5,
+            "image-path": "/home/cvm/.config/sunshine/covers/igdb_1879.png",
+            "name": "Terraria",
+            "output": "",
+            "wait-all": true,
+            "working-dir": "/home/cvm"
+        },
+        {
+            "auto-detach": true,
+            "cmd": "steam -applaunch 799960",
+            "elevated": false,
+            "exclude-global-prep-cmd": false,
+            "exit-timeout": 5,
+            "image-path": "/home/cvm/.config/sunshine/covers/igdb_47101.png",
+            "name": "Wizard101",
+            "output": "",
+            "wait-all": true,
+            "working-dir": "/home/cvm"
+        }
+    ],
+    "env": {
+        "PATH": "$(PATH):$(HOME)/.local/bin"
+    }
+}

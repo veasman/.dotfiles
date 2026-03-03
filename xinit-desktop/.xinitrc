@@ -8,7 +8,7 @@ dunst &
 picom &
 setbg &
 xrandr -r 120
-unclutter -idle 2 &
+unclutter -idle 2 -jitter 5 &
 
 slstatus &
 
