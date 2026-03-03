@@ -85,10 +85,7 @@ bindkey -M visual '^[[P' vi-delete
 
 # Load syntax highlighting; should be last.
 #source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh 2>/dev/null
-
-# Kubectl completion
-source <(kubectl completion zsh)
+#source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh 2>/dev/null
 
 # path stuff
 export CHROME_BIN=$(which chromium-browser)
