@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+[ -f "$HOME/.config/xorg/Xresources" ] && xrdb -merge "$HOME/.config/xorg/Xresources"
+
+# Force dark mode outside of GNOME session
+export GTK_THEME=Adwaita-dark
+
+# Remove work mouse accel
+#xinput --set-prop "BT mouse" "libinput Accel Profile Enabled" 0, 1
+#xinput --set-prop "BT mouse" "libinput Accel Speed" 0
+
+# Stuff
+sxhkd &
+dunst &
+picom &
+setbg &
+unclutter -idle 2 -jitter 5 &
+
+#sunshine &
+
+slstatus &
+
+# Home
+# xrandr --output HDMI-1 --mode 2560x1440 --rate 144
+
+# Work
+xrandr \
+  --output eDP --off \
+  --output DVI-I-1-1      --mode 1920x1080 --rotate left   --pos 0x0 \
+  --output DisplayPort-1  --mode 1920x1080 --rotate normal --pos 1080x0 --primary \
+  --output DVI-I-2-2      --mode 1920x1080 --rotate normal --pos 3000x0 \
+  --fb 4920x1920
+
+# Not needed for Ubuntu
+# exec dwm
