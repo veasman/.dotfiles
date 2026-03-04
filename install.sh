@@ -824,18 +824,30 @@ stow_dotfiles() {
     fi
 }
 
-ensure_suckless_submodules() {
+ensure_suckless_sources() {
     [[ -d "$DOTFILES_DIR/.git" ]] || die_ui "Dotfiles repo is not a git repository: $DOTFILES_DIR"
-    [[ -f "$DOTFILES_DIR/.gitmodules" ]] || die_ui "Missing .gitmodules in $DOTFILES_DIR."
-    run_shell "cd '$DOTFILES_DIR' && git submodule update --init --recursive"
 
-    [[ -d "$DOTFILES_DIR/suckless/dwm" ]] || die_ui "Missing $DOTFILES_DIR/suckless/dwm"
-    [[ -d "$DOTFILES_DIR/suckless/dmenu" ]] || die_ui "Missing $DOTFILES_DIR/suckless/dmenu"
-    [[ -d "$DOTFILES_DIR/suckless/slstatus" ]] || die_ui "Missing $DOTFILES_DIR/suckless/slstatus"
+    # You are vendoring suckless code directly in dotfiles (no submodules).
+    # So we only verify directories exist and contain expected files.
+    local base="$DOTFILES_DIR/suckless"
+
+    [[ -d "$base" ]] || die_ui "Missing $base. Expected: $DOTFILES_DIR/suckless/{dwm,dmenu,slstatus}"
+
+    [[ -f "$base/dwm/dwm.c" ]] || die_ui "Missing $base/dwm/dwm.c (dwm source not present)"
+    [[ -f "$base/dmenu/dmenu.c" ]] || die_ui "Missing $base/dmenu/dmenu.c (dmenu source not present)"
+    [[ -f "$base/slstatus/slstatus.c" ]] || die_ui "Missing $base/slstatus/slstatus.c (slstatus source not present)"
+
+    # If you accidentally left .git directories inside, warn (not fatal).
+    for t in dwm dmenu slstatus; do
+        if [[ -d "$base/$t/.git" ]]; then
+            warn "Detected $base/$t/.git. You said you want vendored code. Consider removing it."
+        fi
+    done
 }
 
 link_suckless_into_repos() {
     ensure_dirs
+    ensure_suckless_sources
     for t in dwm dmenu slstatus; do
         if [[ -e "$HOME/repos/$t" || -L "$HOME/repos/$t" ]]; then
             run_cmd rm -rf "$HOME/repos/$t"
@@ -1226,7 +1238,7 @@ main() {
 
     if grep -q "\"suckless\"" <<<"$selected"; then
         step 84 "Initializing suckless submodules"
-        ensure_suckless_submodules
+        ensure_suckless_sources
         step 88 "Linking suckless repos into ~/repos"
         link_suckless_into_repos
         step 92 "Building and installing dwm/dmenu/slstatus"

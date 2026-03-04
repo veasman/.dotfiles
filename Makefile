@@ -14,16 +14,6 @@ install:
 dry-run:
 >   $(INSTALL) --dry-run
 
-submodules-status:
->   cd "$(DOTFILES_DIR)" && git submodule status --recursive
-
-submodules-update:
->   cd "$(DOTFILES_DIR)" && git submodule update --init --recursive
->   cd "$(DOTFILES_DIR)" && git submodule update --remote --merge --recursive
->   cd "$(DOTFILES_DIR)" && git submodule status --recursive
-
-submodules-sync: submodules-update
-
 suckless-build:
 >   cd "$(HOME)/code/dwm" && make clean && make
 >   cd "$(HOME)/code/dmenu" && make clean && make
