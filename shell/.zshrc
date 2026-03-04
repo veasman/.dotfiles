@@ -89,7 +89,7 @@ bindkey -M visual '^[[P' vi-delete
 
 # path stuff
 export CHROME_BIN=$(which chromium-browser)
-export PATH="$PATH:~/.local/bin:/usr/local/go/bin"
+export PATH="$PATH:$HOME/.local/bin:/usr/local/go/bin"
 export PATH=/home/cvm/.cache/rebar3/bin:$PATH
 export NVM_DIR=~/.nvm
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"

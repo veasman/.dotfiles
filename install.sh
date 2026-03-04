@@ -1,6 +1,30 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Whiptail colors
+export NEWT_COLORS='
+root=,black
+window=white,black
+border=brightblack,black
+title=brightcyan,black
+textbox=white,black
+button=black,brightcyan
+actbutton=black,cyan
+compactbutton=white,black
+listbox=white,black
+actlistbox=black,brightcyan
+actsellistbox=black,cyan
+checkbox=white,black
+actcheckbox=black,brightcyan
+entry=white,black
+label=white,black
+helpline=brightblack,black
+roottext=white,black
+emptyscale=brightblack,black
+fullscale=cyan,black
+disentry=brightblack,black
+'
+
 DRY_RUN=0
 if [[ "${1:-}" == "--dry-run" ]]; then
     DRY_RUN=1
@@ -12,11 +36,19 @@ LOG_FILE="$LOG_DIR/install.log"
 mkdir -p "$LOG_DIR"
 
 GAUGE_FD_OPEN=""
+SUDO_KEEPALIVE_PID=""
 
 # Hardware selections (set by TUI)
-CPU_CHOICE="auto"   # auto|amd|intel
-GPU_CHOICE="auto"   # auto|amd|intel|nvidia
-SUDO_KEEPALIVE_PID=""
+CPU_CHOICE="auto"   # auto|amd|intel|skip
+GPU_CHOICE="auto"   # auto|amd|intel|nvidia|skip
+
+# Gauge state
+CURRENT_PCT=0
+CURRENT_MSG="Preparing…"
+GAUGE_TICK=0
+
+# Non-fatal warnings bucket
+WARNINGS=()
 
 log() { printf "%s\n" "$*" >> "$LOG_FILE"; }
 
@@ -26,7 +58,7 @@ die_ui() {
         exec 4>&- || true
         GAUGE_FD_OPEN=""
     fi
-    whiptail --title "Error" --msgbox "$msg\n\nLog:\n$LOG_FILE" 18 96
+    whiptail --title "Error" --msgbox "$msg\n\nLog:\n$LOG_FILE" 20 104
     if whiptail --title "View Log" --yesno "Open the install log now?" 10 60; then
         whiptail --title "Install Log" --textbox "$LOG_FILE" 28 120
     fi
@@ -64,17 +96,71 @@ ensure_whiptail() {
 }
 
 start_gauge() {
-    exec 4> >(whiptail --title "Ubuntu dwm Installer" \
+    exec 4> >(whiptail --title "Ubuntu .dotfiles Installer" \
         --backtitle "Installing… (log: ~/.local/state/dotfiles-installer/install.log)" \
-        --gauge "Preparing…" 12 96 0)
+        --gauge "Preparing…" 14 120 0)
     GAUGE_FD_OPEN=1
 }
-gauge() { echo "$1" >&4; echo "# $2" >&4; }
+
+gauge_write() {
+    local pct="$1"
+    local msg="$2"
+    [[ -n "${GAUGE_FD_OPEN:-}" ]] || return 0
+    echo "$pct" >&4
+    echo "# $msg" >&4
+}
+
+step() {
+    local pct="$1"
+    local msg="$2"
+    CURRENT_PCT="$pct"
+    CURRENT_MSG="$msg"
+    GAUGE_TICK=0
+    gauge_write "$CURRENT_PCT" "$CURRENT_MSG"
+}
+
 finish_gauge() {
-    gauge 100 "Finalizing…"
+    step 100 "Finalizing…"
     sleep 1
     exec 4>&-
     GAUGE_FD_OPEN=""
+}
+
+# Animated progress “heartbeat” during long-running commands
+gauge_pump_while_pid() {
+    local pid="$1"
+    local start_ts now elapsed
+    start_ts="$(date +%s)"
+    while kill -0 "$pid" 2>/dev/null; do
+        GAUGE_TICK=$((GAUGE_TICK+1))
+
+        local spinner
+        case $((GAUGE_TICK % 4)) in
+            0) spinner="";;
+            1) spinner="·";;
+            2) spinner="··";;
+            3) spinner="···";;
+        esac
+
+        now="$(date +%s)"
+        elapsed=$((now - start_ts))
+
+        local last_line=""
+        last_line="$(tail -n 30 "$LOG_FILE" 2>/dev/null | sed '/^\s*$/d' | tail -n 1 || true)"
+        if [[ -n "$last_line" ]]; then
+            last_line="${last_line:0:100}"
+        fi
+
+        local msg="Step: ${CURRENT_MSG}${spinner}   Elapsed: ${elapsed}s"
+        if [[ -n "$last_line" ]]; then
+            msg="${msg}\nLast: ${last_line}"
+        else
+            msg="${msg}\nLast: (starting…)"
+        fi
+
+        gauge_write "$CURRENT_PCT" "$msg"
+        sleep 2
+    done
 }
 
 run_cmd() {
@@ -82,7 +168,21 @@ run_cmd() {
         log "[DRY RUN] $*"
         return 0
     fi
-    "$@" >>"$LOG_FILE" 2>&1
+
+    log "[cmd] $*"
+    set +e
+    "$@" >>"$LOG_FILE" 2>&1 &
+    local pid=$!
+    set -e
+
+    if [[ -n "${GAUGE_FD_OPEN:-}" ]]; then
+        gauge_pump_while_pid "$pid"
+    fi
+
+    wait "$pid" || {
+        local rc=$?
+        die_ui "Command failed (exit=$rc):\n$*\n\nLast log lines:\n$(tail -n 120 "$LOG_FILE" 2>/dev/null || true)"
+    }
 }
 
 run_shell() {
@@ -90,7 +190,26 @@ run_shell() {
         log "[DRY RUN] bash -lc $1"
         return 0
     fi
-    bash -lc "$1" >>"$LOG_FILE" 2>&1
+    log "[shell] bash -lc $1"
+    set +e
+    bash -lc "set -euo pipefail; $1" >>"$LOG_FILE" 2>&1 &
+    local pid=$!
+    set -e
+
+    if [[ -n "${GAUGE_FD_OPEN:-}" ]]; then
+        gauge_pump_while_pid "$pid"
+    fi
+
+    wait "$pid" || {
+        local rc=$?
+        die_ui "Shell command failed (exit=$rc):\n$1\n\nLast log lines:\n$(tail -n 120 "$LOG_FILE" 2>/dev/null || true)"
+    }
+}
+
+warn() {
+    local msg="$1"
+    WARNINGS+=("$msg")
+    log "[warn] $msg"
 }
 
 ensure_dirs() {
@@ -130,15 +249,12 @@ detect_gpu_vendor() {
 }
 
 hardware_prompt() {
-    # Best-effort detection for defaults (doesn't block)
     local cpu_guess="auto"
     local gpu_guess="auto"
 
-    if command -v grep >/dev/null 2>&1; then
-        local c
-        c="$(detect_cpu_vendor)"
-        [[ "$c" == "amd" || "$c" == "intel" ]] && cpu_guess="$c"
-    fi
+    local c
+    c="$(detect_cpu_vendor)"
+    [[ "$c" == "amd" || "$c" == "intel" ]] && cpu_guess="$c"
 
     if command -v lspci >/dev/null 2>&1; then
         local g
@@ -155,7 +271,7 @@ hardware_prompt() {
 3>&1 1>&2 2>&3)" || die_ui "Aborted."
 
     GPU_CHOICE="$(whiptail --title "Hardware: GPU" --radiolist \
-"Select GPU vendor (affects optional driver step):" 14 84 5 \
+"Select GPU vendor (only used for optional NVIDIA driver step):" 14 84 5 \
 "auto"   "Auto-detect (recommended) [detected: ${gpu_guess}]" ON \
 "amd"    "AMD" OFF \
 "intel"  "Intel" OFF \
@@ -170,33 +286,7 @@ hardware_prompt() {
 # Base install
 # ============================================================
 
-install_base_packages() {
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get upgrade -y
-
-    run_cmd sudo apt-get install -y \
-        git curl ca-certificates wget unzip fontconfig \
-        stow \
-        build-essential pkg-config gcc make \
-        zsh tmux fzf tree ripgrep fd-find \
-        xclip playerctl flameshot \
-        dunst libnotify-bin picom unclutter sxhkd xwallpaper \
-        blueman light \
-        gnupg python3 software-properties-common \
-        libx11-dev libxinerama-dev libxft-dev \
-        x11-xserver-utils dbus-x11 \
-        xinit xserver-xorg-core \
-        linux-firmware pciutils usbutils lm-sensors rfkill \
-        mesa-utils vulkan-tools libvulkan1 mesa-vulkan-drivers
-
-    # Needed for GPU detection later, harmless everywhere
-    run_cmd sudo apt-get install -y pciutils
-
-    install_cpu_microcode
-}
-
 install_cpu_microcode() {
-    # Microcode improves stability/security on real hardware. Idempotent.
     local vendor="$CPU_CHOICE"
     if [[ "$vendor" == "auto" ]]; then
         vendor="$(detect_cpu_vendor)"
@@ -217,10 +307,85 @@ install_cpu_microcode() {
     esac
 }
 
-# Optional NVIDIA driver installer (disabled-by-default menu item)
+install_docker() {
+    # Docker official repo (idempotent)
+    run_cmd sudo apt-get update -y
+    run_cmd sudo apt-get install -y ca-certificates curl gnupg
+
+    run_cmd sudo install -d -m 0755 /etc/apt/keyrings
+    run_shell "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg"
+    run_cmd sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+    # Get UBUNTU_CODENAME from os-release if present; fallback to lsb_release
+    local codename=""
+    if [[ -r /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        codename="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
+    fi
+    if [[ -z "$codename" ]] && command -v lsb_release >/dev/null 2>&1; then
+        codename="$(lsb_release -cs)"
+    fi
+    [[ -n "$codename" ]] || die_ui "Could not determine Ubuntu codename for Docker repo."
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] configure docker apt repo for $codename and install docker-ce + compose plugin; add user to docker group"
+        return 0
+    fi
+
+    sudo tee /etc/apt/sources.list.d/docker.list >/dev/null <<EOF
+deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${codename} stable
+EOF
+
+    run_cmd sudo apt-get update -y
+    run_cmd sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Add current user to docker group (non-fatal if already)
+    if getent group docker >/dev/null 2>&1; then
+        run_cmd sudo usermod -aG docker "$USER" || true
+    fi
+
+    run_cmd sudo systemctl enable --now docker || true
+    log "[docker] installed and enabled docker"
+}
+
+install_nvm() {
+    # Docs method requested. Keep it simple + idempotent-ish.
+    if [[ -d "$HOME/.nvm" && -f "$HOME/.nvm/nvm.sh" ]]; then
+        log "[nvm] already present at ~/.nvm; skipping install"
+        return 0
+    fi
+    run_shell "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash"
+    log "[nvm] installed via official install script"
+}
+
+install_base_packages() {
+    run_cmd sudo apt-get update -y
+    run_cmd sudo apt-get upgrade -y
+
+    run_cmd sudo apt-get install -y \
+        git curl ca-certificates wget unzip fontconfig \
+        stow \
+        build-essential pkg-config gcc make \
+        zsh tmux fzf tree ripgrep fd-find \
+        xclip playerctl flameshot \
+        dunst libnotify-bin picom unclutter sxhkd xwallpaper \
+        blueman light \
+        gnupg python3 software-properties-common golang make \
+        libx11-dev libxinerama-dev libxft-dev \
+        x11-xserver-utils dbus-x11 \
+        xinit xserver-xorg-core \
+        linux-firmware pciutils usbutils lm-sensors rfkill \
+        mesa-utils vulkan-tools libvulkan1 mesa-vulkan-drivers
+
+    install_cpu_microcode
+
+    # Your requested defaults under packages
+    install_docker
+    install_nvm
+}
+
 install_nvidia_proprietary_driver() {
-    # This uses Ubuntu's recommended driver selection.
-    # If Secure Boot is enabled, you'll get MOK enrollment prompts.
     local vendor="$GPU_CHOICE"
     if [[ "$vendor" == "auto" ]]; then
         vendor="$(detect_gpu_vendor)"
@@ -240,7 +405,6 @@ install_nvidia_proprietary_driver() {
 
     run_cmd sudo apt-get update -y
     run_cmd sudo apt-get install -y ubuntu-drivers-common
-
     run_cmd sudo ubuntu-drivers autoinstall
     log "[hw] ran ubuntu-drivers autoinstall"
 }
@@ -255,6 +419,7 @@ install_wezterm() {
     run_cmd sudo install -d -m 0755 /usr/share/keyrings
     run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
 
+    # Always overwrite keyring without prompting
     run_shell "curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg"
     run_shell "echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null"
     run_cmd sudo chmod 644 /usr/share/keyrings/wezterm-fury.gpg
@@ -266,8 +431,15 @@ install_floorp() {
     run_cmd sudo install -d -m 0755 /usr/share/keyrings
     run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
 
-    run_shell "curl -fsSL https://ppa.floorp.app/KEY.gpg | sudo gpg --dearmor -o /usr/share/keyrings/Floorp.gpg"
-    run_cmd sudo curl -sS --compressed -o /etc/apt/sources.list.d/Floorp.list "https://ppa.floorp.app/Floorp.list"
+    # Fix: no interactive overwrite prompt + avoid corrupting keyring on failed downloads.
+    # Write to temp first, then move into place.
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] install Floorp repo key + list and apt install floorp"
+        return 0
+    fi
+
+    run_shell "tmp=\$(mktemp) && curl -fsSL https://ppa.floorp.app/KEY.gpg -o \"\$tmp\" && sudo gpg --dearmor --yes -o /usr/share/keyrings/Floorp.gpg \"\$tmp\" && rm -f \"\$tmp\""
+    run_cmd sudo curl -fsS --compressed -o /etc/apt/sources.list.d/Floorp.list "https://ppa.floorp.app/Floorp.list"
     run_cmd sudo apt-get update -y
     run_cmd sudo apt-get install -y floorp
 }
@@ -282,16 +454,53 @@ github_latest_asset_url() {
     local regex="$3"
     local api="https://api.github.com/repos/${owner}/${repo}/releases/latest"
 
-    python3 - "$regex" <<'PY' < <(curl -fsSL "$api")
+    local auth_header=()
+    if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+        auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    fi
+
+    local tmp body status
+    tmp="$(mktemp)"
+    status="$(
+        curl -sS -L \
+          -H "Accept: application/vnd.github+json" \
+          -H "User-Agent: dotfiles-installer" \
+          "${auth_header[@]}" \
+          -w "%{http_code}" \
+          -o "$tmp" \
+          "$api" || echo "000"
+    )"
+
+    if [[ "$status" == "000" ]]; then
+        rm -f "$tmp"
+        echo "__HTTP_ERROR__"
+        echo "curl failed to reach GitHub API"
+        return 1
+    fi
+
+    if [[ "$status" != "200" ]]; then
+        body="$(head -c 600 "$tmp" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g')"
+        rm -f "$tmp"
+        echo "__HTTP_ERROR__"
+        echo "GitHub API returned HTTP $status for $owner/$repo"
+        echo "$body"
+        return 1
+    fi
+
+    body="$(cat "$tmp")"
+    rm -f "$tmp"
+
+    python3 -c '
 import json, re, sys
 regex = sys.argv[1]
-data = json.load(sys.stdin)
-assets = data.get("assets", [])
+data = json.loads(sys.stdin.read() or "{}")
+assets = data.get("assets", []) or []
 pat = re.compile(regex)
+
 for a in assets:
-    url = a.get("browser_download_url", "")
-    name = a.get("name", "")
-    if url and (pat.search(url) or pat.search(name)):
+    name = a.get("name","") or ""
+    url  = a.get("browser_download_url","") or ""
+    if url and (pat.search(name) or pat.search(url)):
         print(url)
         sys.exit(0)
 
@@ -299,7 +508,7 @@ print("__ASSETS__")
 for a in assets:
     print(a.get("name", ""))
 sys.exit(1)
-PY
+' "$regex" <<<"$body"
 }
 
 install_nerd_font_firacode() {
@@ -350,19 +559,119 @@ install_deb_from_url() {
 }
 
 install_moonlight_latest() {
+    # Moonlight upstream frequently does NOT ship an amd64 .deb.
+    # For v6.1.0, upstream provides an x86_64 AppImage (and Snap/Flatpak).
+    # This function:
+    #   1) tries GitHub latest AppImage (preferred, no system packaging dependency)
+    #   2) falls back to snap (if available)
+    #   3) falls back to flatpak (if available / installable)
+
     if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] install Moonlight from latest GitHub release .deb"
+        log "[DRY RUN] install Moonlight via GitHub AppImage; fallback to snap/flatpak if needed"
         return 0
     fi
 
-    local out
-    out="$(github_latest_asset_url "moonlight-stream" "moonlight-qt" "(amd64|x86_64).*\\.deb$" 2>>"$LOG_FILE")" || true
-    if grep -q "^__ASSETS__$" <<<"$out" || [[ -z "$out" ]]; then
-        log "[moonlight] asset listing:"
-        printf "%s\n" "$out" >>"$LOG_FILE"
-        die_ui "Could not find Moonlight .deb in latest GitHub release. (Asset names were logged.)"
+    local url=""
+    url="$(github_latest_asset_url "moonlight-stream" "moonlight-qt" "(?i)Moonlight-.*(x86_64|amd64).*\\.AppImage$" 2>>"$LOG_FILE")" || true
+
+    if [[ -n "$url" && "$url" != "__ASSETS__"* && "$url" != "__HTTP_ERROR__"* ]]; then
+        install_moonlight_appimage_from_url "$url"
+        return 0
     fi
-    install_deb_from_url "$out" "Moonlight"
+
+    # Log what upstream actually shipped so you can see why we didn't pick a .deb
+    if [[ -n "$url" ]]; then
+        warn "Moonlight GitHub release did not include an x86_64/amd64 AppImage match (details logged)."
+        printf "%s\n" "$url" >>"$LOG_FILE"
+    else
+        warn "Moonlight GitHub lookup returned empty output; possible network/GitHub API issue (see log)."
+    fi
+
+    warn "Falling back to snap/flatpak because upstream .deb for amd64 is not available in latest GitHub release."
+    install_moonlight_fallback_snap_or_flatpak
+}
+
+install_moonlight_appimage_from_url() {
+    local url="$1"
+    local bin_dir="$HOME/.local/bin"
+    local appimage="$bin_dir/moonlight.AppImage"
+    local link="$bin_dir/moonlight"
+
+    run_cmd mkdir -p "$bin_dir"
+
+    # Download to a temp file then atomically replace.
+    local tmp
+    tmp="$(mktemp -p "$bin_dir" moonlight.AppImage.XXXXXX)"
+
+    log "[moonlight] downloading AppImage: $url"
+    run_shell "curl -fL --retry 3 --retry-delay 2 -o '$tmp' '$url'"
+
+    run_cmd chmod +x "$tmp"
+    run_cmd mv -f "$tmp" "$appimage"
+
+    # Convenience symlink so Exec=moonlight works.
+    if [[ -e "$link" || -L "$link" ]]; then
+        run_cmd rm -f "$link"
+    fi
+    run_cmd ln -s "$appimage" "$link"
+
+    # Optional desktop entry (won't break if you're pure dwm).
+    install_moonlight_desktop_entry || true
+
+    log "[moonlight] installed AppImage to $appimage (symlink: $link)"
+}
+
+install_moonlight_desktop_entry() {
+    local apps="$HOME/.local/share/applications"
+    run_cmd mkdir -p "$apps"
+
+    # Use the symlink "moonlight" so PATH is respected.
+    # No icon fetching here; keep it simple and reliable.
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] write $apps/moonlight.desktop"
+        return 0
+    fi
+
+    cat >"$apps/moonlight.desktop" <<'EOF'
+[Desktop Entry]
+Name=Moonlight
+Comment=Stream games and apps from Sunshine/GeForce Experience
+Exec=moonlight
+Terminal=false
+Type=Application
+Categories=Game;Network;
+EOF
+    log "[moonlight] wrote desktop entry: $apps/moonlight.desktop"
+}
+
+install_moonlight_fallback_snap_or_flatpak() {
+    # Prefer snap if available because it's 1 command on Ubuntu.
+    # Snap store lists: `sudo snap install moonlight`.
+    if command -v snap >/dev/null 2>&1; then
+        log "[moonlight] installing via snap"
+        run_cmd sudo snap install moonlight
+        return 0
+    fi
+
+    # Flatpak fallback: Flathub app id is com.moonlight_stream.Moonlight
+    # We will install flatpak if missing, add flathub remote if missing, then install.
+    if ! command -v flatpak >/dev/null 2>&1; then
+        log "[moonlight] flatpak not found; installing flatpak"
+        run_cmd sudo apt-get update -y
+        run_cmd sudo apt-get install -y flatpak
+    fi
+
+    if ! flatpak remotes --columns=name 2>/dev/null | grep -qx "flathub"; then
+        log "[moonlight] adding flathub remote"
+        run_cmd sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    fi
+
+    log "[moonlight] installing via flatpak (com.moonlight_stream.Moonlight)"
+    run_cmd flatpak install -y flathub com.moonlight_stream.Moonlight
+
+    # Optional: create a shim so "moonlight" works in shells if you want it.
+    # (Do not force it; flatpak exports a desktop launcher already.)
+    log "[moonlight] flatpak installed; launch via app menu or: flatpak run com.moonlight_stream.Moonlight"
 }
 
 install_sunshine_latest() {
@@ -371,13 +680,30 @@ install_sunshine_latest() {
         return 0
     fi
 
-    local out
-    out="$(github_latest_asset_url "LizardByte" "Sunshine" "(amd64|x86_64).*\\.deb$" 2>>"$LOG_FILE")" || true
-    if grep -q "^__ASSETS__$" <<<"$out" || [[ -z "$out" ]]; then
+    local out=""
+
+    out="$(github_latest_asset_url "LizardByte" "Sunshine" "(?i)(ubuntu|debian|linux).*(amd64|x86_64).*\\.deb$" 2>>"$LOG_FILE")" || true
+
+    if [[ -z "$out" || "$out" == "__ASSETS__"* || "$out" == "__HTTP_ERROR__"* ]]; then
+        local out2=""
+        out2="$(github_latest_asset_url "LizardByte" "Sunshine" "(?i)(amd64|x86_64).*\\.deb$" 2>>"$LOG_FILE")" || true
+        if [[ -n "$out2" && "$out2" != "__ASSETS__"* && "$out2" != "__HTTP_ERROR__"* ]]; then
+            out="$out2"
+        fi
+    fi
+
+    if [[ "$out" == "__HTTP_ERROR__"* ]]; then
+        log "[sunshine] GitHub API error details:"
+        printf "%s\n" "$out" >>"$LOG_FILE"
+        die_ui "Sunshine download lookup failed due to GitHub API/network issue.\n\nIf this is rate limiting, export GITHUB_TOKEN and retry.\n(Details logged.)"
+    fi
+
+    if [[ -z "$out" || "$out" == "__ASSETS__"* ]]; then
         log "[sunshine] asset listing:"
         printf "%s\n" "$out" >>"$LOG_FILE"
-        die_ui "Could not find Sunshine .deb in latest GitHub release. (Asset names were logged.)"
+        die_ui "Could not find a Sunshine amd64 .deb in latest GitHub release.\n(Asset names were logged.)"
     fi
+
     install_deb_from_url "$out" "Sunshine"
 }
 
@@ -394,7 +720,7 @@ install_steam() {
 
 install_plex_server() {
     run_cmd sudo install -d -m 0755 /usr/share/keyrings
-    run_shell "curl -fsSL https://downloads.plex.tv/plex-keys/PlexSign.key | sudo gpg --dearmor -o /usr/share/keyrings/plex-archive-keyring.gpg"
+    run_shell "curl -fsSL https://downloads.plex.tv/plex-keys/PlexSign.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/plex-archive-keyring.gpg"
     run_shell "echo 'deb [signed-by=/usr/share/keyrings/plex-archive-keyring.gpg] https://downloads.plex.tv/repo/deb public main' | sudo tee /etc/apt/sources.list.d/plex.list >/dev/null"
     run_cmd sudo apt-get update -y
     run_cmd sudo apt-get install -y plexmediaserver
@@ -431,7 +757,25 @@ stow_dotfiles() {
     [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
     ensure_dirs
 
-    local modules=(shell nvim tmux wezterm scripts xinit-desktop floorp git xresources assets sunshine)
+    local requested=(shell nvim tmux wezterm scripts xprofile-desktop floorp git xresources sxhkd assets sunshine)
+
+    local modules=()
+    local missing=()
+    for m in "${requested[@]}"; do
+        if [[ -d "$DOTFILES_DIR/$m" ]]; then
+            modules+=("$m")
+        else
+            missing+=("$m")
+        fi
+    done
+
+    if [[ "${#missing[@]}" -gt 0 ]]; then
+        warn "Skipping missing stow packages: ${missing[*]}"
+    fi
+
+    if [[ "${#modules[@]}" -eq 0 ]]; then
+        die_ui "No stow packages found in $DOTFILES_DIR.\nExpected directories like: shell/, nvim/, tmux/, etc."
+    fi
 
     local tmp
     tmp="$(mktemp)"
@@ -613,13 +957,44 @@ Do this after install:
     fi
 }
 
-set_default_shell_zsh() {
-    [[ "${SHELL:-}" == "/bin/zsh" ]] && return 0
-    run_cmd chsh -s /bin/zsh "$USER" || true
+ensure_zsh_default_shell() {
+  local user="${SUDO_USER:-$USER}"
+  local target_shell="/bin/zsh"
+
+  echo "[shell] Ensuring $user uses $target_shell"
+
+  # Make sure zsh exists
+  if [ ! -x "$target_shell" ]; then
+    echo "[shell] ERROR: $target_shell not found or not executable"
+    return 1
+  fi
+
+  # Ensure it's listed in /etc/shells
+  if ! grep -qx "$target_shell" /etc/shells; then
+    echo "[shell] Adding $target_shell to /etc/shells"
+    echo "$target_shell" | sudo tee -a /etc/shells >/dev/null
+  fi
+
+  # If already set, do nothing
+  current_shell="$(getent passwd "$user" | cut -d: -f7)"
+  if [ "$current_shell" = "$target_shell" ]; then
+    echo "[shell] Already set"
+    return 0
+  fi
+
+  # Force change via root (non-interactive safe)
+  echo "[shell] Changing login shell for $user"
+  sudo usermod -s "$target_shell" "$user" || {
+    echo "[shell] ERROR: usermod failed"
+    return 1
+  }
+
+  echo "[shell] Done. Logout/login required."
 }
 
 # ============================================================
 # Corporate Enrollment (Intune + Defender for Endpoint)
+# (restored exactly as a selectable step: corp_enroll)
 # ============================================================
 
 install_microsoft_apt_repo() {
@@ -629,7 +1004,8 @@ install_microsoft_apt_repo() {
     run_cmd sudo install -d -m 0755 /usr/share/keyrings
     run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
 
-    run_shell "curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft.gpg"
+    # One keyring is fine for both repos
+    run_shell "curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor --yes -o /usr/share/keyrings/microsoft.gpg"
     run_cmd sudo chmod 0644 /usr/share/keyrings/microsoft.gpg
 
     local rel codename
@@ -637,21 +1013,34 @@ install_microsoft_apt_repo() {
     codename="$(lsb_release -cs)"
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] write microsoft apt repo for ubuntu ${rel} (${codename})"
+        log "[DRY RUN] write microsoft ubuntu prod repo (ubuntu ${rel} ${codename}) + edge repo; apt-get update"
         return 0
     fi
 
+    # Microsoft "prod" repo (Intune/MDE packages live here depending on tenant/docs)
     sudo tee /etc/apt/sources.list.d/microsoft-ubuntu-prod.list >/dev/null <<EOF
 deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/ubuntu/${rel}/prod ${codename} main
+EOF
+
+    # Microsoft Edge repo (THIS is what provides microsoft-edge-stable)
+    sudo tee /etc/apt/sources.list.d/microsoft-edge.list >/dev/null <<EOF
+deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main
 EOF
 
     run_cmd sudo apt-get update -y
 }
 
 install_edge_intune_mde_packages() {
+    # Ensure repos are present (safe/idempotent)
+    install_microsoft_apt_repo
+
     run_cmd sudo apt-get update -y
 
+    # Edge (from repos/edge)
     run_cmd sudo apt-get install -y microsoft-edge-stable
+
+    # Intune portal (from microsoft ubuntu prod repo, if your tenant supports it)
+    # If this package name ever changes, it will fail here (which is correct).
     run_cmd sudo apt-get install -y intune-portal
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -659,12 +1048,11 @@ install_edge_intune_mde_packages() {
         return 0
     fi
 
-    if ! sudo apt-get install -y mdatp >>"$LOG_FILE" 2>&1; then
-        die_ui "Failed to install Defender for Endpoint (mdatp) from Microsoft repo.\n\nSee log:\n$LOG_FILE"
-    fi
+    # Defender for Endpoint
+    run_cmd sudo apt-get install -y mdatp
 
     if command -v mdatp >/dev/null 2>&1; then
-        mdatp health >>"$LOG_FILE" 2>&1 || true
+        run_shell "mdatp health || true"
     fi
 }
 
@@ -712,7 +1100,7 @@ prompt_defender_onboarding() {
 
 intune_enrollment_instructions() {
     whiptail --title "Intune Enrollment Steps" --msgbox \
-"Intune enrollment requires an interactive sign-in.\n\nNotes:\n- You can keep using Floorp daily.\n- Edge is installed ONLY to satisfy enrollment requirements.\n- Your WM (dwm/.xinitrc) is fine AFTER enrollment.\n\nDo this once:\n1) Log into a session where GUI apps can be launched.\n2) Run: intune-portal\n3) Sign in with work account.\n4) Complete enrollment prompts.\n\nAfter enrollment:\n- Go back to dwm/.xinitrc.\n- Leave Edge installed.\n\nLog:\n$LOG_FILE" \
+"Intune enrollment requires an interactive sign-in.\n\nNotes:\n- You can keep using Floorp daily.\n- Edge is installed ONLY to satisfy enrollment requirements.\n- Your WM (dwm) is fine AFTER enrollment.\n\nDo this once:\n1) Log into a session where GUI apps can be launched.\n2) Run: intune-portal\n3) Sign in with work account.\n4) Complete enrollment prompts.\n\nAfter enrollment:\n- Go back to dwm.\n- Leave Edge installed.\n\nLog:\n$LOG_FILE" \
 22 104
 }
 
@@ -721,16 +1109,16 @@ intune_enrollment_instructions() {
 # ============================================================
 
 main_menu() {
-    whiptail --title "Ubuntu dwm Installer" --checklist "Select what to install:" 28 104 20 \
-        "packages" "Install system packages (X + startx + build deps + firmware + microcode)" ON \
-        "stow" "Stow dotfiles into HOME (backs up conflicts if needed)" ON \
+    whiptail --title "Ubuntu .dotfiles Installer" --checklist "Select what to install:" 28 114 22 \
+        "packages" "Install system packages (X + startx + build deps + firmware + microcode + docker + nvm)" ON \
+        "stow" "Stow dotfiles into HOME (skips missing packages; backs up conflicts if needed)" ON \
         "wezterm" "Install WezTerm (apt.fury.io/wez)" ON \
         "neovim" "Install Neovim via PPA (neovim-ppa/unstable)" ON \
         "tailscale" "Install Tailscale (official script)" ON \
         "floorp" "Install Floorp browser (ppa.floorp.app)" ON \
         "floorp_profile" "Apply Floorp UI template (user.js + chrome/)" ON \
         "tampermonkey" "Show Tampermonkey import steps (if backup zip exists)" ON \
-        "moonlight" "Install Moonlight (latest GitHub .deb)" ON \
+        "moonlight" "Install Moonlight (GitHub .deb; fallback to apt moonlight-qt)" ON \
         "sunshine" "Install Sunshine (latest GitHub .deb)" ON \
         "steam" "Install Steam (APT, enables i386 multiarch)" OFF \
         "plex" "Install Plex Media Server (APT repo)" OFF \
@@ -760,134 +1148,130 @@ main() {
     local selected
     selected="$(main_menu)" || exit 1
 
-    # Hardware prompt only if it matters for requested steps
     if grep -q "\"packages\"" <<<"$selected" || grep -q "\"nvidia_driver\"" <<<"$selected"; then
         hardware_prompt
     fi
 
     start_gauge
-
-    local ran=()
-    local pct=0
-
     ensure_dirs
 
+    local ran=()
+
     if grep -q "\"packages\"" <<<"$selected"; then
-        pct=5; gauge $pct "Installing system packages…"
+        step 5 "Installing system packages (includes Docker + NVM)"
         install_base_packages
         ran+=("packages")
     fi
 
     if grep -q "\"stow\"" <<<"$selected"; then
-        pct=15; gauge $pct "Stowing dotfiles…"
+        step 20 "Stowing dotfiles"
         stow_dotfiles
         ran+=("stow")
     fi
 
     if grep -q "\"wezterm\"" <<<"$selected"; then
-        pct=22; gauge $pct "Installing WezTerm…"
+        step 30 "Installing WezTerm"
         install_wezterm
         ran+=("wezterm")
     fi
 
     if grep -q "\"neovim\"" <<<"$selected"; then
-        pct=30; gauge $pct "Installing Neovim (PPA)…"
+        step 38 "Installing Neovim (PPA)"
         install_neovim_ppa
         ran+=("neovim")
     fi
 
     if grep -q "\"tailscale\"" <<<"$selected"; then
-        pct=38; gauge $pct "Installing Tailscale…"
+        step 46 "Installing Tailscale"
         install_tailscale
         ran+=("tailscale")
     fi
 
     if grep -q "\"floorp\"" <<<"$selected"; then
-        pct=46; gauge $pct "Installing Floorp…"
+        step 54 "Installing Floorp"
         install_floorp
         ran+=("floorp")
     fi
 
     if grep -q "\"floorp_profile\"" <<<"$selected"; then
-        pct=52; gauge $pct "Applying Floorp UI template…"
+        step 58 "Applying Floorp UI template"
         floorp_apply_template
         ran+=("floorp_profile")
     fi
 
     if grep -q "\"moonlight\"" <<<"$selected"; then
-        pct=60; gauge $pct "Installing Moonlight…"
+        step 64 "Installing Moonlight"
         install_moonlight_latest
         ran+=("moonlight")
     fi
 
     if grep -q "\"sunshine\"" <<<"$selected"; then
-        pct=70; gauge $pct "Installing Sunshine…"
+        step 70 "Installing Sunshine"
         install_sunshine_latest
-        pct=72; gauge $pct "Preparing Sunshine runtime directories…"
         sunshine_post_config
         ran+=("sunshine")
     fi
 
     if grep -q "\"steam\"" <<<"$selected"; then
-        pct=74; gauge $pct "Installing Steam…"
+        step 74 "Installing Steam"
         install_steam
         ran+=("steam")
     fi
 
     if grep -q "\"plex\"" <<<"$selected"; then
-        pct=78; gauge $pct "Installing Plex Media Server…"
+        step 78 "Installing Plex Media Server"
         install_plex_server
         ran+=("plex")
     fi
 
     if grep -q "\"suckless\"" <<<"$selected"; then
-        pct=82; gauge $pct "Initializing suckless submodules…"
+        step 84 "Initializing suckless submodules"
         ensure_suckless_submodules
-        pct=86; gauge $pct "Linking suckless repos into ~/repos…"
+        step 88 "Linking suckless repos into ~/repos"
         link_suckless_into_repos
-        pct=90; gauge $pct "Building and installing dwm/dmenu/slstatus…"
+        step 92 "Building and installing dwm/dmenu/slstatus"
         build_install_suckless
         ran+=("suckless")
     fi
 
     if grep -q "\"session\"" <<<"$selected"; then
-        pct=93; gauge $pct "Registering dwm session…"
+        step 94 "Registering dwm session"
         register_dwm_session
         ran+=("session")
     fi
 
     if grep -q "\"fonts\"" <<<"$selected"; then
-        pct=95; gauge $pct "Installing fonts…"
+        step 96 "Installing fonts"
         install_nerd_font_firacode
         ran+=("fonts")
     fi
 
     if grep -q "\"shell\"" <<<"$selected"; then
-        pct=97; gauge $pct "Setting default shell…"
-        set_default_shell_zsh
+        step 98 "Setting default shell"
+        ensure_zsh_default_shell
         ran+=("shell")
     fi
 
     if grep -q "\"tampermonkey\"" <<<"$selected"; then
-        pct=99; gauge $pct "Tampermonkey import instructions…"
+        step 99 "Tampermonkey import instructions"
         tampermonkey_prompt_import
         ran+=("tampermonkey")
     fi
 
     if grep -q "\"nvidia_driver\"" <<<"$selected"; then
-        pct=40; gauge $pct "Installing NVIDIA driver…"
+        step 80 "Installing NVIDIA driver"
         install_nvidia_proprietary_driver
         ran+=("nvidia_driver")
     fi
 
     if grep -q "\"corp_enroll\"" <<<"$selected"; then
-        pct=45; gauge $pct "Installing Microsoft apt repo…"
+        step 45 "Installing Microsoft apt repo"
         install_microsoft_apt_repo
-        pct=60; gauge $pct "Installing Edge + Intune Portal + Defender…"
+        step 60 "Installing Edge + Intune Portal + Defender"
         install_edge_intune_mde_packages
-        pct=70; gauge $pct "Defender onboarding (optional)…"
+        step 70 "Defender onboarding (optional)"
         prompt_defender_onboarding
-        pct=75; gauge $pct "Showing Intune enrollment steps…"
+        step 75 "Showing Intune enrollment steps"
         intune_enrollment_instructions
         ran+=("corp_enroll")
     fi
@@ -901,6 +1285,11 @@ main() {
 
     local ran_text
     ran_text="$(printf "%s\n" "${ran[@]:-none}" | sed 's/^/- /')"
+
+    local warn_text="none"
+    if [[ "${#WARNINGS[@]}" -gt 0 ]]; then
+        warn_text="$(printf "%s\n" "${WARNINGS[@]}" | sed 's/^/- /')"
+    fi
 
     local corp_notes=""
     if grep -q "\"corp_enroll\"" <<<"$selected"; then
@@ -921,12 +1310,34 @@ Hardware Notes:
 - NVIDIA proprietary driver step is optional and needs a reboot."
     fi
 
+    local docker_notes=""
+    if grep -q "\"packages\"" <<<"$selected"; then
+        docker_notes="
+Docker Notes:
+- Docker was installed from Docker's official repo.
+- Your user was added to the docker group. You may need to log out/in for it to take effect.
+- Verify: docker version"
+    fi
+
+    local nvm_notes=""
+    if grep -q "\"packages\"" <<<"$selected"; then
+        nvm_notes="
+NVM Notes:
+- NVM was installed to ~/.nvm (if not already present).
+- Restart your shell, then verify: command -v nvm"
+    fi
+
     whiptail --title "Installation Complete" --msgbox \
 "$summary
 
 Ran steps:
 $ran_text
+
+Warnings:
+$warn_text
 $hw_notes
+$docker_notes
+$nvm_notes
 $corp_notes
 
 Next steps:
@@ -935,7 +1346,7 @@ Next steps:
 - If NVIDIA driver was installed: reboot
 
 Log file:
-$LOG_FILE" 28 104
+$LOG_FILE" 30 104
 
     if whiptail --title "View Log" --yesno "Open the install log now?" 10 60; then
         whiptail --title "Install Log" --textbox "$LOG_FILE" 28 120
@@ -943,5 +1354,14 @@ $LOG_FILE" 28 104
 
     log "=== dotfiles installer end ==="
 }
+
+# TODO:
+#
+# 1) Install latest node version
+#
+#   nvm install node
+#   nvm use node
+#
+# 2) Install Mullvad VPN
 
 main "$@"
