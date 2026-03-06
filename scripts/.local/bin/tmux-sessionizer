@@ -25,6 +25,20 @@ find_launch_script() {
     return 1
 }
 
+find_python_venv() {
+    local root="$1"
+    local candidate
+
+    for candidate in ".venv" "venv" "env"; do
+        if [[ -f "${root}/${candidate}/bin/activate" ]]; then
+            echo "${root}/${candidate}"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 selected=""
 if [[ $# -eq 1 ]]; then
     selected="$1"
@@ -34,7 +48,7 @@ fi
 
 [[ -n "${selected}" ]] || exit 0
 
-# Validate directory or symlink -> directory
+# symlinks need some love too
 if [[ ! -d "${selected}" && ! ( -L "${selected}" && -d "$(readlink -f "${selected}" 2>/dev/null || true)" ) ]]; then
     echo "Not a directory (or symlink to directory): ${selected}" >&2
     exit 1
@@ -42,26 +56,30 @@ fi
 
 project_root="${selected}"
 
-# tmux-safe session name
+# tmux is gay and can't handle their periods
 selected_name="$(basename "${project_root}" | tr '. ' '__' | tr -cd '[:alnum:]_-' )"
 [[ -n "${selected_name}" ]] || selected_name="session"
 
 launch_script="$(find_launch_script "${project_root}" || true)"
+python_venv="$(find_python_venv "${project_root}" || true)"
+
+shell_prefix='cd "$1"'
+if [[ -n "${python_venv}" ]]; then
+    shell_prefix+='; if [[ -f "$2/bin/activate" ]]; then source "$2/bin/activate"; else echo "Warning: Python venv not found: $2" >&2; fi'
+fi
 
 if ! tmux has-session -t "${selected_name}" 2>/dev/null; then
-    # Create session with Window 1 running nvim .
-    tmux new-session -d -s "${selected_name}" -c "${project_root}" "bash -lc 'nvim .'"
+    tmux new-session -d -s "${selected_name}" -c "${project_root}" \
+        bash -lc "${shell_prefix}; exec nvim ." bash "${project_root}" "${python_venv}"
 
-    # Window 2: idle shell
-    tmux new-window -t "${selected_name}:" -c "${project_root}" "bash -lc 'exec \$SHELL -l'"
+    tmux new-window -t "${selected_name}:" -c "${project_root}" \
+        bash -lc "${shell_prefix}; exec \$SHELL -l" bash "${project_root}" "${python_venv}"
 
-    # Window 3: optional launch script
     if [[ -n "${launch_script}" ]]; then
         tmux new-window -t "${selected_name}:" -n "run" -c "${project_root}" \
-            "bash -lc 'if [[ -x ./.mux/launch.sh ]]; then ./.mux/launch.sh; else bash ./.mux/launch.sh; fi; exec \$SHELL -l'"
+            bash -lc "${shell_prefix}; if [[ -x ./.mux/launch.sh ]]; then ./.mux/launch.sh; else bash ./.mux/launch.sh; fi; exec \$SHELL -l" bash "${project_root}" "${python_venv}"
     fi
 
-    # Ensure focus goes to Window 1 (works with base-index 1)
     tmux select-window -t "${selected_name}:1" 2>/dev/null || true
 fi
 
