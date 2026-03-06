@@ -371,7 +371,7 @@ install_base_packages() {
         xclip playerctl flameshot \
         dunst libnotify-bin picom unclutter sxhkd xwallpaper \
         blueman light \
-        gnupg python3 software-properties-common golang make \
+        gnupg python3 python3-pip software-properties-common golang make \
         libx11-dev libxinerama-dev libxft-dev \
         x11-xserver-utils dbus-x11 \
         xinit xserver-xorg-core \
@@ -415,16 +415,8 @@ install_neovim_ppa() {
     run_cmd sudo apt install -y neovim
 }
 
-install_wezterm() {
-    run_cmd sudo install -d -m 0755 /usr/share/keyrings
-    run_cmd sudo install -d -m 0755 /etc/apt/sources.list.d
-
-    # Always overwrite keyring without prompting
-    run_shell "curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg"
-    run_shell "echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list >/dev/null"
-    run_cmd sudo chmod 644 /usr/share/keyrings/wezterm-fury.gpg
-    run_cmd sudo apt update
-    run_cmd sudo apt install -y wezterm
+install_ghostty() {
+    run_cmd sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
 }
 
 install_floorp() {
@@ -757,7 +749,7 @@ stow_dotfiles() {
     [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
     ensure_dirs
 
-    local requested=(shell nvim tmux wezterm scripts xprofile-desktop floorp git xresources sxhkd assets sunshine)
+    local requested=(shell nvim tmux ghostty scripts xprofile-desktop floorp git xresources sxhkd assets sunshine)
 
     local modules=()
     local missing=()
@@ -1124,7 +1116,7 @@ main_menu() {
     whiptail --title "Ubuntu .dotfiles Installer" --checklist "Select what to install:" 28 114 22 \
         "packages" "Install system packages (X + startx + build deps + firmware + microcode + docker + nvm)" ON \
         "stow" "Stow dotfiles into HOME (skips missing packages; backs up conflicts if needed)" ON \
-        "wezterm" "Install WezTerm (apt.fury.io/wez)" ON \
+        "ghostty" "Install Ghostty" ON \
         "neovim" "Install Neovim via PPA (neovim-ppa/unstable)" ON \
         "tailscale" "Install Tailscale (official script)" ON \
         "floorp" "Install Floorp browser (ppa.floorp.app)" ON \
@@ -1181,10 +1173,10 @@ main() {
         ran+=("stow")
     fi
 
-    if grep -q "\"wezterm\"" <<<"$selected"; then
-        step 30 "Installing WezTerm"
-        install_wezterm
-        ran+=("wezterm")
+    if grep -q "\"ghostty\"" <<<"$selected"; then
+        step 30 "Installing Ghostty"
+        install_ghostty
+        ran+=("ghostty")
     fi
 
     if grep -q "\"neovim\"" <<<"$selected"; then
