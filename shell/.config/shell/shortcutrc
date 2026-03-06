@@ -1,1 +1,1 @@
-export KEYPAIRS="/home/cvm/.ssh/keypairs"
+#export KEYPAIRS="$HOME/.ssh/keypairs"

@@ -1,96 +1,162 @@
-# Enable colors and change prompt:
+# Enable colors and change prompt
+#autoload -U colors && colors
+#PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}]%{$reset_color%}$%b "
+
 autoload -U colors && colors
-PS1="%B%{$fg[red]%}[%{$fg[yellow]%}%n%{$fg[green]%}@%{$fg[blue]%}%M %{$fg[magenta]%}%~%{$fg[red]%}]%{$reset_color%}$%b "
-#autoload -Uz vcs_info
+autoload -Uz vcs_info
+setopt prompt_subst
 
-#zstyle ':vcs_info:*' enable git
-#zstyle ':vcs_info:*' formats "%F{green}%F{red}%b%m%F{reset}"
+zstyle ':vcs_info:*' enable git
+zstyle ':vcs_info:*' check-for-changes true
+zstyle ':vcs_info:*' use-prompt-escapes yes
+zstyle ':vcs_info:git:*' formats ' %F{magenta}git:(%F{red}%b%F{magenta})%f'
+zstyle ':vcs_info:git:*' actionformats ' %F{magenta}git:(%F{red}%b%F{yellow}|%a%F{magenta})%f'
 
-# Set up the precmd function
-#precmd() {
-    #vcs_info
-    #psvar[1]="${vcs_info_msg_0_}"
-    #psvar[1]=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-#}
+prompt_git_dirty() {
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
 
-# Use add-zsh-hook to make Zsh call precmd after each command
-#add-zsh-hook preexec precmd
+    if ! git diff --no-ext-diff --quiet 2>/dev/null || ! git diff --no-ext-diff --cached --quiet 2>/dev/null; then
+        print -r -- ' %F{yellow}✗%f'
+    fi
+}
 
-# Set up the prompt
-#setopt PROMPT_SUBST
+precmd_update_prompt() {
+    vcs_info
+}
 
-#ZSH_GIT_PROMPT="%{$fg_bold[blue]%}git::%{$fg_bold[red]%}%{$fg_bold[blue]%}(%{$fg_bold[red]%}${psvar[1]}%{$fg_bold[blue]%})%{$reset_color%}"
-#PROMPT=" %(?:%{$fg_bold[green]%}➜:%{$fg_bold[red]%}➜) %{$fg[cyan]%}%c "
-#PROMPT+="$ZSH_GIT_PROMPT "
+precmd_functions+=(precmd_update_prompt)
 
-setopt autocd		# Automatically cd into typed directory.
-stty stop undef		# Disable ctrl-s to freeze terminal.
+PROMPT='%B%F{green}➜ %F{cyan}%c${vcs_info_msg_0_}$(prompt_git_dirty) %f%b'
+
+# Behavior
+setopt autocd
 setopt interactive_comments
+setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_dups
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_find_no_dups
+setopt hist_reduce_blanks
+setopt extendedhistory
 
-# History in cache directory:
-HISTSIZE=10000000
-SAVEHIST=10000000
+# Disable Ctrl-S to freeze terminal
+[[ -t 0 ]] && stty stop undef
+
+HISTSIZE=200000
+SAVEHIST=200000
 HISTFILE="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/history"
 
-# Load aliases and shortcuts if existent.
-[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc"
-[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/aliasrc" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/aliasrc"
-[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" ] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc"
+# Ensure history dir exists
+mkdir -p "${HISTFILE:h}"
 
-# Basic auto/tab complete:
+# Load aliases and shortcuts
+[[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/shortcutrc"
+[[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/aliasrc" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/aliasrc"
+[[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc"
+
+# Completion
 autoload -U compinit
-zstyle ':completion:*' menu select
 zmodload zsh/complist
-compinit
-_comp_options+=(globdots)		# Include hidden files.
 
-# vi mode
+if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
+    mkdir -p "$XDG_CACHE_HOME/zsh"
+    compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
+else
+    compinit
+fi
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' '+r:|[._-]=* r:|=*'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' special-dirs true
+_comp_options+=(globdots)
+
+# Vim mode
 bindkey -v
 export KEYTIMEOUT=1
 
-# Use vim keys in tab complete menu:
+# Vim keys in completion menu
 bindkey -M menuselect 'h' vi-backward-char
 bindkey -M menuselect 'k' vi-up-line-or-history
 bindkey -M menuselect 'l' vi-forward-char
 bindkey -M menuselect 'j' vi-down-line-or-history
-bindkey -v '^?' backward-delete-char
 
-# Change cursor shape for different vi modes.
+# Backspace / delete
+bindkey -v '^?' backward-delete-char
+# ^[[P is the original
+# bindkey '^[[3~' delete-char
+bindkey '^[[P' delete-char
+bindkey -M vicmd '^[[3~' vi-delete-char
+bindkey -M visual '^[[3~' vi-delete
+
+# Edit command line in vim
+autoload edit-command-line
+zle -N edit-command-line
+bindkey '^e' edit-command-line
+bindkey -M vicmd '^e' edit-command-line
+
+# Cursor shape
+function _set_cursor_block() {
+    echo -ne '\e[1 q'
+}
+
+function _set_cursor_beam() {
+    echo -ne '\e[5 q'
+}
+
 function zle-keymap-select () {
     case $KEYMAP in
-        vicmd) echo -ne '\e[1 q';;      # block
-        viins|main) echo -ne '\e[1 q';; # beam
+        vicmd) _set_cursor_block ;;
+        viins|main) _set_cursor_block ;;
     esac
 }
 zle -N zle-keymap-select
 
 zle-line-init() {
-    zle -K viins # initiate `vi insert` as keymap (can be removed if `bindkey -V` has been set elsewhere)
-    echo -ne "\e[1 q"
+    zle -K viins
+    _set_cursor_block
 }
 zle -N zle-line-init
-echo -ne '\e[1 q' # Use beam shape cursor on startup.
-preexec() { echo -ne '\e[1 q' ;} # Use beam shape cursor for each new prompt.
 
+# Old way
+# preexec() { _set_cursor_block }
+# New way
+precmd_functions+=(_set_cursor_block)
+
+# Startup cursor
+_set_cursor_block
+
+# Keybinds
 bindkey -s '^f' '~/.local/bin/tmux-sessionizer\n'
 
-bindkey '^[[P' delete-char
+# PATH
+export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
 
-# Edit line in vim with ctrl-e:
-autoload edit-command-line; zle -N edit-command-line
-bindkey '^e' edit-command-line
-bindkey -M vicmd '^[[P' vi-delete-char
-bindkey -M vicmd '^e' edit-command-line
-bindkey -M visual '^[[P' vi-delete
+# NVM
+export NVM_DIR="$HOME/.nvm"
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
 
-# Load syntax highlighting; should be last.
-#source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh 2>/dev/null
-#source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh 2>/dev/null
+# Auto-use local node version when entering a project
+autoload -U add-zsh-hook
 
-# path stuff
-export CHROME_BIN=$(which chromium-browser)
-export PATH="$PATH:$HOME/.local/bin:/usr/local/go/bin"
-export PATH=/home/cvm/.cache/rebar3/bin:$PATH
-export NVM_DIR=~/.nvm
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-nvm use lts/gallium &>/dev/null
+load-nvmrc() {
+    local nvmrc_path
+    nvmrc_path="$(nvm_find_nvmrc 2>/dev/null)"
+
+    if [[ -n "$nvmrc_path" ]]; then
+        local node_version
+        node_version="$(<"$nvmrc_path")"
+        local current_version
+        current_version="$(nvm version "$node_version")"
+
+        if [[ "$current_version" = "N/A" ]]; then
+            nvm install "$node_version"
+        elif [[ "$(nvm current)" != "$current_version" ]]; then
+            nvm use "$node_version" >/dev/null
+        fi
+    fi
+}
+
+add-zsh-hook chpwd load-nvmrc
+load-nvmrc
