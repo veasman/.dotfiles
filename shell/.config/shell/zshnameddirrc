@@ -1,1 +1,2 @@
 alias r="cd ~/repos"
+alias d="cd ~/.dotfiles"
