@@ -4,9 +4,9 @@ return {
     dependencies = { "nvim-lua/plenary.nvim" },
     cmd = "Telescope",
     keys = {
-        { "<leader>ff", function() require("telescope.builtin").find_files({ hidden = true, follow = true }) end, desc = "Find files" },
-        { "<leader>fs", function() require("telescope.builtin").live_grep() end, desc = "Live grep" },
-        { "<leader>fr", function() require("telescope.builtin").oldfiles() end, desc = "Recent files" },
+        { "<leader>pf", function() require("telescope.builtin").find_files({ hidden = true, follow = true }) end, desc = "Find files" },
+        { "<leader>ps", function() require("telescope.builtin").live_grep() end, desc = "Live grep" },
+        { "<leader>pr", function() require("telescope.builtin").oldfiles() end, desc = "Recent files" },
     },
     config = function()
         local telescope = require("telescope")

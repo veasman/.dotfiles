@@ -56,21 +56,25 @@ mkdir -p "${HISTFILE:h}"
 [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc" ]] && source "${XDG_CONFIG_HOME:-$HOME/.config}/shell/zshnameddirrc"
 
 # Completion
-autoload -U compinit
+autoload -Uz compinit
 zmodload zsh/complist
 
-if [[ -n "${XDG_CACHE_HOME:-}" ]]; then
-    mkdir -p "$XDG_CACHE_HOME/zsh"
-    compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
-else
-    compinit
-fi
+: ${XDG_CACHE_HOME:=$HOME/.cache}
+mkdir -p "$XDG_CACHE_HOME/zsh"
+compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
 
 zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' '+r:|[._-]=* r:|=*'
+zstyle ':completion:*' special-dirs false
+zstyle ':completion:*' matcher-list \
+    'm:{a-zA-Z}={A-Za-z}' \
+    'r:|[._-]=* r:|=*' \
+    'l:|=* r:|=*'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-zstyle ':completion:*' special-dirs true
-_comp_options+=(globdots)
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%F{yellow}%d%f'
+zstyle ':completion:*' list-separator ' — '
+zstyle ':completion:*' file-sort name
+zstyle ':completion:*' squeeze-slashes true
 
 # Vim mode
 bindkey -v
@@ -128,7 +132,7 @@ precmd_functions+=(_set_cursor_block)
 _set_cursor_block
 
 # Keybinds
-bindkey -s '^f' '~/.local/bin/tmux-sessionizer\n'
+bindkey -s '^f' '~/.local/bin/pmux\n'
 
 # PATH
 export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
