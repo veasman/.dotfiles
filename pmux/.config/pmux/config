@@ -1,0 +1,12 @@
+MUX_EDITOR_CMD='exec nvim .'
+MUX_SHELL_CMD='exec "$SHELL" -l'
+MUX_CHOOSER_CMD='fzf --prompt="Project > "'
+
+MUX_FIXED_PROJECTS=(
+    "$HOME/.dotfiles"
+)
+
+MUX_PROJECT_ROOTS=(
+    "$HOME/repos"
+    "$HOME/work"
+)
