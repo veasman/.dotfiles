@@ -1,9 +1,9 @@
 [global]
 follow = mouse
-width = 380
-height = 130
+width = 360
+height = 120
 origin = top-right
-offset = 24x24
+offset = 20x20
 notification_limit = 20
 progress_bar = true
 progress_bar_height = 10
@@ -19,24 +19,24 @@ padding = 12
 horizontal_padding = 12
 text_icon_padding = 8
 
-background = "#ffeef6"
-foreground = "#4a3543"
-frame_color = "#f29fc2"
+background = "#11182d"
+foreground = "#d8e2ff"
+frame_color = "#7aa2f7"
 
 [urgency_low]
-background = "#ffeef6"
-foreground = "#4a3543"
-frame_color = "#e7bfd1"
+background = "#11182d"
+foreground = "#d8e2ff"
+frame_color = "#3a4668"
 timeout = 6
 
 [urgency_normal]
-background = "#ffeef6"
-foreground = "#4a3543"
-frame_color = "#f29fc2"
+background = "#11182d"
+foreground = "#d8e2ff"
+frame_color = "#7aa2f7"
 timeout = 6
 
 [urgency_critical]
-background = "#fff7fb"
-foreground = "#5c4451"
-frame_color = "#f29fc2"
+background = "#0b1020"
+foreground = "#ffffff"
+frame_color = "#7aa2f7"
 timeout = 0
