@@ -2,6 +2,9 @@ return {
     {
         "tpope/vim-fugitive",
         cmd = { "Git", "Gdiffsplit", "Gvdiffsplit", "Gwrite", "Gread", "Ggrep" },
+        keys = {
+            { "<leader>gs", vim.cmd.Git },
+        },
     },
     {
         "mbbill/undotree",
