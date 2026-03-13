@@ -34,8 +34,6 @@ function M.reload_loom_theme()
         else
             vim.o.background = "dark"
         end
-    elseif theme.colorscheme == "material" then
-        vim.g.material_style = theme.variant
     elseif theme.colorscheme == "catppuccin" then
         require("catppuccin").setup({
             flavour = theme.variant,

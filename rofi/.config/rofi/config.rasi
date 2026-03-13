@@ -10,22 +10,22 @@ window {
     background-color: @bg;
     border: 2px;
     border-color: @border;
-    border-radius: 0px;
-    width: 40%;
-    padding: 10px;
+    border-radius: @radius;
+    width: @win-width;
+    padding: @pad;
 }
 
 mainbox {
     background-color: @bg;
-    spacing: 10px;
+    spacing: @elem-spacing;
     children: [ inputbar, listview ];
 }
 
 inputbar {
     background-color: @bg-alt;
     text-color: @fg;
-    padding: 8px;
-    spacing: 8px;
+    padding: @pad;
+    spacing: @elem-spacing;
     children: [ prompt, entry ];
 }
 
@@ -42,25 +42,27 @@ entry {
 
 listview {
     background-color: @bg;
-    lines: 8;
+    lines: @lines;
     columns: 1;
     fixed-height: false;
     dynamic: true;
     scrollbar: false;
-    spacing: 4px;
+    spacing: @elem-spacing;
 }
 
 element {
     background-color: @bg;
     text-color: @fg;
-    padding: 8px;
-    spacing: 8px;
+    padding: @pad;
+    spacing: @elem-spacing;
     border: 0px;
+    border-radius: @radius;
 }
 
 element selected {
     background-color: @selection-bg;
     text-color: @selection-fg;
+    border-radius: @radius;
 }
 
 element-text {
@@ -70,6 +72,6 @@ element-text {
 }
 
 element-icon {
-    size: 24px;
+    size: @icon-size;
     background-color: inherit;
 }
