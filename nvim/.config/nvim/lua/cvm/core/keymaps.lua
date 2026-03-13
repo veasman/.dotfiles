@@ -27,8 +27,8 @@ keymap("n", "<leader>f", function()
     vim.lsp.buf.format({ async = true })
 end, { desc = "Format buffer" })
 
-keymap("n", "<C-k>", "<cmd>cnext<CR>zz", { desc = "Quickfix next" })
-keymap("n", "<C-j>", "<cmd>cprev<CR>zz", { desc = "Quickfix prev" })
+keymap("n", "<C-j>", "<cmd>cnext<CR>zz", { desc = "Quickfix next" })
+keymap("n", "<C-k>", "<cmd>cprev<CR>zz", { desc = "Quickfix prev" })
 keymap("n", "<leader>k", "<cmd>lnext<CR>zz", { desc = "Loclist next" })
 keymap("n", "<leader>j", "<cmd>lprev<CR>zz", { desc = "Loclist prev" })
 
