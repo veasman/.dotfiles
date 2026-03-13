@@ -1,12 +1,13 @@
-MUX_EDITOR_CMD='exec nvim .'
-MUX_SHELL_CMD='exec "$SHELL" -l'
-MUX_CHOOSER_CMD='fzf --prompt="Project > "'
+# nvim command allows for remote cmd execution from loom
+PMUX_EDITOR_CMD='exec nvim --listen "/tmp/nvim-loom-$$-$(date +%s).sock" .'
+PMUX_SHELL_CMD='exec "$SHELL" -l'
+PMUX_CHOOSER_CMD='fzf --prompt="Project > "'
 
-MUX_FIXED_PROJECTS=(
+PMUX_FIXED_PROJECTS=(
     "$HOME/.dotfiles"
 )
 
-MUX_PROJECT_ROOTS=(
+PMUX_PROJECT_ROOTS=(
     "$HOME/repos"
     "$HOME/work"
 )

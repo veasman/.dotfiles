@@ -33,8 +33,14 @@ return {
         "ellisonleao/gruvbox.nvim",
         lazy = true,
         config = function()
+            if theme.transparent then
+                vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
+                vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+            end
+
             if theme.colorscheme == "gruvbox" then
                 vim.cmd.colorscheme("gruvbox")
+
             end
         end,
     },
