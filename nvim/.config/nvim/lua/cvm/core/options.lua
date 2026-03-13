@@ -35,7 +35,10 @@ opt.statusline = " %f %m%r%h%w %= %y  %l:%c  %p%% "
 
 opt.isfname:append("@-@")
 
-vim.cmd("highlight Normal guibg=None")
+-- vim.cmd("highlight Normal guibg=None")
+
+vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
 
 local undodir = fn.stdpath("state") .. "/undo"
 if fn.isdirectory(undodir) == 0 then
