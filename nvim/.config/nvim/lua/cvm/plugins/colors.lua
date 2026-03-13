@@ -9,7 +9,6 @@ if not ok then
 end
 
 return {
-
     {
         "rose-pine/neovim",
         name = "rose-pine",
@@ -33,14 +32,8 @@ return {
         "ellisonleao/gruvbox.nvim",
         lazy = true,
         config = function()
-            if theme.transparent then
-                vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
-                vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
-            end
-
             if theme.colorscheme == "gruvbox" then
                 vim.cmd.colorscheme("gruvbox")
-
             end
         end,
     },
@@ -68,4 +61,20 @@ return {
         end,
     },
 
+    {
+        "catppuccin/nvim",
+        name = "catppuccin",
+        lazy = true,
+        config = function()
+            require("catppuccin").setup({
+                flavour = theme.variant,
+                transparent_background = theme.transparent,
+                no_italic = true,
+            })
+
+            if theme.colorscheme == "catppuccin" then
+                vim.cmd.colorscheme("catppuccin")
+            end
+        end,
+    },
 }

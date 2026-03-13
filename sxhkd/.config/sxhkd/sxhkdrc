@@ -12,3 +12,6 @@ XF86MonBrightnessDown
 
 super + shift + s
     flameshot gui
+
+super + t
+    python3 ~/repos/loom/loom menu

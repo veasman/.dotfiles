@@ -1,0 +1,42 @@
+[global]
+follow = mouse
+width = 380
+height = 130
+origin = top-right
+offset = 24x24
+notification_limit = 20
+progress_bar = true
+progress_bar_height = 10
+icon_corner_radius = 0
+min_icon_size = 32
+max_icon_size = 64
+
+font = FiraCode Nerd Font 11
+corner_radius = 12
+frame_width = 2
+separator_height = 2
+padding = 12
+horizontal_padding = 12
+text_icon_padding = 8
+
+background = "#ffeef6"
+foreground = "#4a3543"
+frame_color = "#f29fc2"
+
+[urgency_low]
+background = "#ffeef6"
+foreground = "#4a3543"
+frame_color = "#e7bfd1"
+timeout = 6
+
+[urgency_normal]
+background = "#ffeef6"
+foreground = "#4a3543"
+frame_color = "#f29fc2"
+timeout = 6
+
+[urgency_critical]
+background = "#fff7fb"
+foreground = "#5c4451"
+frame_color = "#f29fc2"
+timeout = 0
