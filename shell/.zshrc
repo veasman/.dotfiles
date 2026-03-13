@@ -132,7 +132,7 @@ precmd_functions+=(_set_cursor_block)
 _set_cursor_block
 
 # Keybinds
-bindkey -s '^f' '~/.local/bin/pmux\n'
+bindkey -s '^f' 'pmux\n'
 
 # PATH
 export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
