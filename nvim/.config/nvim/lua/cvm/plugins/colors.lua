@@ -39,19 +39,6 @@ return {
     },
 
     {
-        "marko-cerovac/material.nvim",
-        lazy = true,
-        init = function()
-            vim.g.material_style = theme.variant
-        end,
-        config = function()
-            if theme.colorscheme == "material" then
-                vim.cmd.colorscheme("material")
-            end
-        end,
-    },
-
-    {
         "nyoom-engineering/oxocarbon.nvim",
         lazy = true,
         config = function()
@@ -77,4 +64,47 @@ return {
             end
         end,
     },
+
+    {
+        "EdenEast/nightfox.nvim",
+        lazy = true,
+        config = function()
+            if theme.colorscheme == "dayfox" then
+                vim.cmd.colorscheme("dayfox")
+            end
+
+            if theme.colorscheme == "dawnfox" then
+                vim.cmd.colorscheme("dawnfox")
+            end
+        end,
+    },
+
+    {
+          "vague-theme/vague.nvim",
+          lazy = false,
+          priority = 1000,
+          config = function()
+                require("vague").setup({
+                    transparent = theme.transparent
+                })
+                vim.cmd("colorscheme vague")
+          end
+    },
+
+    {
+        "paulfrische/reddish.nvim",
+        lazy = true,
+        config = function ()
+            if theme.colorscheme == "reddish" then
+                vim.cmd("colorscheme reddish")
+            end
+        end,
+    },
+
+    {
+        "folke/tokyonight.nvim",
+        lazy = false,
+        priority = 1000,
+        opts = {},
+    }
 }
