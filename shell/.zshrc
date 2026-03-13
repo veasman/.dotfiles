@@ -164,3 +164,9 @@ load-nvmrc() {
 
 add-zsh-hook chpwd load-nvmrc
 load-nvmrc
+
+# LOOM
+
+# fzf config
+[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh" ] && source "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh"
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }${LOOM_FZF_COLOR_OPTS:-}"

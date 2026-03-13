@@ -12,7 +12,7 @@ export GTK_THEME=Adwaita-dark
 # Stuff
 sxhkd &
 dunst &
-picom --vsync --backend="glx" &
+picom --config ~/.config/picom/picom.conf &
 setbg &
 unclutter -idle 1 -jitter 5 &
 
