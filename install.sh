@@ -415,8 +415,8 @@ install_neovim_ppa() {
     run_cmd sudo apt install -y neovim
 }
 
-install_ghostty() {
-    run_cmd sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/mkasberg/ghostty-ubuntu/HEAD/install.sh)"
+install_kitty() {
+    run_cmd sudo apt install -y kitty
 }
 
 install_floorp() {
@@ -749,7 +749,7 @@ stow_dotfiles() {
     [[ -d "$DOTFILES_DIR" ]] || die_ui "Dotfiles dir not found: $DOTFILES_DIR"
     ensure_dirs
 
-    local requested=(shell nvim tmux ghostty scripts xprofile-desktop floorp git xresources sxhkd assets sunshine)
+    local requested=(shell nvim tmux kitty scripts xprofile-desktop floorp git xresources sxhkd assets sunshine)
 
     local modules=()
     local missing=()
@@ -1116,7 +1116,7 @@ main_menu() {
     whiptail --title "Ubuntu .dotfiles Installer" --checklist "Select what to install:" 28 114 22 \
         "packages" "Install system packages (X + startx + build deps + firmware + microcode + docker + nvm)" ON \
         "stow" "Stow dotfiles into HOME (skips missing packages; backs up conflicts if needed)" ON \
-        "ghostty" "Install Ghostty" ON \
+        "kitty" "Install Kitty" ON \
         "neovim" "Install Neovim via PPA (neovim-ppa/unstable)" ON \
         "tailscale" "Install Tailscale (official script)" ON \
         "floorp" "Install Floorp browser (ppa.floorp.app)" ON \
@@ -1173,10 +1173,10 @@ main() {
         ran+=("stow")
     fi
 
-    if grep -q "\"ghostty\"" <<<"$selected"; then
-        step 30 "Installing Ghostty"
-        install_ghostty
-        ran+=("ghostty")
+    if grep -q "\"kitty\"" <<<"$selected"; then
+        step 30 "Installing Kitty"
+        install_kitty
+        ran+=("kitty")
     fi
 
     if grep -q "\"neovim\"" <<<"$selected"; then
