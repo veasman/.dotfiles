@@ -2,39 +2,37 @@
 
 [ -f "$HOME/.config/xorg/Xresources" ] && xrdb -merge "$HOME/.config/xorg/Xresources"
 
-# Force dark mode outside of GNOME session
-export GTK_THEME=Adwaita-dark
-
 # Remove work mouse accel
-#xinput --set-prop "BT mouse" "libinput Accel Profile Enabled" 0, 1
-#xinput --set-prop "BT mouse" "libinput Accel Speed" 0
+xinput | grep "BT mouse" && xinput --set-prop "BT mouse" "libinput Accel Profile Enabled" 0, 1
+xinput | grep "BT mouse" && xinput --set-prop "BT mouse" "libinput Accel Speed" 0
+
+# Stuff
+dunst &
+picom --config ~/.config/picom/picom.conf &
+
+#sunshine &
 
 # DisplayLink dock fix
 xrandr --setprovideroutputsource 1 0 || true
 
-# Stuff
-sxhkd &
-dunst &
-picom --config ~/.config/picom/picom.conf &
-setbg $(cat ~/.local/state/loom/current_wallpaper) &
-unclutter -idle 1 -jitter 5 &
-
-#sunshine &
-
-dwmblocks &
-
 # Home
-# xrandr --output HDMI-1 --mode 2560x1440 --rate 144
+#xrandr --output HDMI-1 --mode 2560x1440 --rate 144
 
 # Work
 xrandr \
-  --output eDP --off \
-  --output DVI-I-1-1      --mode 1920x1080 --rotate left   --pos 0x0 \
-  --output DisplayPort-1  --mode 1920x1080 --rotate normal --pos 1080x0 --primary \
-  --output DVI-I-2-2      --mode 1920x1080 --rotate normal --pos 3000x0 \
-  --fb 4920x1920
+    --output eDP --off \
+    --output DisplayPort-1 --primary --mode 1920x1080 --pos 1080x420 --rotate normal \
+    --output DVI-I-2-2 --mode 1920x1080 --pos 3000x420 --rotate normal \
+    --output DVI-I-1-1 --mode 1920x1080 --pos 0x0 --rotate left
 
-#xrandr --output eDP --off --output DVI-I-1-1      --mode 1920x1080 --rotate left   --pos 0x0 --output DisplayPort-1  --mode 1920x1080 --rotate normal --pos 1080x0 --primary --output DVI-I-2-2      --mode 1920x1080 --rotate normal --pos 3000x0 --fb 4920x1920
+# LOOM GTK THEME
+[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh"
 
-# Not needed for Ubuntu
-# exec dwm
+if [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/current_wallpaper" ]; then
+    BG_PATH="$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/loom/current_wallpaper")"
+    if [ -f "$BG_PATH" ]; then
+        mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}"
+        ln -snf "$BG_PATH" "${XDG_DATA_HOME:-$HOME/.local/share}/bg"
+        xwallpaper --zoom "$BG_PATH"
+    fi
+fi
