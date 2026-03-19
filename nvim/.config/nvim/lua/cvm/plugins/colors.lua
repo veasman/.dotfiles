@@ -71,30 +71,29 @@ return {
         config = function()
             if theme.colorscheme == "dayfox" then
                 vim.cmd.colorscheme("dayfox")
-            end
-
-            if theme.colorscheme == "dawnfox" then
+            elseif theme.colorscheme == "dawnfox" then
                 vim.cmd.colorscheme("dawnfox")
             end
         end,
     },
 
     {
-          "vague-theme/vague.nvim",
-          lazy = false,
-          priority = 1000,
-          config = function()
-                require("vague").setup({
-                    transparent = theme.transparent
-                })
+        "vague-theme/vague.nvim",
+        lazy = true,
+        config = function()
+            require("vague").setup({
+                transparent = theme.transparent,
+            })
+            if theme.colorscheme == "vague" then
                 vim.cmd("colorscheme vague")
-          end
+            end
+        end,
     },
 
     {
         "paulfrische/reddish.nvim",
         lazy = true,
-        config = function ()
+        config = function()
             if theme.colorscheme == "reddish" then
                 vim.cmd("colorscheme reddish")
             end
@@ -103,8 +102,25 @@ return {
 
     {
         "folke/tokyonight.nvim",
-        lazy = false,
-        priority = 1000,
-        opts = {},
-    }
+        lazy = true,
+        config = function()
+            if theme.colorscheme == "tokyonight" then
+                vim.cmd("colorscheme tokyonight")
+            end
+        end,
+    },
+
+    {
+        "echasnovski/mini.base16",
+        version = false,
+        lazy = true,
+        config = function()
+            if theme.colorscheme == "loom-custom" and theme.palette then
+                require("mini.base16").setup({
+                    palette = theme.palette,
+                    use_cterm = true,
+                })
+            end
+        end,
+    },
 }
