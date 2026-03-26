@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+
+# --- Notify helper ---
+notify() {
+    if command -v dunstify >/dev/null 2>&1; then
+        dunstify -a "printer" "$1" "$2"
+    else
+        notify-send "$1" "$2"
+    fi
+}
+
+# --- Menu detection ---
+if command -v rofi >/dev/null 2>&1; then
+    MENU="rofi -dmenu -p"
+elif command -v fzf >/dev/null 2>&1; then
+    MENU="fzf --prompt"
+else
+    notify "Error" "Install rofi or fzf"
+    exit 1
+fi
+
+# --- File selection (restricted paths) ---
+SEARCH_PATHS="$HOME/Documents $HOME/Downloads $HOME/repos"
+
+notify "Printer" "Select a file..."
+
+FILE=$(find $SEARCH_PATHS -type f \
+    \( -iname "*.csv" -o -iname "*.pdf" -o -iname "*.txt" \) \
+    2>/dev/null | eval $MENU "'Select file:'")
+
+[ -z "$FILE" ] && { notify "Cancelled" "No file selected"; exit 0; }
+
+# --- Printer selection ---
+PRINTER=$(lpstat -p | awk '{print $2}' | eval $MENU "'Printer:'")
+[ -z "$PRINTER" ] && { notify "Cancelled" "No printer selected"; exit 0; }
+
+# --- Copies ---
+COPIES=$(printf "1\n2\n3\n4\n5" | eval $MENU "'Copies:'")
+[ -z "$COPIES" ] && COPIES=1
+
+# --- Orientation ---
+ORIENT=$(printf "portrait\nlandscape" | eval $MENU "'Orientation:'")
+
+EXT="${FILE##*.}"
+
+OPTIONS=""
+[ "$ORIENT" = "landscape" ] && OPTIONS="-o landscape"
+
+# --- CSV scaling mode ---
+SCALE_MODE=$(printf "normal\nfit-to-page" | eval $MENU "'CSV scaling:'")
+ZOOM=""
+[ "$SCALE_MODE" = "fit-to-page" ] && ZOOM="--zoom 0.7"
+
+notify "Printing..." "$(basename "$FILE") → $PRINTER"
+
+# --- CSV pretty printing ---
+if [[ "$EXT" == "csv" ]]; then
+    if ! command -v pandoc >/dev/null 2>&1; then
+        notify "Warning" "pandoc not installed, printing raw CSV"
+        lp -d "$PRINTER" -n "$COPIES" "$FILE"
+        exit 0
+    fi
+
+    if ! command -v wkhtmltopdf >/dev/null 2>&1; then
+        notify "Error" "wkhtmltopdf not installed"
+        exit 1
+    fi
+
+    TMP_HTML=$(mktemp --suffix=.html)
+    TMP_PDF=$(mktemp --suffix=.pdf)
+
+    # Convert CSV → HTML
+    pandoc "$FILE" -f csv -t html -s -o "$TMP_HTML" \
+        -M title="$(basename "$FILE")"
+
+    # Inject print-optimized CSS
+    cat <<EOF >> "$TMP_HTML"
+<style>
+body {
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 4px;
+    word-wrap: break-word;
+}
+
+th {
+    background: #eee;
+}
+
+@page {
+    size: A4 landscape;
+    margin: 8mm;
+}
+</style>
+EOF
+
+    if wkhtmltopdf \
+        --orientation Landscape \
+        --page-size A4 \
+        --margin-top 8mm \
+        --margin-bottom 8mm \
+        --margin-left 5mm \
+        --margin-right 5mm \
+        --disable-smart-shrinking \
+        $ZOOM \
+        "$TMP_HTML" "$TMP_PDF" >/dev/null 2>&1; then
+
+        if lp -d "$PRINTER" -n "$COPIES" "$TMP_PDF"; then
+            notify "Success" "Printed $(basename "$FILE")"
+        else
+            notify "Error" "lp failed"
+        fi
+    else
+        notify "Error" "PDF conversion failed"
+    fi
+
+    rm -f "$TMP_HTML" "$TMP_PDF"
+
+else
+    if lp -d "$PRINTER" -n "$COPIES" $OPTIONS "$FILE"; then
+        notify "Success" "Printed $(basename "$FILE")"
+    else
+        notify "Error" "Printing failed"
+    fi
+fi
