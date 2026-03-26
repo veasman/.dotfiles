@@ -1,4 +1,4 @@
-# Sunshine secrets/state/logs
 sunshine/.config/sunshine/credentials/
 sunshine/.config/sunshine/sunshine_state.json
 sunshine/.config/sunshine/sunshine.log
+nvim/.config/nvim/lazy-lock.json

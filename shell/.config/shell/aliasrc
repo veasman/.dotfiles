@@ -1,6 +1,7 @@
 alias ls="ls --color=auto"
 alias la="ls --color=auto -lah"
 alias clip="xclip -selection clipboard"
+alias csv="column -s, -t < somefile.csv | nvim"
 
 alias ema="
 export DISPLAY=$(ip route | awk '/^default/{print $3; exit}'):0.0
