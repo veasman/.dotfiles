@@ -1,5 +1,15 @@
 # TODO
 
+# daily reports
+
+## missing
+
+2400, 2600, 3900, 5200
+
+## photos
+
+Dustin House, MH 323 N Court ST to ML WEST, map and site photo
+Eric Zerr, 116 B 8th ave missing site and map photo
 
 # general
 
@@ -8,23 +18,15 @@ build out screenshotting tool using rofi
 
 # vwm
 
-* config options not working:
-workspace_count, default_layout
-
-they are valid config options but they dont do anything in the code
-
-i took out padding_y because it was useless, but we do need some way of adding some vertical space between the bar background and the module pills when bar is in float mode but transparent_background is false
-bar modules get some margin_x by default, i dont want this, if my modules margin_x is 10 and my gap is 10 then my bar modules and windows should line up on screen if that makes sense
-think on bar module coloring, user confiured? preset? etc etc
-consider custom bar modules
-truncate something when too much in bar
-allowing keybinds like XF86AudioRaiseVolume so i can setup default media keys in the config
-bar modules for brightness and media?
-
-* config options i do not even want:
-default_layout
-
-i only like the current layout, i dont want to provide other layouts
+* scratchpad becomes an overlay workspace like hyprland, needs some way of showing the scratchpad worksapce is active
+* fix bar states so u can have no bar and pill modules, floating bar and pill modules, floating bar and flat modules, flat bar and flat modules, no bar and flat modules, and no bar and pill modules
+    * currently when bar is none, modules wont render as pills, only flat, and when bar is floating the rounding doesnt look right 
+* add memory module
+* should wifi module show more accurate state of connection?
+* add weather module
+* update time module to look more pretty, its ugly
+* occupied workspaces should be same color as its outline, only color a workspace when its active
+* why does it take a few seconds to switch workspaces or monitors or use any keybind at all sometimes
 
 ## kitty
 
@@ -42,37 +44,11 @@ create ability to yank text to clipboard without using mouse?
 * e.g. when i press backspace it registers the keydown and key up both as individual key presses or something like that
 * can i make tmux scrollable?
 
-## vwm wayland
-things to add when migration to wayland:
-
-* compositor/render pipeline
-* xdg-shell window management
-* output management
-* seat/input handling
-* app-id based rules
-* layer-shell support
-* XWayland support
-* IPC/control socket
-* bar state export model
-* popup/utility window rules
-* config reload path
-* theme/state integration points for Loom
-
-and potentially:
-
-* bar/client separation plan
-* utility window behavior
-* decorations strategy
-* damage/frame handling that feels smooth
-* enough protocol coverage that core desktop tools work
-
-
 ## Gardening
 
 ### Last Spring Frost
 
-* Leawood, KS: Apr 15
-* Centralia, IL: Apr 15
+* Apr 15
 
 ### Plants
 

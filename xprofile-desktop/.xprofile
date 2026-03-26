@@ -21,7 +21,15 @@ xrandr --setprovideroutputsource 1 0 || true
 # Work
 xrandr \
     --output eDP --off \
+    --output HDMI-A-0 --off \
+    --output DisplayPort-0 --off \
     --output DisplayPort-1 --primary --mode 1920x1080 --pos 1080x420 --rotate normal \
+    --output DisplayPort-2 --off \
+    --output DisplayPort-3 --off \
+    --output DisplayPort-4 --off \
+    --output DisplayPort-5 --off \
+    --output DVI-I-4-4 --off \
+    --output DVI-I-3-3 --off \
     --output DVI-I-2-2 --mode 1920x1080 --pos 3000x420 --rotate normal \
     --output DVI-I-1-1 --mode 1920x1080 --pos 0x0 --rotate left
 
