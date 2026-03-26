@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VIDEO_DIR=~/Videos/PO
+VIDEO_DIR=~/Downloads
 
 ask_delete() {
     choice=$(echo -e "Yes\nNo" | rofi -dmenu -p "Delete this video?")
@@ -11,25 +11,19 @@ ask_delete() {
 }
 
 while true; do
-    # Get list of files
-    video_list=$(find "$VIDEO_DIR" -type f)
+    video_list=$(find "$VIDEO_DIR" -type f | grep 'mp4')
 
-    # If empty, show message and exit
     if [ -z "$video_list" ]; then
         rofi -e "No videos found in $VIDEO_DIR"
         exit 0
     fi
 
-    # Pick video
     video_file=$(echo "$video_list" | rofi -dmenu -p "Select a video:")
 
-    # Exit if user cancels
     [ -z "$video_file" ] && exit 0
 
-    # Play video
     mpv --no-terminal "$video_file" &
     wait $!
 
-    # Ask to delete
     ask_delete "$video_file"
 done
