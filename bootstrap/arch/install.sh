@@ -39,6 +39,7 @@ PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 VWM_DIR="$REPOS_DIR/vwm"
 LOOM_DIR="$REPOS_DIR/loom"
 PMUX_DIR="$REPOS_DIR/pmux"
+YAY_DIR="$REPOS_DIR/yay"
 
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
 LOG_FILE="$LOG_DIR/install.log"
@@ -82,18 +83,14 @@ die_ui() {
     exit 1
 }
 
-require_ubuntu() {
+require_arch() {
     [[ -r /etc/os-release ]] || die_ui "/etc/os-release not found"
 
     # shellcheck disable=SC1091
     . /etc/os-release
 
-    if [[ "${ID:-}" != "ubuntu" && "${ID_LIKE:-}" != *"ubuntu"* ]]; then
-        die_ui "This installer is for Ubuntu.\n\nYou said you want Arch support later. Fine. This is not that script."
-    fi
-
-    if [[ "${VERSION_ID:-}" != "24.04" ]]; then
-        warn "Tested target is Ubuntu 24.04, current VERSION_ID=${VERSION_ID:-unknown}"
+    if [[ "${ID:-}" != "arch" && "${ID_LIKE:-}" != *"arch"* ]]; then
+        die_ui "This installer is for Arch Linux."
     fi
 }
 
@@ -113,12 +110,17 @@ ensure_whiptail() {
     if command -v whiptail >/dev/null 2>&1; then
         return
     fi
-    sudo apt-get update -y >>"$LOG_FILE" 2>&1
-    sudo apt-get install -y whiptail >>"$LOG_FILE" 2>&1
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] sudo pacman -Sy --noconfirm libnewt"
+        return 0
+    fi
+
+    sudo pacman -Sy --noconfirm libnewt >>"$LOG_FILE" 2>&1
 }
 
 start_gauge() {
-    exec 4> >(whiptail --title "Ubuntu dotfiles bootstrap" \
+    exec 4> >(whiptail --title "Arch dotfiles bootstrap" \
         --backtitle "Installing...  Log: $LOG_FILE" \
         --gauge "Preparing..." 10 80 0)
     GAUGE_OPEN=1
@@ -179,12 +181,7 @@ run_cmd() {
     fi
 
     log "[cmd] $*"
-
-    env \
-        DEBIAN_FRONTEND=noninteractive \
-        NEEDRESTART_MODE=a \
-        APT_LISTCHANGES_FRONTEND=none \
-        "$@" >>"$LOG_FILE" 2>&1 &
+    "$@" >>"$LOG_FILE" 2>&1 &
     local pid=$!
 
     if [[ -n "${GAUGE_OPEN:-}" ]]; then
@@ -210,12 +207,7 @@ run_shell() {
     fi
 
     log "[shell] bash -lc $cmd"
-
-    env \
-        DEBIAN_FRONTEND=noninteractive \
-        NEEDRESTART_MODE=a \
-        APT_LISTCHANGES_FRONTEND=none \
-        bash -lc "set -eo pipefail; $cmd" >>"$LOG_FILE" 2>&1 &
+    bash -lc "set -eo pipefail; $cmd" >>"$LOG_FILE" 2>&1 &
     local pid=$!
 
     if [[ -n "${GAUGE_OPEN:-}" ]]; then
@@ -237,9 +229,9 @@ optional_prompt() {
     result="$(
         whiptail --title "Optional installs" --checklist \
         "Choose optional software:" 16 90 6 \
-        "sunshine" "Install Sunshine" OFF \
+        "sunshine" "Install Sunshine (AUR)" OFF \
         "steam" "Install Steam" OFF \
-        "mullvad" "Install Mullvad VPN" OFF \
+        "mullvad" "Install Mullvad VPN (AUR)" OFF \
         3>&1 1>&2 2>&3
     )" || die_ui "Aborted"
 
@@ -247,17 +239,9 @@ optional_prompt() {
     INSTALL_STEAM=0
     INSTALL_MULLVAD=0
 
-    if [[ "$result" == *'"sunshine"'* ]]; then
-        INSTALL_SUNSHINE=1
-    fi
-
-    if [[ "$result" == *'"steam"'* ]]; then
-        INSTALL_STEAM=1
-    fi
-
-    if [[ "$result" == *'"mullvad"'* ]]; then
-        INSTALL_MULLVAD=1
-    fi
+    [[ "$result" == *'"sunshine"'* ]] && INSTALL_SUNSHINE=1
+    [[ "$result" == *'"steam"'* ]] && INSTALL_STEAM=1
+    [[ "$result" == *'"mullvad"'* ]] && INSTALL_MULLVAD=1
 
     log "[optional] sunshine=$INSTALL_SUNSHINE steam=$INSTALL_STEAM mullvad=$INSTALL_MULLVAD"
 }
@@ -271,130 +255,95 @@ ensure_dirs() {
         "$REPOS_DIR"
 }
 
-apt_install() {
-    run_cmd sudo apt-get install -y "$@"
+pacman_install() {
+    run_cmd sudo pacman -S --needed --noconfirm "$@"
 }
 
-apt_update_upgrade() {
-    run_cmd sudo apt-get update -y
-    #run_cmd sudo apt-get upgrade -y
+enable_multilib_if_needed() {
+    if grep -Eq '^\[multilib\]' /etc/pacman.conf && grep -Eq '^Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf; then
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] enable multilib in /etc/pacman.conf"
+        return 0
+    fi
+
+    run_shell '
+        sudo cp /etc/pacman.conf /etc/pacman.conf.bak-dotfiles
+        sudo sed -i "/^\#\[multilib\]/,/^\#Include = \/etc\/pacman.d\/mirrorlist/ s/^#//" /etc/pacman.conf
+    '
+    run_cmd sudo pacman -Sy
 }
 
 install_cpu_microcode() {
-    local vendor=""
-
     if grep -qi "AuthenticAMD" /proc/cpuinfo 2>/dev/null; then
-        vendor="amd"
+        log "[cpu] detected AMD CPU"
+        pacman_install amd-ucode
     elif grep -qi "GenuineIntel" /proc/cpuinfo 2>/dev/null; then
-        vendor="intel"
+        log "[cpu] detected Intel CPU"
+        pacman_install intel-ucode
     else
-        vendor="unknown"
+        warn "Could not determine CPU vendor for microcode install; skipping"
     fi
-
-    case "$vendor" in
-        amd)
-            log "[cpu] detected AMD CPU"
-            run_cmd sudo apt-get install -y amd64-microcode
-            ;;
-        intel)
-            log "[cpu] detected Intel CPU"
-            run_cmd sudo apt-get install -y intel-microcode
-            ;;
-        *)
-            warn "Could not determine CPU vendor for microcode install; skipping"
-            ;;
-    esac
 }
 
 install_base_packages() {
-    step 5 "Refreshing apt metadata"
-    run_cmd sudo apt-get update -y
+    step 5 "Refreshing pacman metadata"
+    run_cmd sudo pacman -Sy
 
-    step 8 "Installing bootstrap prerequisites"
-    run_cmd sudo apt-get install -y \
-        ca-certificates curl gnupg software-properties-common apt-transport-https whiptail
-
-    step 12 "Installing core development packages"
-    run_cmd sudo apt-get install -y \
-        git stow build-essential pkg-config gcc make \
-        python3 python3-pip unzip wget fontconfig
+    step 10 "Installing bootstrap prerequisites"
+    pacman_install base-devel git stow curl wget unzip python python-pip pkgconf libnewt
 
     step 18 "Installing shell and terminal tools"
-    run_cmd sudo apt-get install -y \
-        zsh tmux fzf tree ripgrep fd-find xclip
+    pacman_install zsh tmux fzf tree ripgrep fd xclip
 
-    step 24 "Installing X11 desktop utilities"
-    run_cmd sudo apt-get install -y \
-        xinit x11-xserver-utils xserver-xorg-core dbus-x11 \
-        rofi dunst libnotify-bin picom xwallpaper playerctl flameshot brightnessctl
+    step 26 "Installing X11 desktop utilities"
+    pacman_install \
+        xorg-server xorg-xinit xorg-xrandr xorg-xsetroot \
+        rofi dunst libnotify picom xwallpaper playerctl flameshot brightnessctl
 
-    step 30 "Installing VWM build dependencies"
-    run_cmd sudo apt-get install -y \
-        libx11-dev libx11-xcb-dev libxcb1-dev libxcb-randr0-dev \
-        libxcb-icccm4-dev libxcb-keysyms1-dev libxft-dev \
-        libfontconfig1-dev libcairo2-dev libxrender-dev libxext-dev
+    step 34 "Installing VWM build dependencies"
+    pacman_install \
+        libx11 libxinerama libxft libxrender cairo \
+        libxcb xcb-util xcb-util-randr xcb-util-keysyms xcb-util-wm fontconfig
 
-    step 36 "Installing system utilities"
-    run_cmd sudo apt-get install -y \
-        linux-firmware pciutils usbutils lm-sensors rfkill \
-        mesa-utils vulkan-tools libvulkan1 mesa-vulkan-drivers
+    step 42 "Installing system utilities"
+    pacman_install \
+        linux-firmware pciutils usbutils lm_sensors mesa vulkan-tools vulkan-icd-loader
 
-    step 42 "Installing LaTeX tooling"
-    run_cmd sudo apt-get install -y \
-        texlive-latex-base texlive-latex-extra latexmk zathura zathura-pdf-poppler
+    step 50 "Installing LaTeX tooling"
+    pacman_install texlive-basic texlive-latexextra latexmk zathura zathura-pdf-poppler
+
+    step 56 "Installing Node and npm"
+    pacman_install nodejs-lts-iron npm
+
+    step 60 "Installing treesitter-cli"
+    run_cmd sudo npm install -g treesitter-cli
 
     install_cpu_microcode
 }
 
-install_floorp() {
-    run_cmd sudo mkdir -p /usr/share/keyrings
-    run_cmd sudo mkdir -p /etc/apt/sources.list.d
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] configure Floorp repo and install floorp"
+ensure_yay() {
+    if command -v yay >/dev/null 2>&1; then
         return 0
     fi
 
-    run_shell '
-        tmp_key="$(mktemp)"
-        tmp_list="$(mktemp)"
+    clone_or_update_repo "https://aur.archlinux.org/yay.git" "$YAY_DIR"
+    run_shell "cd '$YAY_DIR' && makepkg -si --noconfirm"
+}
 
-        curl -fsSL https://ppa.floorp.app/KEY.gpg -o "$tmp_key"
-        sudo rm -f /usr/share/keyrings/Floorp.gpg
-        sudo gpg --dearmor --yes -o /usr/share/keyrings/Floorp.gpg "$tmp_key"
+yay_install() {
+    ensure_yay
+    run_shell "yay -S --needed --noconfirm $*"
+}
 
-        curl -fsSL https://ppa.floorp.app/Floorp.list -o "$tmp_list"
-        sudo install -m 0644 "$tmp_list" /etc/apt/sources.list.d/Floorp.list
-
-        rm -f "$tmp_key" "$tmp_list"
-    '
-
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get install -y floorp
+install_floorp() {
+    yay_install floorp-bin
 }
 
 install_tailscale() {
-    run_cmd sudo mkdir -p /usr/share/keyrings
-    run_cmd sudo mkdir -p /etc/apt/sources.list.d
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] install Tailscale from apt repository"
-        return 0
-    fi
-
-    run_shell '
-        tmp_key="$(mktemp)"
-        curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg -o "$tmp_key"
-        sudo install -m 0644 "$tmp_key" /usr/share/keyrings/tailscale-archive-keyring.gpg
-        rm -f "$tmp_key"
-
-        cat <<EOF | sudo tee /etc/apt/sources.list.d/tailscale.list >/dev/null
-deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu noble main
-EOF
-    '
-
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get install -y tailscale
+    pacman_install tailscale
     run_cmd sudo systemctl enable --now tailscaled
 }
 
@@ -416,76 +365,17 @@ tailscale_post() {
 }
 
 install_mullvad() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] install Mullvad VPN via official repository"
-        return 0
-    fi
-
-    run_shell 'curl -fsSLo /tmp/mullvad-repo.sh https://repository.mullvad.net/deb/mullvad-keyring.sh && sudo sh /tmp/mullvad-repo.sh && rm -f /tmp/mullvad-repo.sh'
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get install -y mullvad-vpn
+    yay_install mullvad-vpn-bin
 }
 
 install_docker() {
-    run_cmd sudo apt-get update -y
-    apt_install ca-certificates curl gnupg
-
-    run_cmd sudo install -d -m 0755 /etc/apt/keyrings
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] configure Docker apt repo and install Docker"
-        return 0
-    fi
-
-    run_shell 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg'
-    run_cmd sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-    # shellcheck disable=SC1091
-    . /etc/os-release
-    local codename="${UBUNTU_CODENAME:-${VERSION_CODENAME:-noble}}"
-
-    sudo tee /etc/apt/sources.list.d/docker.list >/dev/null <<EOF
-deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${codename} stable
-EOF
-
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get install -y \
-        docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
+    pacman_install docker docker-buildx docker-compose
     run_cmd sudo systemctl enable --now docker
     run_cmd sudo usermod -aG docker "$USER"
 }
 
-install_nvm_and_node() {
-    if [[ ! -d "$HOME/.nvm" ]]; then
-        run_shell 'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash'
-    fi
-
-    run_shell 'nvm install --lts'
-    run_shell 'nvm use --lts'
-}
-
 install_neovim_nightly() {
-    run_cmd mkdir -p "$HOME/.local/bin"
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] download Neovim nightly tarball and install to ~/.local/bin/nvim"
-        return 0
-    fi
-
-    run_shell '
-        tmpdir="$(mktemp -d)"
-        cd "$tmpdir"
-
-        curl -fL -o nvim-linux-x86_64.tar.gz \
-            https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz
-
-        tar -xzf nvim-linux-x86_64.tar.gz
-
-        install -Dm755 nvim-linux-x86_64/bin/nvim "$HOME/.local/bin/nvim"
-
-        rm -rf "$tmpdir"
-    '
+    yay_install neovim-nightly-bin
 }
 
 clone_or_update_repo() {
@@ -506,7 +396,7 @@ clone_or_update_repo() {
 
 install_vwm() {
     clone_or_update_repo "$VWM_REPO" "$VWM_DIR"
-    run_shell "cd '$VWM_DIR' && make && make install"
+    run_shell "cd '$VWM_DIR' && make && sudo make install"
 }
 
 install_loom() {
@@ -524,12 +414,8 @@ delete_stow_conflicts_for_package() {
     local target_root="$2"
 
     while IFS= read -r -d '' src; do
-        local rel
-        rel="${src#"$package_dir"/}"
-
-        if [[ -z "$rel" ]]; then
-            continue
-        fi
+        local rel="${src#"$package_dir"/}"
+        [[ -z "$rel" ]] && continue
 
         local dst="$target_root/$rel"
 
@@ -582,31 +468,35 @@ stow_dotfiles() {
     run_cmd fc-cache -f
 }
 
-generate_vwm_session_file() {
-    local vwm_bin
-    vwm_bin="$(command -v vwm || true)"
-    [[ -n "$vwm_bin" ]] || die_ui "vwm binary not found after install"
+generate_xinitrc() {
+    local xinitrc="$HOME/.xinitrc"
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] write /usr/share/xsessions/vwm.desktop"
+        log "[DRY RUN] write $xinitrc"
         return 0
     fi
 
-    sudo tee /usr/share/xsessions/vwm.desktop >/dev/null <<EOF
-[Desktop Entry]
-Name=vwm
-Comment=veasman's window manager
-Exec=$vwm_bin
-Type=Application
-DesktopNames=vwm
+    cat > "$xinitrc" <<'EOF'
+#!/usr/bin/env sh
+
+[ -f "$HOME/.xprofile" ] && . "$HOME/.xprofile"
+
+if [ -x /usr/bin/dbus-update-activation-environment ]; then
+    dbus-update-activation-environment --systemd DISPLAY XAUTHORITY
+fi
+
+exec vwm
 EOF
+
+    chmod +x "$xinitrc"
 }
 
 ensure_zsh_default_shell() {
     local user="${SUDO_USER:-$USER}"
-    local target_shell="/bin/zsh"
+    local target_shell
+    target_shell="$(command -v zsh || true)"
 
-    [[ -x "$target_shell" ]] || die_ui "$target_shell not found"
+    [[ -n "$target_shell" ]] || die_ui "zsh not found"
 
     if ! grep -qx "$target_shell" /etc/shells; then
         echo "$target_shell" | sudo tee -a /etc/shells >/dev/null
@@ -630,57 +520,12 @@ apply_default_theme() {
 }
 
 install_steam() {
-    run_cmd sudo dpkg --add-architecture i386
-    run_cmd sudo apt-get update -y
-    run_cmd sudo apt-get install -y steam
-}
-
-github_latest_asset_url() {
-    local owner="$1"
-    local repo="$2"
-    local regex="$3"
-
-    python3 - "$owner" "$repo" "$regex" <<'PY'
-import json
-import re
-import sys
-import urllib.request
-
-owner, repo, regex = sys.argv[1:]
-url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
-req = urllib.request.Request(url, headers={"User-Agent": "dotfiles-bootstrap"})
-with urllib.request.urlopen(req) as r:
-    data = json.load(r)
-
-pat = re.compile(regex)
-for asset in data.get("assets", []):
-    name = asset.get("name", "")
-    dl = asset.get("browser_download_url", "")
-    if dl and (pat.search(name) or pat.search(dl)):
-        print(dl)
-        sys.exit(0)
-
-sys.exit(1)
-PY
+    enable_multilib_if_needed
+    pacman_install steam
 }
 
 install_sunshine() {
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] install latest Sunshine .deb"
-        return 0
-    fi
-
-    local url
-    url="$(github_latest_asset_url "LizardByte" "Sunshine" '(?i)(ubuntu|debian|linux).*(amd64|x86_64).*\.deb$')" \
-        || die_ui "Could not resolve Sunshine .deb URL"
-
-    local tmpdir
-    tmpdir="$(mktemp -d)"
-    run_shell "cd '$tmpdir' && curl -fLO '$url' && sudo dpkg -i ./*.deb || sudo apt-get -f install -y"
-    run_cmd sudo apt-get -f install -y
-    run_cmd rm -rf "$tmpdir"
-
-    run_cmd sudo systemctl enable sunshine || true
+    yay_install sunshine-bin
 }
 
 tampermonkey_reminder() {
@@ -692,30 +537,28 @@ tampermonkey_reminder() {
 }
 
 post_install_notes() {
-    local notes=""
     local warns="none"
-
     if [[ "${#WARNINGS[@]}" -gt 0 ]]; then
         warns="$(printf '%s\n' "${WARNINGS[@]}" | sed 's/^/- /')"
     fi
 
-    notes+="Completed.
+    local notes="Completed.
 
 Warnings:
 $warns
 
 Next steps:
-- Log out and choose the 'vwm' session in GDM
-- Run 'docker run hello-world' after re-login to confirm Docker group access
+- Run: startx
 - If Tailscale is not connected yet, run: sudo tailscale up
+- Run: docker run hello-world after re-login to confirm Docker group access
 - Open Floorp and manually import the Tampermonkey backup if you want it
-- Reboot if anything graphics/session-related acts stupid
+- Reboot if graphics/input acts stupid
 "
 
     if [[ "$INSTALL_SUNSHINE" -eq 1 ]]; then
         notes+="
 Sunshine:
-- Open Sunshine from the app menu or service setup
+- Launch Sunshine
 - Complete host setup and pairing
 "
     fi
@@ -733,9 +576,9 @@ Mullvad:
 
 main() {
     : >"$LOG_FILE"
-    log "=== bootstrap start (dry_run=$DRY_RUN) ==="
+    log "=== arch bootstrap start (dry_run=$DRY_RUN) ==="
 
-    require_ubuntu
+    require_arch
     ensure_sudo
     ensure_whiptail
     ensure_dirs
@@ -745,59 +588,53 @@ main() {
 
     start_gauge
 
-    step 5 "Installing Ubuntu packages"
+    step 5 "Installing Arch packages"
     install_base_packages
 
     step 20 "Installing Floorp"
     install_floorp
 
-    step 30 "Installing Tailscale"
+    step 28 "Installing Tailscale"
     install_tailscale
 
-    step 38 "Installing Docker"
+    step 36 "Installing Docker"
     install_docker
 
-    step 46 "Installing NVM, Node LTS, treesitter-cli"
-    install_nvm_and_node
-
-    step 54 "Installing Neovim nightly"
+    step 44 "Installing Neovim nightly"
     install_neovim_nightly
 
-    step 62 "Installing vwm repo"
+    step 56 "Installing vwm repo"
     install_vwm
 
-    step 70 "Installing loom repo"
+    step 66 "Installing loom repo"
     install_loom
 
-    step 76 "Installing pmux repo"
+    step 74 "Installing pmux repo"
     install_pmux
 
     step 84 "Stowing dotfiles with forced replacement"
     stow_dotfiles
 
-    step 90 "Generating GDM session for vwm"
-    generate_vwm_session_file
+    step 90 "Generating ~/.xinitrc for startx"
+    generate_xinitrc
 
-    step 94 "Setting default shell to zsh"
+    step 95 "Setting default shell to zsh"
     ensure_zsh_default_shell
 
     if [[ "$INSTALL_SUNSHINE" -eq 1 ]]; then
-        step 96 "Installing Sunshine"
+        step 97 "Installing Sunshine"
         install_sunshine
     fi
 
     if [[ "$INSTALL_STEAM" -eq 1 ]]; then
-        step 97 "Installing Steam"
+        step 98 "Installing Steam"
         install_steam
     fi
 
     if [[ "$INSTALL_MULLVAD" -eq 1 ]]; then
-        step 98 "Installing Mullvad"
+        step 99 "Installing Mullvad"
         install_mullvad
     fi
-
-    step 99 "Applying default loom theme"
-    #apply_default_theme
 
     finish_gauge
 
@@ -805,7 +642,7 @@ main() {
     tampermonkey_reminder
     post_install_notes
 
-    log "=== bootstrap end ==="
+    log "=== arch bootstrap end ==="
 }
 
 main "$@"
