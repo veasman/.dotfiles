@@ -1,28 +1,17 @@
 SHELL := /usr/bin/env bash
 DOTFILES_DIR := $(HOME)/.dotfiles
-INSTALL := $(DOTFILES_DIR)/install.sh
+INSTALL := $(DOTFILES_DIR)/bootstrap/ubuntu/install.sh
 
 # Allow recipes to start with ">" instead of a TAB.
 .RECIPEPREFIX := >
 
-.PHONY: install dry-run submodules-status submodules-update submodules-sync \
-        suckless-build suckless-install tampermonkey-check tampermonkey-capture
+.PHONY: install dry-run tampermonkey-check tampermonkey-capture
 
 install:
 >   $(INSTALL)
 
 dry-run:
 >   $(INSTALL) --dry-run
-
-suckless-build:
->   cd "$(HOME)/code/dwm" && make clean && make
->   cd "$(HOME)/code/dmenu" && make clean && make
->   cd "$(HOME)/code/slstatus" && make clean && make
-
-suckless-install:
->   cd "$(HOME)/code/dwm" && sudo make install
->   cd "$(HOME)/code/dmenu" && sudo make install
->   cd "$(HOME)/code/slstatus" && sudo make install
 
 tampermonkey-check:
 >   test -f "$(DOTFILES_DIR)/assets/tampermonkey/tampermonkey-backup.zip" && \

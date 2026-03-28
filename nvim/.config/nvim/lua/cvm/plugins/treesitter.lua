@@ -9,6 +9,7 @@ return {
                 "bash",
                 "c",
                 "diff",
+                "latex",
                 "go",
                 "html",
                 "javascript",

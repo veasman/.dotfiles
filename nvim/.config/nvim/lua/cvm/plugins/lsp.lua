@@ -13,14 +13,20 @@ return {
         },
         opts = {
             ensure_installed = {
+                "basedpyright",
                 "bashls",
                 "clangd",
+                "dockerls",
+                "eslint",
                 "gopls",
                 "html",
                 "jsonls",
                 "lua_ls",
-                "basedpyright",
+                "pyright",
                 "ruff",
+                "rust_analyzer",
+                "texlab",
+                "ts_ls",
                 "yamlls",
             },
             automatic_enable = false,
@@ -66,6 +72,31 @@ return {
                 pyright = {},
                 rust_analyzer = {},
                 yamlls = {},
+                texlab = {
+                    settings = {
+                        texlab = {
+                            build = {
+                                executable = "latexmk",
+                                args = {
+                                    "-pdf",
+                                    "-interaction=nonstopmode",
+                                    "-synctex=1",
+                                    "%f",
+                                },
+                                onSave = false,
+                                forwardSearchAfter = false,
+                            },
+                            forwardSearch = {
+                                executable = "zathura",
+                                args = {
+                                    "--synctex-forward",
+                                    "%l:1:%f",
+                                    "%p",
+                                },
+                            },
+                        },
+                    },
+                },
                 lua_ls = {
                     settings = {
                         Lua = {
