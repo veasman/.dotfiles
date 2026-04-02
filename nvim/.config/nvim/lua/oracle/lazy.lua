@@ -12,7 +12,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-    { import = "cvm.plugins" },
+    { import = "oracle.plugins" },
 }, {
     change_detection = { notify = false },
     install = {
