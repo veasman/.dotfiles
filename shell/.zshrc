@@ -170,3 +170,8 @@ export FZF_DEFAULT_OPTS_BASE="${FZF_DEFAULT_OPTS_BASE:-$FZF_DEFAULT_OPTS}"
 [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh" ] && source "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh"
 export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${LOOM_FZF_COLOR_OPTS:-}"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# NVM
+[ -f "/usr/share/nvm/init-nvm.sh" ] && source /usr/share/nvm/init-nvm.sh
+
+pfetch

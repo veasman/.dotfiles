@@ -20,11 +20,11 @@
             "elevated": false,
             "exclude-global-prep-cmd": false,
             "exit-timeout": 5,
-            "image-path": "/home/cvm/.config/sunshine/covers/igdb_332780.png",
+            "image-path": "/home/oracle/.config/sunshine/covers/igdb_332780.png",
             "name": "R.E.P.O.",
             "output": "",
             "wait-all": true,
-            "working-dir": "/home/cvm"
+            "working-dir": "/home/oracle"
         },
         {
             "auto-detach": true,
@@ -32,11 +32,11 @@
             "elevated": false,
             "exclude-global-prep-cmd": false,
             "exit-timeout": 5,
-            "image-path": "/home/cvm/.config/sunshine/covers/igdb_17000.png",
+            "image-path": "/home/oracle/.config/sunshine/covers/igdb_17000.png",
             "name": "Stardew Valley",
             "output": "",
             "wait-all": true,
-            "working-dir": "/home/cvm"
+            "working-dir": "/home/oracle"
         },
         {
             "detached": [
@@ -57,11 +57,11 @@
             "elevated": false,
             "exclude-global-prep-cmd": false,
             "exit-timeout": 5,
-            "image-path": "/home/cvm/.config/sunshine/covers/igdb_1879.png",
+            "image-path": "/home/oracle/.config/sunshine/covers/igdb_1879.png",
             "name": "Terraria",
             "output": "",
             "wait-all": true,
-            "working-dir": "/home/cvm"
+            "working-dir": "/home/oracle"
         },
         {
             "auto-detach": true,
@@ -69,11 +69,11 @@
             "elevated": false,
             "exclude-global-prep-cmd": false,
             "exit-timeout": 5,
-            "image-path": "/home/cvm/.config/sunshine/covers/igdb_47101.png",
+            "image-path": "/home/oracle/.config/sunshine/covers/igdb_47101.png",
             "name": "Wizard101",
             "output": "",
             "wait-all": true,
-            "working-dir": "/home/cvm"
+            "working-dir": "/home/oracle"
         }
     ],
     "env": {

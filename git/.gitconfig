@@ -1,6 +1,5 @@
-[user]
-    name = Charlton Moren
-    email = charlton.moren@gmail.com
+[include]
+    path = ~/.gitconfig.user
 
 [core]
     editor = nvim
