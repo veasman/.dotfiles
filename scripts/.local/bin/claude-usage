@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# claude-usage: Outputs Claude 5hr usage for a status bar module.
+# Requires: curl, jq
+# Usage: ./claude-usage.sh
+
+CREDS="$HOME/.claude/.credentials.json"
+URL="https://api.anthropic.com/api/oauth/usage"
+ICON="󰚩"  # nf-md-robot (Nerd Font)
+
+[[ -f "$CREDS" ]] || { echo "${ICON} ?"; exit 1; }
+
+TOKEN=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS")
+[[ -n "$TOKEN" ]] || { echo "${ICON} ?"; exit 1; }
+
+RESPONSE=$(curl -sf --max-time 5 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "anthropic-beta: oauth-2025-04-20" \
+  "$URL") || { echo "${ICON} err"; exit 1; }
+
+PCT=$(echo "$RESPONSE" | jq -r '.five_hour.utilization // empty')
+[[ -z "$PCT" ]] && { echo "${ICON} ?"; exit 1; }
+
+printf "${ICON} %.0f%%\n" "$PCT"

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# weather: Outputs current weather for a status bar module.
+# Requires: curl
+# Usage: ./weather.sh [location]
+
+LOCATION="${1:-}"
+BASE="https://wttr.in/${LOCATION// /+}"
+
+COND=$(curl -sf --max-time 5 "${BASE}?format=%C") || { echo "? --°F"; exit 1; }
+TEMP=$(curl -sf --max-time 5 "${BASE}?format=%t+%w") || { echo "? --°F"; exit 1; }
+
+c=$(echo "$COND" | tr '[:upper:]' '[:lower:]')
+
+if   [[ "$c" == *thunder* || "$c" == *storm* ]];          then ICON="󰖓"
+elif [[ "$c" == *blizzard* ]];                             then ICON="󰼶"
+elif [[ "$c" == *snow* || "$c" == *sleet* || "$c" == *ice* ]]; then ICON="󰖒"
+elif [[ "$c" == *pour* || "$c" == *heavyrain* ]];          then ICON="󰖖"
+elif [[ "$c" == *rain* || "$c" == *drizzle* || "$c" == *shower* ]]; then ICON="󰖗"
+elif [[ "$c" == *fog* || "$c" == *mist* || "$c" == *haze* ]]; then ICON="󰖑"
+elif [[ "$c" == *overcast* || "$c" == *cloudy* ]];         then ICON="󰖔"
+elif [[ "$c" == *partly* ]];                               then ICON="󰖐"
+elif [[ "$c" == *sunny* || "$c" == *clear* ]];             then ICON="󰖙"
+else                                                            ICON="󰖐"
+fi
+
+echo "${ICON} ${TEMP}"
