@@ -12,7 +12,7 @@ Personal dotfiles managed with **GNU Stow**. Each top-level directory is a stow 
 # Deploy a single package
 stow -v -R -t "$HOME" <package-name>
 
-# Full install (Ubuntu 24.04 only)
+# Full install (Artix Linux)
 make install
 
 # Dry-run install
@@ -32,9 +32,8 @@ The bootstrap installer deploys these packages: floorp, fonts, git, kitty, latex
 
 ### Bootstrap System
 
-- `bootstrap/ubuntu/install.sh` — Ubuntu 24.04 installer (~2K lines, interactive whiptail dialogs, supports `--dry-run`)
-- `bootstrap/arch/install.sh` — Arch Linux installer
-- `bootstrap/common.sh` — Shared helpers including `stow_package_force()` which removes conflicts before stowing
+- `bootstrap/arch/pre-install.sh` — Phase 1: runs inside `artix-chroot`, creates user, generates SSH key, clones dotfiles
+- `bootstrap/arch/install.sh` — Phase 2: post-reboot installer (interactive whiptail dialogs, supports `--dry-run`). Uses paru (AUR helper) and sigil (replaces loom for theme compilation)
 
 ### Theme System (Loom)
 
