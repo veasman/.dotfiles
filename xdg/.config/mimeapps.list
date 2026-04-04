@@ -14,6 +14,7 @@ x-scheme-handler/unknown=floorp.desktop
 inode/directory=pcmanfm.desktop
 x-scheme-handler/io.element.nightly=element-desktop-nightly.desktop
 x-scheme-handler/element=element-desktop-nightly.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 
 [Added Associations]
 x-scheme-handler/http=userapp-Floorp-TVDXM3.desktop;

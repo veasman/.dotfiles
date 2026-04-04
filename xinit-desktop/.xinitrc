@@ -9,17 +9,20 @@ xinput | grep "BT mouse" && xinput --set-prop "BT mouse" "libinput Accel Speed" 
 
 exec dbus-run-session -- sh -lc '
     [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh"
+    #[ -f "${XDG_STATE_HOME:-$HOME/.local/bin}/displaylink-setup.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/bin}/displaylink-setup.sh"
 
+    # TODO: This needs to become a cli command from loom (e.g. "loom wallpaper" restores the previously set wallpaper or something like that)
     if [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/current_wallpaper" ]; then
         BG_PATH="$(cat "${XDG_STATE_HOME:-$HOME/.local/state}/loom/current_wallpaper")"
         if [ -f "$BG_PATH" ]; then
             mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}"
             ln -snf "$BG_PATH" "${XDG_DATA_HOME:-$HOME/.local/share}/bg"
-            xwallpaper --zoom "$BG_PATH"
+            xwallpaper --output DVI-I-1-1 --zoom "$BG_PATH" \
+                       --output DP-2 --zoom "$BG_PATH" \
+                       --output DVI-I-2-2 --zoom "$BG_PATH" \
+                       --output eDP-1 --zoom "$BG_PATH"
         fi
     fi
-
-    xrandr --setprovideroutputsource 1 0 || true
 
     exec vwm
 '
