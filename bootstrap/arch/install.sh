@@ -33,13 +33,17 @@ DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 REPOS_DIR="${REPOS_DIR:-$HOME/repos}"
 
 VWM_REPO="${VWM_REPO:-git@github.com:veasman/vwm.git}"
-LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
+SIGIL_REPO="${SIGIL_REPO:-git@github.com:veasman/sigil.git}"
 PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 
+# TODO: loom-rs is not yet packaged — uncomment when ready
+# LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
+# LOOM_DIR="$REPOS_DIR/loom"
+
 VWM_DIR="$REPOS_DIR/vwm"
-LOOM_DIR="$REPOS_DIR/loom"
+SIGIL_DIR="$REPOS_DIR/sigil"
 PMUX_DIR="$REPOS_DIR/pmux"
-YAY_DIR="$REPOS_DIR/yay"
+PARU_DIR="$REPOS_DIR/paru"
 
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
 LOG_FILE="$LOG_DIR/install.log"
@@ -56,6 +60,10 @@ INSTALL_STEAM=0
 INSTALL_MULLVAD=0
 
 WARNINGS=()
+
+# ---------------------------------------------------------------------------
+# Logging / UI helpers
+# ---------------------------------------------------------------------------
 
 log() {
     printf "%s\n" "$*" >> "$LOG_FILE"
@@ -83,14 +91,37 @@ die_ui() {
     exit 1
 }
 
+# ---------------------------------------------------------------------------
+# Prerequisite checks
+# ---------------------------------------------------------------------------
+
+check_prerequisites() {
+    [[ "$(id -u)" -ne 0 ]] || die_ui "Do not run this script as root. Run as your regular user."
+
+    [[ -d "$DOTFILES_DIR/.git" ]] || die_ui "Dotfiles not found at $DOTFILES_DIR\nRun pre-install.sh first."
+
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log "[DRY RUN] skip network and SSH checks"
+        return 0
+    fi
+
+    if ! ping -c1 -W3 archlinux.org &>/dev/null; then
+        die_ui "No network connectivity. Check NetworkManager."
+    fi
+
+    if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 | grep -qi "success\|authenticated"; then
+        die_ui "SSH to GitHub failed.\nMake sure your SSH key is added to GitHub and ssh-agent is running."
+    fi
+}
+
 require_arch() {
     [[ -r /etc/os-release ]] || die_ui "/etc/os-release not found"
 
     # shellcheck disable=SC1091
     . /etc/os-release
 
-    if [[ "${ID:-}" != "arch" && "${ID_LIKE:-}" != *"arch"* ]]; then
-        die_ui "This installer is for Arch Linux."
+    if [[ "${ID:-}" != "artix" && "${ID:-}" != "arch" && "${ID_LIKE:-}" != *"arch"* ]]; then
+        die_ui "This installer is for Arch/Artix Linux."
     fi
 }
 
@@ -119,8 +150,12 @@ ensure_whiptail() {
     sudo pacman -Sy --noconfirm libnewt >>"$LOG_FILE" 2>&1
 }
 
+# ---------------------------------------------------------------------------
+# Gauge (progress bar) helpers
+# ---------------------------------------------------------------------------
+
 start_gauge() {
-    exec 4> >(whiptail --title "Arch dotfiles bootstrap" \
+    exec 4> >(whiptail --title "Artix dotfiles bootstrap" \
         --backtitle "Installing...  Log: $LOG_FILE" \
         --gauge "Preparing..." 10 80 0)
     GAUGE_OPEN=1
@@ -174,6 +209,10 @@ gauge_pump_while_pid() {
     done
 }
 
+# ---------------------------------------------------------------------------
+# Command runners
+# ---------------------------------------------------------------------------
+
 run_cmd() {
     if [[ "$DRY_RUN" -eq 1 ]]; then
         log "[DRY RUN] $*"
@@ -224,6 +263,10 @@ run_shell() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# Interactive prompts
+# ---------------------------------------------------------------------------
+
 optional_prompt() {
     local result=""
     result="$(
@@ -246,6 +289,10 @@ optional_prompt() {
     log "[optional] sunshine=$INSTALL_SUNSHINE steam=$INSTALL_STEAM mullvad=$INSTALL_MULLVAD"
 }
 
+# ---------------------------------------------------------------------------
+# Directory setup
+# ---------------------------------------------------------------------------
+
 ensure_dirs() {
     run_cmd mkdir -p \
         "$HOME/.config" \
@@ -255,9 +302,41 @@ ensure_dirs() {
         "$REPOS_DIR"
 }
 
+# ---------------------------------------------------------------------------
+# Package managers
+# ---------------------------------------------------------------------------
+
 pacman_install() {
     run_cmd sudo pacman -S --needed --noconfirm "$@"
 }
+
+ensure_paru() {
+    if command -v paru >/dev/null 2>&1; then
+        return 0
+    fi
+
+    clone_or_update_repo "https://aur.archlinux.org/paru.git" "$PARU_DIR"
+    run_shell "cd '$PARU_DIR' && makepkg -si --noconfirm"
+}
+
+paru_install() {
+    ensure_paru
+    run_shell "paru -S --needed --noconfirm $*"
+}
+
+# ---------------------------------------------------------------------------
+# OpenRC service helpers
+# ---------------------------------------------------------------------------
+
+openrc_enable_start() {
+    local svc="$1"
+    run_cmd sudo rc-update add "$svc" default
+    run_cmd sudo rc-service "$svc" start
+}
+
+# ---------------------------------------------------------------------------
+# Package installation
+# ---------------------------------------------------------------------------
 
 enable_multilib_if_needed() {
     if grep -Eq '^\[multilib\]' /etc/pacman.conf && grep -Eq '^Include = /etc/pacman.d/mirrorlist' /etc/pacman.conf; then
@@ -289,94 +368,105 @@ install_cpu_microcode() {
 }
 
 install_base_packages() {
-    step 5 "Refreshing pacman metadata"
+    step 3 "Refreshing pacman metadata"
     run_cmd sudo pacman -Sy
 
-    step 10 "Installing bootstrap prerequisites"
-    pacman_install base-devel git stow curl wget unzip python python-pip pkgconf libnewt
+    step 5 "Installing bootstrap prerequisites"
+    pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
 
-    step 18 "Installing shell and terminal tools"
-    pacman_install zsh tmux fzf tree ripgrep fd xclip
+    step 8 "Installing shell and terminal tools"
+    pacman_install zsh kitty tmux fzf tree ripgrep fd jq btop xclip
 
-    step 26 "Installing X11 desktop utilities"
+    step 12 "Installing X11 desktop utilities"
     pacman_install \
         xorg-server xorg-xinit xorg-xrandr xorg-xsetroot \
-        rofi dunst libnotify picom xwallpaper playerctl flameshot brightnessctl
+        rofi dunst libnotify picom xwallpaper playerctl brightnessctl \
+        arandr xdg-utils xdg-desktop-portal xdg-desktop-portal-gtk
 
-    step 34 "Installing VWM build dependencies"
+    step 16 "Installing audio stack"
     pacman_install \
-        libx11 libxinerama libxft libxrender cairo \
-        libxcb xcb-util xcb-util-randr xcb-util-keysyms xcb-util-wm fontconfig
+        pipewire pipewire-alsa pipewire-jack pipewire-pulse \
+        wireplumber pavucontrol
 
-    step 42 "Installing system utilities"
+    step 19 "Installing OpenRC service scripts"
     pacman_install \
-        linux-firmware pciutils usbutils lm_sensors mesa vulkan-tools vulkan-icd-loader
+        pipewire-openrc pipewire-pulse-openrc wireplumber-openrc
 
-    step 50 "Installing LaTeX tooling"
+    step 22 "Installing bluetooth"
+    pacman_install bluez bluez-utils bluez-openrc
+
+    step 25 "Installing VWM build dependencies"
+    pacman_install \
+        libx11 libxcb xcb-util-wm xcb-util-keysyms libxft fontconfig \
+        cairo libxrender libxext
+
+    step 28 "Installing sigil build dependencies"
+    pacman_install libxrandr libpng
+
+    step 30 "Installing system utilities"
+    pacman_install \
+        linux-firmware pciutils usbutils lm_sensors \
+        mesa vulkan-tools vulkan-icd-loader \
+        mpv pcmanfm
+
+    step 33 "Installing development tools"
+    pacman_install python python-pip python-pillow go rustup nvm
+
+    step 36 "Installing LaTeX tooling"
     pacman_install texlive-basic texlive-latexextra latexmk zathura zathura-pdf-poppler
 
-    step 56 "Installing Node and npm"
-    pacman_install nodejs-lts-iron npm
+    step 39 "Installing Node LTS via nvm"
+    run_shell "source /usr/share/nvm/init-nvm.sh && nvm install --lts"
 
-    step 60 "Installing treesitter-cli"
-    run_cmd sudo npm install -g treesitter-cli
+    step 41 "Installing tree-sitter-cli"
+    pacman_install tree-sitter-cli
 
     install_cpu_microcode
 }
 
-ensure_yay() {
-    if command -v yay >/dev/null 2>&1; then
-        return 0
-    fi
-
-    clone_or_update_repo "https://aur.archlinux.org/yay.git" "$YAY_DIR"
-    run_shell "cd '$YAY_DIR' && makepkg -si --noconfirm"
-}
-
-yay_install() {
-    ensure_yay
-    run_shell "yay -S --needed --noconfirm $*"
-}
+# ---------------------------------------------------------------------------
+# Third-party / AUR packages
+# ---------------------------------------------------------------------------
 
 install_floorp() {
-    yay_install floorp-bin
+    paru_install floorp-bin
+}
+
+install_thunderbird() {
+    paru_install thunderbird-esr-bin
 }
 
 install_tailscale() {
-    pacman_install tailscale
-    run_cmd sudo systemctl enable --now tailscaled
-}
-
-tailscale_post() {
-    if tailscale status >/dev/null 2>&1; then
-        return 0
-    fi
-
-    warn "Tailscale is installed but not authenticated yet"
-
-    if whiptail --title "Tailscale" --yesno \
-"Run 'sudo tailscale up' now?\n\nThis will begin login/auth." 12 72; then
-        if [[ "$DRY_RUN" -eq 0 ]]; then
-            sudo tailscale up || warn "tailscale up did not complete successfully"
-        fi
-    else
-        warn "Skipped 'tailscale up'. Run it manually later."
-    fi
-}
-
-install_mullvad() {
-    yay_install mullvad-vpn-bin
+    pacman_install tailscale tailscale-openrc
+    openrc_enable_start tailscaled
 }
 
 install_docker() {
-    pacman_install docker docker-buildx docker-compose
-    run_cmd sudo systemctl enable --now docker
+    pacman_install docker docker-compose docker-openrc
+    openrc_enable_start docker
     run_cmd sudo usermod -aG docker "$USER"
 }
 
 install_neovim_nightly() {
-    yay_install neovim-nightly-bin
+    paru_install neovim-git
 }
+
+install_mullvad() {
+    paru_install mullvad-vpn-bin
+}
+
+install_steam() {
+    enable_multilib_if_needed
+    pacman_install steam
+}
+
+install_sunshine() {
+    paru_install sunshine-bin
+}
+
+# ---------------------------------------------------------------------------
+# Custom projects (clone + make install)
+# ---------------------------------------------------------------------------
 
 clone_or_update_repo() {
     local repo_url="$1"
@@ -399,15 +489,19 @@ install_vwm() {
     run_shell "cd '$VWM_DIR' && make && sudo make install"
 }
 
-install_loom() {
-    clone_or_update_repo "$LOOM_REPO" "$LOOM_DIR"
-    run_shell "cd '$LOOM_DIR' && make install"
+install_sigil() {
+    clone_or_update_repo "$SIGIL_REPO" "$SIGIL_DIR"
+    run_shell "cd '$SIGIL_DIR' && make && sudo make install"
 }
 
 install_pmux() {
     clone_or_update_repo "$PMUX_REPO" "$PMUX_DIR"
     run_shell "cd '$PMUX_DIR' && make install"
 }
+
+# ---------------------------------------------------------------------------
+# Stow dotfiles
+# ---------------------------------------------------------------------------
 
 delete_stow_conflicts_for_package() {
     local package_dir="$1"
@@ -457,7 +551,8 @@ stow_dotfiles() {
         shell
         tmux
         vwm
-        xprofile-desktop
+        xdg
+        xinit-desktop
         xresources
     )
 
@@ -468,28 +563,9 @@ stow_dotfiles() {
     run_cmd fc-cache -f
 }
 
-generate_xinitrc() {
-    local xinitrc="$HOME/.xinitrc"
-
-    if [[ "$DRY_RUN" -eq 1 ]]; then
-        log "[DRY RUN] write $xinitrc"
-        return 0
-    fi
-
-    cat > "$xinitrc" <<'EOF'
-#!/usr/bin/env sh
-
-[ -f "$HOME/.xprofile" ] && . "$HOME/.xprofile"
-
-if [ -x /usr/bin/dbus-update-activation-environment ]; then
-    dbus-update-activation-environment --systemd DISPLAY XAUTHORITY
-fi
-
-exec vwm
-EOF
-
-    chmod +x "$xinitrc"
-}
+# ---------------------------------------------------------------------------
+# Post-install configuration
+# ---------------------------------------------------------------------------
 
 ensure_zsh_default_shell() {
     local user="${SUDO_USER:-$USER}"
@@ -519,13 +595,25 @@ apply_default_theme() {
     run_shell 'loom apply gruvbox'
 }
 
-install_steam() {
-    enable_multilib_if_needed
-    pacman_install steam
+enable_bluetooth() {
+    openrc_enable_start bluetoothd
 }
 
-install_sunshine() {
-    yay_install sunshine-bin
+tailscale_post() {
+    if tailscale status >/dev/null 2>&1; then
+        return 0
+    fi
+
+    warn "Tailscale is installed but not authenticated yet"
+
+    if whiptail --title "Tailscale" --yesno \
+"Run 'sudo tailscale up' now?\n\nThis will begin login/auth." 12 72; then
+        if [[ "$DRY_RUN" -eq 0 ]]; then
+            sudo tailscale up || warn "tailscale up did not complete successfully"
+        fi
+    else
+        warn "Skipped 'tailscale up'. Run it manually later."
+    fi
 }
 
 tampermonkey_reminder() {
@@ -574,11 +662,16 @@ Mullvad:
     whiptail --title "Install complete" --msgbox "$notes\nLog:\n$LOG_FILE" 28 110
 }
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 main() {
     : >"$LOG_FILE"
-    log "=== arch bootstrap start (dry_run=$DRY_RUN) ==="
+    log "=== artix bootstrap start (dry_run=$DRY_RUN) ==="
 
     require_arch
+    check_prerequisites
     ensure_sudo
     ensure_whiptail
     ensure_dirs
@@ -588,51 +681,63 @@ main() {
 
     start_gauge
 
-    step 5 "Installing Arch packages"
     install_base_packages
 
-    step 20 "Installing Floorp"
+    step 44 "Installing paru (AUR helper)"
+    ensure_paru
+
+    step 46 "Installing Floorp"
     install_floorp
 
-    step 28 "Installing Tailscale"
+    step 48 "Installing Thunderbird"
+    install_thunderbird
+
+    step 50 "Installing Tailscale"
     install_tailscale
 
-    step 36 "Installing Docker"
+    step 53 "Installing Docker"
     install_docker
 
-    step 44 "Installing Neovim nightly"
+    step 56 "Installing Neovim nightly"
     install_neovim_nightly
 
-    step 56 "Installing vwm repo"
+    step 60 "Enabling Bluetooth"
+    enable_bluetooth
+
+    step 63 "Building and installing vwm"
     install_vwm
 
-    step 66 "Installing loom repo"
-    install_loom
+    step 68 "Building and installing sigil"
+    install_sigil
 
-    step 74 "Installing pmux repo"
+    step 73 "Installing pmux"
     install_pmux
 
-    step 84 "Stowing dotfiles with forced replacement"
+    # TODO: uncomment when loom-rs is packaged
+    # step 78 "Installing loom"
+    # install_loom
+
+    step 80 "Stowing dotfiles"
     stow_dotfiles
 
-    step 90 "Generating ~/.xinitrc for startx"
-    generate_xinitrc
-
-    step 95 "Setting default shell to zsh"
+    step 90 "Setting default shell to zsh"
     ensure_zsh_default_shell
 
+    step 92 "Applying default theme"
+    apply_default_theme
+
     if [[ "$INSTALL_SUNSHINE" -eq 1 ]]; then
-        step 97 "Installing Sunshine"
+        step 94 "Installing Sunshine"
         install_sunshine
     fi
 
     if [[ "$INSTALL_STEAM" -eq 1 ]]; then
-        step 98 "Installing Steam"
+        step 96 "Installing Steam"
         install_steam
     fi
 
     if [[ "$INSTALL_MULLVAD" -eq 1 ]]; then
-        step 99 "Installing Mullvad"
+        step 98 "Installing Mullvad"
         install_mullvad
     fi
 
@@ -642,7 +747,7 @@ main() {
     tampermonkey_reminder
     post_install_notes
 
-    log "=== arch bootstrap end ==="
+    log "=== artix bootstrap end ==="
 }
 
 main "$@"

@@ -1,18 +1,38 @@
-# Ubuntu dwm Dotfiles
+# Artix Dotfiles
 
-Ubuntu-only dotfiles using:
+Artix Linux (OpenRC) dotfiles using:
 
-- dwm
-- dmenu
-- slstatus
+- vwm
+- rofi
 - stow-managed configs
 
 ---
 
 ## Install
 
+### Phase 1 — Inside `artix-chroot`
+
 ```bash
-git clone <repo-url> ~/.dotfiles
+curl -fsSL https://raw.githubusercontent.com/veasman/.dotfiles/master/bootstrap/arch/pre-install.sh | bash
+```
+
+Creates user, generates SSH key, clones dotfiles.
+
+### Phase 2 — After reboot and login
+
+```bash
+~/.dotfiles/bootstrap/arch/install.sh
+```
+
+Or:
+
+```bash
 cd ~/.dotfiles
-chmod +x install.sh
-./install.sh
+make install
+```
+
+Dry run:
+
+```bash
+make dry-run
+```

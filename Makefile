@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 DOTFILES_DIR := $(HOME)/.dotfiles
-INSTALL := $(DOTFILES_DIR)/bootstrap/ubuntu/install.sh
+INSTALL := $(DOTFILES_DIR)/bootstrap/arch/install.sh
 
 # Allow recipes to start with ">" instead of a TAB.
 .RECIPEPREFIX := >
