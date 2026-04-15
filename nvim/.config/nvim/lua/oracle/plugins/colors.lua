@@ -105,13 +105,16 @@ return {
             "echasnovski/mini.base16",
         },
         config = function()
+            -- setup() internally calls apply() which already issues
+            -- the right :colorscheme for the generated palette
+            -- (nord/gruvbox/vague/kara-custom). Do NOT also run
+            -- `vim.cmd.colorscheme("kara")` here — that triggers
+            -- colors/kara.vim which calls apply() a second time,
+            -- doubling startup cost.
             require("kara").setup({
-                -- Default palette path + reload behavior. Override
-                -- only if you relocate kara-beautify's state dir.
                 auto_reload = true,
                 serverstart = true,
             })
-            vim.cmd.colorscheme("kara")
         end,
     },
 }
