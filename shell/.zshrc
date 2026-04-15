@@ -172,12 +172,36 @@ load-nvmrc() {
 add-zsh-hook chpwd load-nvmrc
 
 # kara-beautify — fzf + session env vars
+#
+# Capture the pre-kara FZF_DEFAULT_OPTS as a base once so theme
+# switches don't keep appending kara's color args to a growing string.
 export FZF_DEFAULT_OPTS_BASE="${FZF_DEFAULT_OPTS_BASE:-$FZF_DEFAULT_OPTS}"
-[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh" ] && \
-    source "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
-[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh" ] && \
-    source "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
-export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${KARA_FZF_COLOR_OPTS:-}"
+
+# Re-source kara's fzf + session env scripts when the file has been
+# touched (or on first prompt after shell start). Lets existing shells
+# pick up new colors from `kara-beautify apply` without a restart.
+_kara_fzf_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
+_kara_session_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
+
+_kara_reload_fzf() {
+    [ -f "$_kara_fzf_theme_path" ] || return 0
+    local mtime
+    mtime=$(stat -c %Y "$_kara_fzf_theme_path" 2>/dev/null) || return 0
+    if [ "${_kara_fzf_mtime:-0}" != "$mtime" ]; then
+        source "$_kara_fzf_theme_path"
+        [ -f "$_kara_session_theme_path" ] && source "$_kara_session_theme_path"
+        export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${KARA_FZF_COLOR_OPTS:-}"
+        _kara_fzf_mtime="$mtime"
+    fi
+}
+
+# Initial load at shell startup so the first fzf invocation has colors.
+_kara_reload_fzf
+
+# Hook into zsh's precmd so subsequent prompts re-check mtime and
+# re-source if kara-beautify touched the file since last prompt.
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _kara_reload_fzf
 
 # Plugins (load order matters: fast-syntax-highlighting BEFORE zsh-autosuggestions)
 [[ -f /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && \
