@@ -173,21 +173,44 @@ add-zsh-hook chpwd load-nvmrc
 
 # kara-beautify — fzf + session env vars
 #
-# Capture the pre-kara FZF_DEFAULT_OPTS as a base once so theme
-# switches don't keep appending kara's color args to a growing string.
-export FZF_DEFAULT_OPTS_BASE="${FZF_DEFAULT_OPTS_BASE:-$FZF_DEFAULT_OPTS}"
+# The base we capture here must NOT contain any previously-injected
+# --color= args — otherwise re-applies accumulate (shell A captures
+# kara-injected colors as "base," child shell B then appends NEW
+# kara colors on top of that "base," and fzf ends up with two
+# --color= arg sets fighting each other). Strip every --color=...
+# token out of the inherited FZF_DEFAULT_OPTS before storing, so
+# BASE is strictly the user's non-color fzf options.
+_kara_fzf_strip_colors() {
+    local s="$1"
+    local -a words=(${(z)s})
+    local out="" w
+    for w in $words; do
+        [[ "$w" == --color=* ]] && continue
+        out="${out:+$out }$w"
+    done
+    print -r -- "$out"
+}
+
+# Re-capture BASE on every shell init (unconditional, not `:-`), so a
+# contaminated inherited FZF_DEFAULT_OPTS_BASE from a parent shell
+# gets reset to the stripped baseline of whatever FZF_DEFAULT_OPTS
+# currently holds.
+export FZF_DEFAULT_OPTS_BASE="$(_kara_fzf_strip_colors "${FZF_DEFAULT_OPTS:-}")"
+unfunction _kara_fzf_strip_colors
 
 # Re-source kara's fzf + session env scripts when the file has been
-# touched (or on first prompt after shell start). Lets existing shells
-# pick up new colors from `kara-beautify apply` without a restart.
+# touched (or on first prompt after shell start). Lets existing
+# shells pick up new colors from `kara-beautify apply` without a
+# restart.
 _kara_fzf_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
 _kara_session_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
+_kara_fzf_mtime=0
 
 _kara_reload_fzf() {
     [ -f "$_kara_fzf_theme_path" ] || return 0
     local mtime
     mtime=$(stat -c %Y "$_kara_fzf_theme_path" 2>/dev/null) || return 0
-    if [ "${_kara_fzf_mtime:-0}" != "$mtime" ]; then
+    if [ "$_kara_fzf_mtime" != "$mtime" ]; then
         source "$_kara_fzf_theme_path"
         [ -f "$_kara_session_theme_path" ] && source "$_kara_session_theme_path"
         export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${KARA_FZF_COLOR_OPTS:-}"
