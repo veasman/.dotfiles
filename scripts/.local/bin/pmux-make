@@ -10,7 +10,7 @@ set -euo pipefail
 # Each argument (or layout line) is passed to make.
 # The first word becomes the window name.
 
-PMUX_LOOM_FZF_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh"
+PMUX_KARA_FZF_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
 PMUX_FZF_BASE_OPTS="${PMUX_FZF_BASE_OPTS:-}"
 
 require_cmd() {
@@ -26,16 +26,16 @@ session="$(tmux display-message -p "#{session_name}")"
 pane_path="$(tmux display-message -p "#{pane_current_path}")"
 
 load_fzf_theme() {
-    LOOM_FZF_COLOR_OPTS=""
-    if [[ -f "${PMUX_LOOM_FZF_FILE}" ]]; then
+    KARA_FZF_COLOR_OPTS=""
+    if [[ -f "${PMUX_KARA_FZF_FILE}" ]]; then
         # shellcheck source=/dev/null
-        source "${PMUX_LOOM_FZF_FILE}"
+        source "${PMUX_KARA_FZF_FILE}"
     fi
 }
 
 current_fzf_opts() {
     load_fzf_theme
-    printf '%s' "${PMUX_FZF_BASE_OPTS:+$PMUX_FZF_BASE_OPTS }${LOOM_FZF_COLOR_OPTS:-}"
+    printf '%s' "${PMUX_FZF_BASE_OPTS:+$PMUX_FZF_BASE_OPTS }${KARA_FZF_COLOR_OPTS:-}"
 }
 
 detect_targets() {

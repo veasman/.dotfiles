@@ -9,7 +9,7 @@ xinput | grep "BT mouse" && xinput --set-prop "BT mouse" "libinput Accel Speed" 
 
 exec dbus-run-session -- sh -lc '
     [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/session-theme.sh"
-    #[ -f "${XDG_STATE_HOME:-$HOME/.local/bin}/displaylink-setup.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/bin}/displaylink-setup.sh"
+    [ -f "${XDG_STATE_HOME:-$HOME/.local/bin}/monitors.sh" ] && . "${XDG_STATE_HOME:-$HOME/.local/bin}/monitors.sh"
 
     # TODO: This needs to become a cli command from loom (e.g. "loom wallpaper" restores the previously set wallpaper or something like that)
     if [ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/current_wallpaper" ]; then
