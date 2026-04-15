@@ -6,14 +6,14 @@ local function load_theme()
   local ok, theme = pcall(require, "oracle.generated.theme")
   if not ok then
     vim.schedule(function()
-      vim.notify("Failed to load loom theme: " .. tostring(theme), vim.log.levels.ERROR)
+      vim.notify("Failed to load kara theme: " .. tostring(theme), vim.log.levels.ERROR)
     end)
     return nil
   end
 
   if type(theme) ~= "table" then
     vim.schedule(function()
-      vim.notify("Loom theme payload is not a table", vim.log.levels.ERROR)
+      vim.notify("Kara theme payload is not a table", vim.log.levels.ERROR)
     end)
     return nil
   end
@@ -119,18 +119,18 @@ local function apply_vague(theme)
   end
 end
 
-local function apply_loom_custom(theme)
+local function apply_kara_custom(theme)
   local ok, mini = pcall(require, "mini.base16")
   if not ok then
     vim.schedule(function()
-      vim.notify("mini.base16 is not available for loom-custom", vim.log.levels.ERROR)
+      vim.notify("mini.base16 is not available for kara-custom", vim.log.levels.ERROR)
     end)
     return
   end
 
   if type(theme.palette) ~= "table" then
     vim.schedule(function()
-      vim.notify("Loom theme missing palette for loom-custom", vim.log.levels.ERROR)
+      vim.notify("Kara theme missing palette for kara-custom", vim.log.levels.ERROR)
     end)
     return
   end
@@ -140,7 +140,7 @@ local function apply_loom_custom(theme)
     use_cterm = true,
   })
 
-  vim.g.colors_name = "loom-custom"
+  vim.g.colors_name = "kara-custom"
 
   if theme.transparent then
     apply_transparency()
@@ -167,23 +167,39 @@ function M.apply()
     return
   end
 
-  if theme.colorscheme == "loom-custom" then
-    apply_loom_custom(theme)
+  if theme.colorscheme == "kara-custom" then
+    apply_kara_custom(theme)
     return
   end
 
   local ok = pcall(vim.cmd.colorscheme, theme.colorscheme)
   if not ok then
     vim.schedule(function()
-      vim.notify("Unknown Loom colorscheme: " .. tostring(theme.colorscheme), vim.log.levels.ERROR)
+      vim.notify("Unknown Kara colorscheme: " .. tostring(theme.colorscheme), vim.log.levels.ERROR)
     end)
   end
 end
 
 function M.setup()
-  vim.api.nvim_create_user_command("LoomReloadTheme", function()
+  vim.api.nvim_create_user_command("KaraReloadTheme", function()
     M.apply()
   end, {})
+
+  -- Expose a predictable Unix socket so `kara-beautify apply` can push
+  -- a live reload into this nvim instance. kara-beautify/src/reload.rs
+  -- iterates /tmp/nvim-kara-*.sock and sends :KaraReloadTheme via
+  -- nvim --server --remote-send. nvim always has its own per-session
+  -- socket via $NVIM_LISTEN_ADDRESS, but the pattern is unpredictable;
+  -- this gives kara a stable glob to target.
+  local sock = string.format("/tmp/nvim-kara-%d.sock", vim.fn.getpid())
+  pcall(vim.fn.serverstart, sock)
+
+  -- Clean up our socket on exit so stale files don't accumulate in /tmp.
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      pcall(vim.fn.delete, sock)
+    end,
+  })
 
   M.apply()
 end
