@@ -119,6 +119,31 @@ local function apply_vague(theme)
   end
 end
 
+local function apply_nord(theme)
+  -- shaunsingh/nord.nvim reads vim.g.nord_disable_background etc. at
+  -- plugin config time; we only need to toggle transparency here.
+  if theme.transparent then
+    vim.g.nord_disable_background = true
+  else
+    vim.g.nord_disable_background = false
+  end
+
+  local ok = pcall(vim.cmd.colorscheme, "nord")
+  if not ok then
+    vim.schedule(function()
+      vim.notify(
+        "nord colorscheme not installed — run :Lazy sync to fetch shaunsingh/nord.nvim",
+        vim.log.levels.WARN
+      )
+    end)
+    return
+  end
+
+  if theme.transparent then
+    apply_transparency()
+  end
+end
+
 local function apply_kara_custom(theme)
   local ok, mini = pcall(require, "mini.base16")
   if not ok then
@@ -164,6 +189,11 @@ function M.apply()
 
   if theme.colorscheme == "vague" then
     apply_vague(theme)
+    return
+  end
+
+  if theme.colorscheme == "nord" then
+    apply_nord(theme)
     return
   end
 

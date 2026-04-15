@@ -61,7 +61,14 @@ zmodload zsh/complist
 
 : ${XDG_CACHE_HOME:=$HOME/.cache}
 mkdir -p "$XDG_CACHE_HOME/zsh"
-compinit -d "$XDG_CACHE_HOME/zsh/zcompdump"
+# Only rebuild zcompdump if older than 24h; otherwise skip the security check
+_zcompdump="$XDG_CACHE_HOME/zsh/zcompdump"
+if [[ -n "$_zcompdump"(#qN.mh+24) ]]; then
+    compinit -d "$_zcompdump"
+else
+    compinit -C -d "$_zcompdump"
+fi
+unset _zcompdump
 
 zstyle ':completion:*' menu select
 zstyle ':completion:*' special-dirs false
@@ -123,12 +130,7 @@ zle-line-init() {
 }
 zle -N zle-line-init
 
-# Old way
-# preexec() { _set_cursor_block }
-# New way
 precmd_functions+=(_set_cursor_block)
-
-# Startup cursor
 _set_cursor_block
 
 # Keybinds
@@ -137,41 +139,50 @@ bindkey -s '^f' 'pmux\n'
 # PATH
 export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
 
-# NVM
+# NVM (lazy-loaded — sourcing nvm.sh costs 300-600ms, so defer until first use)
 export NVM_DIR="$HOME/.nvm"
-[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
 
-# Auto-use local node version when entering a project
-autoload -U add-zsh-hook
-
-load-nvmrc() {
-    local nvmrc_path
-    nvmrc_path="$(nvm_find_nvmrc 2>/dev/null)"
-
-    if [[ -n "$nvmrc_path" ]]; then
-        local node_version
-        node_version="$(<"$nvmrc_path")"
-        local current_version
-        current_version="$(nvm version "$node_version")"
-
-        if [[ "$current_version" = "N/A" ]]; then
-            nvm install "$node_version"
-        elif [[ "$(nvm current)" != "$current_version" ]]; then
-            nvm use "$node_version" >/dev/null
-        fi
+_nvm_load() {
+    unset -f nvm node npm npx _nvm_load
+    if [[ -s "/usr/share/nvm/init-nvm.sh" ]]; then
+        source /usr/share/nvm/init-nvm.sh
+    elif [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        source "$NVM_DIR/nvm.sh"
+        [[ -s "$NVM_DIR/bash_completion" ]] && source "$NVM_DIR/bash_completion"
     fi
 }
+nvm()  { _nvm_load; nvm  "$@"; }
+node() { _nvm_load; node "$@"; }
+npm()  { _nvm_load; npm  "$@"; }
+npx()  { _nvm_load; npx  "$@"; }
 
+# Auto-use local node version when entering a project (lazy — only if .nvmrc present)
+autoload -U add-zsh-hook
+load-nvmrc() {
+    [[ -f .nvmrc ]] || return
+    _nvm_load
+    local node_version="$(<.nvmrc)"
+    local current_version="$(nvm version "$node_version")"
+    if [[ "$current_version" = "N/A" ]]; then
+        nvm install "$node_version"
+    elif [[ "$(nvm current)" != "$current_version" ]]; then
+        nvm use "$node_version" >/dev/null
+    fi
+}
 add-zsh-hook chpwd load-nvmrc
-load-nvmrc
 
-# LOOM
+# kara-beautify — fzf + session env vars
 export FZF_DEFAULT_OPTS_BASE="${FZF_DEFAULT_OPTS_BASE:-$FZF_DEFAULT_OPTS}"
-[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh" ] && source "${XDG_STATE_HOME:-$HOME/.local/state}/loom/generated/fzf-theme.sh"
-export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${LOOM_FZF_COLOR_OPTS:-}"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh" ] && \
+    source "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
+[ -f "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh" ] && \
+    source "${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${KARA_FZF_COLOR_OPTS:-}"
 
-# NVM
-[ -f "/usr/share/nvm/init-nvm.sh" ] && source /usr/share/nvm/init-nvm.sh
+# Plugins (load order matters: fast-syntax-highlighting BEFORE zsh-autosuggestions)
+[[ -f /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && \
+    source /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh
+[[ -f /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
+    source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 pfetch
