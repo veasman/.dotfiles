@@ -86,4 +86,32 @@ return {
         version = false,
         priority = 1000,
     },
+
+    -- kara.nvim: extracted from oracle.core.kara_theme into its own
+    -- repo at github.com/veasman/kara.nvim. During local development
+    -- we point at the working copy in ~/repos/kara.nvim via lazy's
+    -- `dir` option; flip to the github spec once the repo is pushed.
+    {
+        dir = vim.fn.expand("~/repos/kara.nvim"),
+        name = "kara.nvim",
+        lazy = false,
+        priority = 1001, -- higher than the dependency colorschemes so
+                         -- kara's setup runs first and dispatches into
+                         -- them rather than the other way around
+        dependencies = {
+            "shaunsingh/nord.nvim",
+            "ellisonleao/gruvbox.nvim",
+            "vague-theme/vague.nvim",
+            "echasnovski/mini.base16",
+        },
+        config = function()
+            require("kara").setup({
+                -- Default palette path + reload behavior. Override
+                -- only if you relocate kara-beautify's state dir.
+                auto_reload = true,
+                serverstart = true,
+            })
+            vim.cmd.colorscheme("kara")
+        end,
+    },
 }
