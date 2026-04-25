@@ -130,8 +130,10 @@ Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manuall
 
 To test, install Hyprland and the native ecosystem tools (all in the Artix `world`/`galaxy` repos — no AUR needed):
 ```
-sudo pacman -S hyprland hyprpaper hypridle hyprlock swaync
+sudo pacman -S hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker swaync
 ```
+- `hyprshot` powers `Print` (output), `mod+Shift+s` (region), `mod+Print` (window).
+- `hyprpicker` powers `mod+Shift+p` (copy color under cursor to clipboard).
 (Also requires the existing sway dependencies — wpctl, grim, slurp, wl-clipboard, brightnessctl, playerctl.)
 Then:
 ```
