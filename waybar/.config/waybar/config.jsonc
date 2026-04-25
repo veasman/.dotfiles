@@ -30,7 +30,11 @@
         // otherwise render as a "-1" button. When focus is on one of
         // these, no workspace button highlights — which is the
         // desired "invisible" behavior for emulated overlays.
-        "ignore-list": ["^__"]
+        // Regex must match the FULL workspace name (waybar uses
+        // std::regex_match, not regex_search). `^…$` anchors are
+        // implicit. Covers __scratch_main__, __scratch_music__, and
+        // sway-monocle's __mono_<ws>__.
+        "ignore-list": ["__.*"]
     },
 
     "sway/mode": {
