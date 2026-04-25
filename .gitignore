@@ -26,8 +26,8 @@ scripts/.local/bin/uvx
 # don't belong in version control.
 scripts/.local/bin/start-sway
 scripts/.local/bin/sway-cursor
+scripts/.local/bin/sway-float-toggle
 scripts/.local/bin/sway-focus-cycle
-scripts/.local/bin/sway-kill
 scripts/.local/bin/sway-monocle
 scripts/.local/bin/sway-output-profile
 scripts/.local/bin/sway-scratch-show

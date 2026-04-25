@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+# sway-float-toggle — toggle floating with sane geometry.
+#
+# Tiled  → floating: enable floating, size to ~70x75 ppt, center on
+#                    the focused output.
+# Float  → tiled:    just disable floating.
+#
+# Without this, sway places newly-floating windows wherever the tile
+# container was — often skinny tall or offset off the visible area.
+
+set -eu
+
+# .type of the focused container: "con" = tiled, "floating_con" = float.
+focused_type=$(swaymsg -t get_tree | jq -r '
+    [.. | objects | select(.focused == true)
+     | select(.type == "con" or .type == "floating_con")]
+    | first | .type // empty')
+
+case "$focused_type" in
+    con)
+        swaymsg "floating enable, resize set width 70 ppt height 75 ppt, move position center" >/dev/null
+        ;;
+    floating_con)
+        swaymsg "floating disable" >/dev/null
+        ;;
+    *)
+        # Unknown — let sway decide.
+        swaymsg "floating toggle" >/dev/null
+        ;;
+esac

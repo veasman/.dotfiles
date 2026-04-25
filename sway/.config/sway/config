@@ -202,19 +202,21 @@ no_focus [app_id="scratch-glances"]
 no_focus [app_id="spotatui"]
 no_focus [app_id="pulsemixer"]
 
-for_window [app_id="scratch-todo"]    floating enable, resize set width 60 ppt height 70 ppt, move position center, move scratchpad
+for_window [app_id="scratch-todo"]    floating enable, resize set width 75 ppt height 80 ppt, move position center, move scratchpad
 for_window [app_id="scratch-glances"] floating enable, resize set width 100 ppt height 100 ppt, move scratchpad
 for_window [app_id="spotatui"]        floating enable, resize set width 100 ppt height 100 ppt, move scratchpad
-for_window [app_id="pulsemixer"]      floating enable, resize set width 50 ppt height 50 ppt, move position center, move scratchpad
+for_window [app_id="pulsemixer"]      floating enable, resize set width 60 ppt height 60 ppt, move position center, move scratchpad
 
 # ─── Floating rules (matches kara's rules block) ─────────────────────
-for_window [app_id="pavucontrol"]  floating enable
-for_window [app_id="mpv"]          floating enable
-# kara's transient dialog behavior — common floats sway won't catch:
-for_window [window_role="pop-up"]       floating enable
-for_window [window_role="bubble"]       floating enable
-for_window [window_role="dialog"]       floating enable
-for_window [window_type="dialog"]       floating enable
+for_window [app_id="pavucontrol"]  floating enable, resize set width 60 ppt height 60 ppt, move position center
+for_window [app_id="mpv"]          floating enable, resize set width 80 ppt height 80 ppt, move position center
+# kara's transient dialog behavior — common floats sway won't catch.
+# Don't resize these — they're transient and usually self-size sensibly;
+# just center so they don't pop up in odd corners.
+for_window [window_role="pop-up"]       floating enable, move position center
+for_window [window_role="bubble"]       floating enable, move position center
+for_window [window_role="dialog"]       floating enable, move position center
+for_window [window_type="dialog"]       floating enable, move position center
 
 # ═══════════════════════════════════════════════════════════════════
 # Keybinds — ported from kara-gate.conf [binds] block.
@@ -269,23 +271,22 @@ bindsym $mod+bracketright resize grow   width 80 px or 5 ppt
 bindsym $mod+Shift+Return exec sway-zoom-master
 
 # ─── Layout ──────────────────────────────────────────────────────────
-# mod+f = true kara-style monocle via sway-monocle script: every other
-# window on the workspace is parked in the scratchpad (marked per-ws
-# for later restore), leaving ONLY the focused window visible with no
-# tab bar, no titlebar residue. mod+j/mod+k cycle through the hidden
-# stack while active; Toggle again to restore.
-# mod+Shift+f = output-level fullscreen (covers bar).
-bindsym $mod+f            exec sway-monocle toggle
-bindsym $mod+Shift+f      fullscreen
-bindsym $mod+t            floating toggle
+# mod+f = workspace-level fullscreen via sway's native `fullscreen
+# toggle`. Robust across workspace/monitor switches and new windows
+# opening — sway keeps fullscreen state attached to the window, so
+# switching workspaces hides/reveals it naturally. mod+j/mod+k stay
+# monocle-aware via sway-monocle: while fullscreen is on, they swap
+# fullscreen onto the next/prev leaf (atomic single-IPC swap); when
+# fullscreen is off, they fall through to sway-focus-cycle.
+bindsym $mod+f            fullscreen toggle
+bindsym $mod+t            exec sway-float-toggle
 # mod+Shift+t (kara theme switcher) → no sway equivalent. Left unbound.
 
 # ─── Window management ───────────────────────────────────────────────
-# sway-kill wraps `kill` so that if monocle is active and we destroy
-# the only visible window, a hidden monocle window is auto-promoted
-# into view (otherwise the workspace goes empty with stuff still in
-# the __mono_<ws>__ holding workspace).
-bindsym $mod+q            exec sway-kill
+# Native kill — fullscreen-based monocle doesn't need a wrapper:
+# closing the fullscreened window naturally exits fullscreen and
+# reveals the workspace's tiling.
+bindsym $mod+q            kill
 bindsym $mod+Shift+r      reload
 bindsym $mod+Shift+q      exit
 bindsym $mod+Shift+x      exec swaylock -f -c 111111

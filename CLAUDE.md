@@ -66,7 +66,7 @@ These are NOT stowed via the package's `.local/bin` — sway's `.stow-local-igno
 - **`sway-monocle`** — Kara-style monocle via native sway `fullscreen`. The focused window is fullscreened; other windows stay in their tile positions but are hidden. `cycle-next`/`cycle-prev` atomically swap fullscreen to a different leaf in a single swaymsg IPC call (disable fs, focus target, enable fs), so cycling is near-instant. Previous implementation moved windows between a `__mono_<ws>__` hidden workspace — too slow (4 IPC calls per cycle) and polluted waybar with a `-1` workspace button. `is-active` returns 0 when active so keybinds can chain `sway-monocle cycle-next || sway-focus-cycle next`.
 - **`sway-focus-cycle`** — Robust cycle through tiled windows on the current workspace. Replaces `focus next sibling` (too shallow in deep autotiling trees) and `focus next` (jumps unexpectedly).
 - **`sway-zoom-master`** — Swaps focused window with the leftmost window in the current workspace. Mirrors kara's `zoom_master` / dwm's master promote. Pairs with autotiling-rs's fib layout where the leftmost window IS the master.
-- **`sway-kill`** — `mod+q` wrapper. Aware of monocle: if killing the visible window leaves the workspace empty but hidden monocle windows exist, auto-restores one to view.
+- **`sway-float-toggle`** — `mod+t` wrapper. Toggling a tiled window to floating sizes it to ~70×75% of the output and centers it; toggling a floating window back to tiled is plain `floating disable`. Replaces sway's bare `floating toggle` which inherits the tile-time geometry (often a skinny strip).
 - **`sway-wallpaper`** / **`sway-cursor`** — Preview-cycle pickers driven by sway modes (`mod+Shift+w` / `mod+Shift+c`). Left/Right cycles with live preview, Enter commits, Esc reverts. State persists to `~/.config/sway/config.d/{wallpaper,cursor}.conf`.
 - **`sway-scratch-show`** — Spawn-if-missing then toggle a scratchpad window by app_id. Caller passes the app_id and the spawn command; helper polls briefly for the window to map before issuing `scratchpad show`. Used by every scratchpad binding (`mod+'`, `mod+;`, `mod+g`, `mod+m`), so first press spawns and subsequent presses toggle. No autostart needed.
 
@@ -89,14 +89,13 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+Return`            | terminal (kara-toe-client)   |
 | `mod+d`                 | fuzzel launcher              |
 | `mod+e`                 | yazi in kara-toe-client      |
-| `mod+f`                 | sway-monocle toggle          |
-| `mod+Shift+f`           | output-fullscreen            |
+| `mod+f`                 | fullscreen toggle (native)   |
 | `mod+j` / `mod+k`       | cycle (monocle-aware)        |
 | `mod+h` / `mod+l`       | focus output left/right      |
 | `mod+Shift+h/l`         | move container to L/R output |
 | `mod+Shift+Return`      | sway-zoom-master             |
-| `mod+t`                 | floating toggle              |
-| `mod+q`                 | sway-kill                    |
+| `mod+t`                 | sway-float-toggle (centered) |
+| `mod+q`                 | kill (native)                |
 | `mod+1`–`mod+9`         | sway-ws switch (per-output)  |
 | `mod+Shift+1`–`9`       | sway-ws move                 |
 | `mod+apostrophe`        | scratchpad TODO.md popup (nvim)            |
