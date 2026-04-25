@@ -1,13 +1,15 @@
 #!/usr/bin/env sh
-# hyprland-scratch-show — spawn-if-empty then toggle a special workspace.
+# hyprland-scratch-show — spawn-on-demand + toggle a special workspace.
 #
-# Hyprland's `togglespecialworkspace` toggles the named overlay. If
-# the special workspace has no windows yet (first toggle after login,
-# or after the user has closed every window in it), this helper runs
-# the supplied spawn command and waits briefly for the window to
-# register before issuing the toggle. The window's
-# `windowrulev2 = workspace special:NAME silent` rule routes it into
-# place automatically.
+# On first press the script uses `hyprctl dispatch exec
+# '[workspace special:NAME silent] CMD'` so the windowrule is applied
+# at spawn time, BEFORE the window maps. This avoids the race we saw
+# with `windowrulev2 = workspace special:NAME silent, class:...`,
+# where the window briefly appeared in the active workspace before
+# the rule moved it (then ended up looking like it spawned "as the
+# scratchpad was closing").
+#
+# Subsequent presses just toggle the special workspace.
 #
 # Usage:
 #   hyprland-scratch-show <special-name> <spawn-command...>
@@ -25,9 +27,11 @@ count_in_special() {
 }
 
 if [ "$(count_in_special)" = "0" ]; then
-    setsid -f sh -c "$spawn" >/dev/null 2>&1 || true
-    # Poll up to ~2s for the window to map and the windowrulev2 to
-    # park it on the special workspace.
+    # Use Hyprland's exec-with-rules form so the workspace assignment
+    # is applied at spawn rather than relying on a windowrulev2 match.
+    hyprctl dispatch exec "[workspace special:$ws_name silent] $spawn" >/dev/null
+
+    # Wait up to ~2s for the window to actually map into the special.
     tries=20
     while [ "$tries" -gt 0 ]; do
         [ "$(count_in_special)" != "0" ] && break

@@ -34,7 +34,6 @@ scripts/.local/bin/sway-monocle
 # symlinks each hyprland/.local/bin/* into ~/.local/bin/, which is
 # itself a symlink to scripts/.local/bin/).
 scripts/.local/bin/start-hyprland
-scripts/.local/bin/hyprland-ws
 scripts/.local/bin/hyprland-scratch-show
 scripts/.local/bin/hyprland-float-toggle
 scripts/.local/bin/hyprland-monocle
