@@ -1,0 +1,118 @@
+#!/usr/bin/env sh
+# sway-wallpaper — preview-cycle wallpaper picker.
+#
+# Driven by the "wallpaper" sway mode — mod+Shift+w enters the mode,
+# applies the first wallpaper as a preview, and then Left/Right cycle
+# between options (each press applies immediately). Return persists
+# the current preview; Escape reverts to whatever was set before the
+# mode was entered.
+#
+# Wallpapers live under ~/.local/state/sway/wallpapers/ (override via
+# SWAY_WALLPAPER_DIR). The committed choice is written to
+# ~/.config/sway/config.d/wallpaper.conf and picked up on reload.
+#
+# Actions:
+#   start          snapshot current state, apply first wallpaper
+#   next | prev    cycle forward/backward (apply, don't commit)
+#   commit         persist current preview to config.d
+#   revert         restore pre-start state, discard preview
+#   pick <path>    set a specific file and persist (non-interactive)
+#   clear          revert to solid-color bg and persist
+
+set -eu
+
+dir="${SWAY_WALLPAPER_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/sway/wallpapers}"
+persist="$HOME/.config/sway/config.d/wallpaper.conf"
+state_dir="${XDG_RUNTIME_DIR:-/tmp}/sway-wallpaper"
+list_file="$state_dir/list"
+pos_file="$state_dir/pos"
+revert_file="$state_dir/revert.conf"
+
+mkdir -p "$dir" "$(dirname "$persist")"
+
+apply_path() {
+    path="$1"
+    swaymsg "output * bg \"$path\" fill" >/dev/null
+}
+
+apply_solid() {
+    swaymsg "output * bg #111111 solid_color" >/dev/null
+}
+
+write_persist_path() {
+    printf '# managed by sway-wallpaper\noutput * bg "%s" fill\n' "$1" > "$persist"
+}
+
+write_persist_solid() {
+    printf '# managed by sway-wallpaper\noutput * bg #111111 solid_color\n' > "$persist"
+}
+
+restore_from_revert() {
+    if [ -f "$revert_file" ]; then
+        cp "$revert_file" "$persist"
+        saved=$(awk -F'"' '/output \*/ {print $2; exit}' "$revert_file" 2>/dev/null || true)
+        if [ -n "$saved" ] && [ -f "$saved" ]; then
+            apply_path "$saved"
+        else
+            apply_solid
+        fi
+    else
+        rm -f "$persist"
+        apply_solid
+    fi
+}
+
+action="${1:-start}"
+case "$action" in
+    start)
+        mkdir -p "$state_dir"
+        if [ -f "$persist" ]; then cp "$persist" "$revert_file"; else rm -f "$revert_file"; fi
+        find "$dir" -maxdepth 3 -type f \
+            \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' \) \
+            | sort > "$list_file"
+        if [ ! -s "$list_file" ]; then
+            notify-send -u low "sway-wallpaper" "No wallpapers in $dir" 2>/dev/null || true
+            rm -rf "$state_dir"
+            exit 0
+        fi
+        echo 0 > "$pos_file"
+        apply_path "$(head -1 "$list_file")"
+        notify-send -u low -t 1500 "wallpaper" "$(basename "$(head -1 "$list_file")") — ← → cycle · Enter commit · Esc revert" 2>/dev/null || true
+        ;;
+    next|prev)
+        [ -s "$list_file" ] && [ -f "$pos_file" ] || exit 0
+        n=$(wc -l < "$list_file")
+        pos=$(cat "$pos_file")
+        case "$action" in
+            next) pos=$(( (pos + 1) % n )) ;;
+            prev) pos=$(( (pos - 1 + n) % n )) ;;
+        esac
+        echo "$pos" > "$pos_file"
+        path=$(sed -n "$((pos+1))p" "$list_file")
+        apply_path "$path"
+        notify-send -u low -t 1200 "wallpaper" "$(basename "$path")" 2>/dev/null || true
+        ;;
+    commit)
+        if [ -s "$list_file" ] && [ -f "$pos_file" ]; then
+            pos=$(cat "$pos_file")
+            path=$(sed -n "$((pos+1))p" "$list_file")
+            write_persist_path "$path"
+        fi
+        rm -rf "$state_dir"
+        ;;
+    revert)
+        restore_from_revert
+        rm -rf "$state_dir"
+        ;;
+    pick)
+        [ -n "${2:-}" ] && [ -f "$2" ] || { echo "usage: sway-wallpaper pick <path>" >&2; exit 2; }
+        apply_path "$2"; write_persist_path "$2"
+        ;;
+    clear)
+        apply_solid; write_persist_solid
+        ;;
+    *)
+        echo "usage: sway-wallpaper {start|next|prev|commit|revert|pick <path>|clear}" >&2
+        exit 2
+        ;;
+esac

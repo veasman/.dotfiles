@@ -1,0 +1,7 @@
+# Keep .local/bin out of stow's sibling-tree analysis. The sway package
+# canonically owns .local/bin/start-sway (the session launcher), but the
+# scripts package has pre-existing absolute-symlink entries (claude,
+# python3.11 → ~/.local/share/...) that stow globally rejects. Pulling
+# those into the same tree aborts stow for sway, so we manage
+# start-sway via a direct ln -s in bootstrap instead.
+\.local

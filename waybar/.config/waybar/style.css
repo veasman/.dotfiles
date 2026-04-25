@@ -1,0 +1,68 @@
+/* waybar — ~/.config/waybar/style.css
+ *
+ * Colors match kara-gate.conf theme block:
+ *   bg=#111111  surface=#1b1b1b  text=#f2f2f2  accent=#6bacac
+ *   accent_soft=#458588  border=#353535
+ *
+ * Kara's bar uses pill modules off by default (pill=false) — matching
+ * that here: flat row with border only on the bar itself.
+ */
+
+* {
+    /* Broad fallback stack. "FiraCode Nerd Font" supplies both text and
+     * Nerd glyphs; "Symbols Nerd Font" is a dedicated symbol-only font
+     * (ttf-nerd-fonts-symbols) used as a safety net if the primary font
+     * misses a codepoint. Without the fallback, missing glyphs render
+     * as empty squares or no icons at all. */
+    font-family: "FiraCode Nerd Font", "FiraCode Nerd Font Mono", "Symbols Nerd Font", monospace;
+    font-size:   11pt;
+    min-height:  0;
+    border:      none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: rgba(17, 17, 17, 0.86);   /* #111111 @ alpha 220/255 */
+    color:      #f2f2f2;
+}
+
+#workspaces button {
+    padding:    0 8px;
+    background: transparent;
+    color:      #5c5c5c;
+    border-bottom: 2px solid transparent;
+}
+
+#workspaces button.focused {
+    color:         #f2f2f2;
+    border-bottom: 2px solid #6bacac;
+}
+
+#workspaces button.urgent {
+    color:         #bf616a;
+    border-bottom: 2px solid #bf616a;
+}
+
+#mode {
+    background: #458588;
+    color:      #111111;
+    padding:    0 8px;
+}
+
+#window {
+    color: #f2f2f2;
+}
+
+#clock,
+#cpu,
+#memory,
+#network,
+#battery,
+#pulseaudio {
+    padding: 0 10px;
+    color:   #f2f2f2;
+}
+
+#battery.warning  { color: #ebcb8b; }
+#battery.critical { color: #bf616a; }
+#network.disconnected { color: #bf616a; }

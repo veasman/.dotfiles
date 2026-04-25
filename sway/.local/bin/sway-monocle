@@ -1,0 +1,98 @@
+#!/usr/bin/env sh
+# sway-monocle — kara-style monocle mode for sway.
+#
+# Only the focused window is visible; every other window on the
+# current workspace is moved to a HIDDEN per-workspace holding
+# workspace (named `__mono_<current-ws>__`). Cycling swaps the
+# focused window with the next/prev hidden one.
+#
+# Why a hidden workspace, not the scratchpad? sway's scratchpad
+# forces windows into floating state and strips their tile geometry.
+# Restoring from scratchpad means extra `floating disable` calls and
+# a visible "jump" as the window flops back into the tiling. A
+# hidden sibling workspace keeps windows tiled the whole time, so
+# cycling is instant and autotiling stays out of the way.
+#
+# Actions:
+#   toggle       enter/exit monocle for current workspace
+#   cycle-next   (only when active) swap focused with next hidden
+#   cycle-prev   (only when active) swap focused with prev hidden
+#   is-active    exit 0 if monocle is active on current workspace
+
+set -eu
+
+ws=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name')
+ws_sanitized=$(printf '%s' "$ws" | sed 's/[^A-Za-z0-9]/_/g')
+mark="mono_${ws_sanitized}"
+hidden_ws="__mono_${ws_sanitized}__"
+
+get_marked_ids() {
+    swaymsg -t get_tree | jq -r --arg m "$mark" '
+        [.. | objects | select(.marks? // [] | any(. == $m)) | .id] | .[]'
+}
+
+is_active() {
+    [ -n "$(get_marked_ids | head -1)" ]
+}
+
+enter() {
+    focused_id=$(swaymsg -t get_tree | jq -r '
+        .. | objects | select(.focused == true and (.type == "con" or .type == "floating_con"))
+        | .id' | head -1)
+    [ -n "$focused_id" ] || return 1
+
+    ids=$(swaymsg -t get_tree | jq -r --arg ws "$ws" --argjson fid "$focused_id" '
+        [.. | objects | select(.type == "workspace" and .name == $ws)][0] // empty
+        | [.. | objects
+           | select((.type == "con" or .type == "floating_con")
+                    and ((.nodes // []) | length == 0)
+                    and .id != $fid)
+           | .id]
+        | .[]')
+
+    for id in $ids; do
+        swaymsg "[con_id=$id] mark --add $mark"                   >/dev/null
+        swaymsg "[con_id=$id] move container to workspace $hidden_ws" >/dev/null
+    done
+}
+
+exit_mono() {
+    for id in $(get_marked_ids); do
+        swaymsg "[con_id=$id] move container to workspace $ws" >/dev/null
+        swaymsg "[con_id=$id] unmark $mark"                    >/dev/null
+    done
+}
+
+cycle() {
+    direction="$1"
+    is_active || return 1
+
+    focused_id=$(swaymsg -t get_tree | jq -r '
+        .. | objects | select(.focused == true and (.type == "con" or .type == "floating_con"))
+        | .id' | head -1)
+    [ -n "$focused_id" ] || return 1
+
+    ids=$(get_marked_ids)
+    case "$direction" in
+        next) target=$(printf '%s\n' "$ids" | head -1) ;;
+        prev) target=$(printf '%s\n' "$ids" | tail -1) ;;
+    esac
+    [ -n "$target" ] || return 1
+
+    # Hide current, then reveal target. Keep tiling context intact
+    # by moving between workspaces (no scratchpad, no floating flip).
+    swaymsg "[con_id=$focused_id] mark --add $mark"                          >/dev/null
+    swaymsg "[con_id=$focused_id] move container to workspace $hidden_ws"    >/dev/null
+    swaymsg "[con_id=$target]     move container to workspace $ws"           >/dev/null
+    swaymsg "[con_id=$target]     unmark $mark"                              >/dev/null
+    swaymsg "[con_id=$target]     focus"                                     >/dev/null
+}
+
+action="${1:-toggle}"
+case "$action" in
+    toggle)      if is_active; then exit_mono; else enter; fi ;;
+    cycle-next)  cycle next ;;
+    cycle-prev)  cycle prev ;;
+    is-active)   is_active ;;
+    *)           echo "usage: sway-monocle {toggle|cycle-next|cycle-prev|is-active}" >&2; exit 2 ;;
+esac

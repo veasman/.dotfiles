@@ -1,0 +1,85 @@
+#!/usr/bin/env sh
+# sway-output-profile — apply the right docked/laptop output config
+# based on what's currently plugged in, and re-apply on hotplug.
+#
+# Docked (any of DVI-I-1 / DVI-I-2 / DP-2 present):
+#   DVI-I-2  portrait-left   @ 0 0
+#   DVI-I-1  1440p center    @ 1080 0
+#   DP-2     portrait-right  @ 3640 0
+#   eDP-1    disabled        (lid is closed while docked)
+#
+# Undocked (only eDP-1 present):
+#   eDP-1    enabled @ 0 0   (the built-in laptop panel)
+#
+# Runs once in the foreground to set the initial profile, then stays
+# attached to sway's output-event stream so any hotplug re-applies
+# the right profile automatically. Launched from the sway config as
+# `exec sway-output-profile`.
+
+set -eu
+
+EXTERNALS="DVI-I-1 DVI-I-2 DP-2"
+
+apply_profile() {
+    # Grep active external outputs by name.
+    connected=$(swaymsg -t get_outputs --raw 2>/dev/null | jq -r '
+        .[] | select(.name != "eDP-1") | .name' || true)
+
+    if [ -n "$connected" ]; then
+        # Docked — externals present, drive them, hide eDP.
+        swaymsg "output DVI-I-2 mode 1920x1080 transform 270 position 0 0"    >/dev/null 2>&1 || true
+        swaymsg "output DVI-I-1 mode 2560x1440@144Hz position 1080 0"         >/dev/null 2>&1 || true
+        swaymsg "output DP-2 mode 1920x1080 transform 90 position 3640 0"     >/dev/null 2>&1 || true
+        swaymsg "output eDP-1 disable"                                        >/dev/null 2>&1 || true
+    else
+        # Undocked — laptop only. Enable eDP at origin.
+        swaymsg "output eDP-1 enable position 0 0"                            >/dev/null 2>&1 || true
+    fi
+
+    consolidate_orphan_workspaces
+}
+
+# Per-output workspaces are named "<N>:<output>" (see sway-ws). When
+# an output disconnects, sway migrates its workspaces to a surviving
+# output, producing orphan names like "1:DVI-I-1" sitting on eDP-1.
+# Waybar's {index} strips the suffix, so we see "1" twice. Merge
+# each orphan into the equivalent workspace on the current primary
+# output so duplicates disappear.
+consolidate_orphan_workspaces() {
+    active_json=$(swaymsg -t get_outputs --raw 2>/dev/null | jq -c \
+        '[.[] | select(.active) | .name]' || echo '[]')
+    primary=$(echo "$active_json" | jq -r '.[0] // empty')
+    [ -n "$primary" ] || return 0
+
+    # Collect orphan workspaces — name is "<N>:<x>" where <x> isn't
+    # currently active. Emit "<orphan>\t<target>" tab-separated lines.
+    swaymsg -t get_workspaces --raw 2>/dev/null | jq -r --argjson active "$active_json" --arg primary "$primary" '
+        .[] | select(.name | test(":"))
+        | (.name | split(":")) as $p
+        | select(($active | index($p[1])) == null)
+        | .name + "\t" + $p[0] + ":" + $primary' | while IFS="	" read -r orphan target; do
+        [ -n "$orphan" ] && [ -n "$target" ] || continue
+        [ "$orphan" = "$target" ] && continue
+
+        # Move every leaf container out of the orphan workspace into
+        # the target. Sway auto-deletes empty workspaces, so the
+        # orphan name disappears on its own after the last move.
+        swaymsg -t get_tree 2>/dev/null | jq -r --arg ws "$orphan" '
+            [.. | objects | select(.type == "workspace" and .name == $ws)][0] // empty
+            | [.. | objects | select(.type == "con" and ((.nodes // []) | length == 0)) | .id]
+            | .[]' | while read -r id; do
+            [ -n "$id" ] && swaymsg "[con_id=$id] move container to workspace $target" >/dev/null 2>&1 || true
+        done
+    done
+}
+
+# Initial profile.
+apply_profile
+
+# Re-apply on any output event (connect / disconnect / mode change).
+# swaymsg -m subscribes and keeps the connection open, emitting one
+# JSON object per line per event. We don't care about the payload —
+# any event triggers a reprofile.
+exec swaymsg -m -t subscribe '["output"]' | while IFS= read -r _line; do
+    apply_profile
+done

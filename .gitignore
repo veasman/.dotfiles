@@ -9,3 +9,28 @@ scripts/.local/bin/vwm
 scripts/.local/bin/pmux
 scripts/.local/bin/pmux-run
 scripts/.local/bin/pmux-cheat
+
+# user-local install pointers — version-pinned absolute symlinks that
+# auto-update on every release. They aren't portable across machines
+# and they're what historically blocked stow from cleanly folding
+# scripts/.local/bin/ (stow rejects absolute symlinks in package
+# sources, aborting any sibling-tree analysis).
+scripts/.local/bin/claude
+scripts/.local/bin/python3.11
+scripts/.local/bin/uv
+scripts/.local/bin/uvx
+
+# Sway helpers symlinked from sway/.local/bin/ by bootstrap install.sh.
+# ~/.local/bin is itself a symlink to scripts/.local/bin, so the helpers
+# land here at install time. Canonical sources live in sway/.local/bin/
+# (committed); these are absolute-path machine-specific symlinks and
+# don't belong in version control.
+scripts/.local/bin/start-sway
+scripts/.local/bin/sway-cursor
+scripts/.local/bin/sway-focus-cycle
+scripts/.local/bin/sway-kill
+scripts/.local/bin/sway-monocle
+scripts/.local/bin/sway-output-profile
+scripts/.local/bin/sway-wallpaper
+scripts/.local/bin/sway-ws
+scripts/.local/bin/sway-zoom-master

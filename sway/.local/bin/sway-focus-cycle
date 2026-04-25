@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+# sway-focus-cycle — cycle focus through tiled windows on the current
+# workspace in stable order. Bulletproof replacement for `focus next
+# sibling` (too narrow — misses windows in nested split containers)
+# and `focus next` (walks tree but can traverse into unexpected
+# branches with autotiling trees).
+#
+# Usage:
+#   sway-focus-cycle next   focus the next tiled window in workspace
+#   sway-focus-cycle prev   focus the previous tiled window
+
+set -eu
+
+direction="${1:-next}"
+ws=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name')
+[ -n "$ws" ] || exit 0
+
+focused=$(swaymsg -t get_tree | jq '
+    .. | objects
+    | select(.focused == true and (.type == "con" or .type == "floating_con"))
+    | .id' | head -1)
+
+# Ordered list of tiled leaf-window IDs in the current workspace.
+# "Leaf" = a container with no child nodes (i.e. a real window).
+# jq walks in depth-first order which matches visual reading order.
+ids=$(swaymsg -t get_tree | jq --arg ws "$ws" '
+    [.. | objects | select(.type == "workspace" and .name == $ws)][0]
+    | [.. | objects | select(.type == "con" and ((.nodes // []) | length == 0)) | .id]
+    | .[]')
+
+count=$(printf '%s\n' "$ids" | grep -c . || true)
+[ "$count" -lt 2 ] && exit 0   # fewer than 2 windows — nothing to cycle
+
+idx=$(printf '%s\n' "$ids" | awk -v f="$focused" '$0 == f { print NR; exit }')
+if [ -z "$idx" ]; then
+    # Focused container isn't in the tiled list (floating/scratchpad) —
+    # fall through and focus the first tiled window.
+    target=$(printf '%s\n' "$ids" | head -1)
+else
+    case "$direction" in
+        next) target_idx=$(( idx % count + 1 )) ;;
+        prev) target_idx=$(( (idx - 2 + count) % count + 1 )) ;;
+    esac
+    target=$(printf '%s\n' "$ids" | sed -n "${target_idx}p")
+fi
+
+[ -n "$target" ] && swaymsg "[con_id=$target] focus" >/dev/null

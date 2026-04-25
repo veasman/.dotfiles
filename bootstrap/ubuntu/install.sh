@@ -561,16 +561,20 @@ stow_dotfiles() {
     local packages=(
         floorp
         fonts
+        fuzzel
         git
         kitty
         latex
+        mako
         nvim
         pmux
         rofi
         scripts
         shell
+        sway
         tmux
         vwm
+        waybar
         xprofile-desktop
         xresources
     )

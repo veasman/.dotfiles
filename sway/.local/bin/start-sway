@@ -1,0 +1,100 @@
+#!/usr/bin/env sh
+# start-sway — session launcher for sway on Artix/OpenRC
+#
+# Modeled after /usr/local/bin/kara so behavior on this box is
+# consistent between the two sessions. Handles:
+#   - D-Bus session bus (joins existing $XDG_RUNTIME_DIR/bus if
+#     present, else falls back to dbus-run-session)
+#   - Wayland + toolkit env hints (Firefox, Qt, Electron, Java)
+#   - Reuses kara-beautify's generated session-theme.sh if it
+#     exists, so fzf/cursor/env colors survive the switch
+#
+# Usage: run from a TTY:  start-sway
+
+set -Eeu
+
+# ─── Log every launch to ~/.cache/sway/start-sway.log ────────────────
+# Output on a TTY scrolls off-screen fast and can't be copy-pasted.
+# Mirror stderr+stdout to a log file and keep the previous launch.
+_log_dir="${XDG_CACHE_HOME:-$HOME/.cache}/sway"
+mkdir -p "$_log_dir"
+_log="$_log_dir/start-sway.log"
+if [ -f "$_log" ]; then
+    mv "$_log" "$_log.1" 2>/dev/null || true
+fi
+exec > >(tee -a "$_log") 2>&1
+echo "=== start-sway $(date -Is) (pid $$) ==="
+
+# ─── Pre-flight: refuse to launch nested in another Wayland session ──
+# Sway's DRM/KMS backend will fail hard if another compositor holds
+# the seat. Most common "it just errored" cause: running start-sway
+# from a terminal inside kara.
+if [ -n "${WAYLAND_DISPLAY:-}" ]; then
+    echo "start-sway: refusing to launch — WAYLAND_DISPLAY=$WAYLAND_DISPLAY is already set."
+    echo "            You're inside another Wayland session (kara?). Log out to a TTY and run from there."
+    exit 1
+fi
+if [ -n "${DISPLAY:-}" ]; then
+    echo "start-sway: note — DISPLAY=$DISPLAY is set. XWayland will still work,"
+    echo "            but this suggests an X session is active. Continuing."
+fi
+
+# ─── Reuse kara's generated session env if present ────────────────────
+# kara-beautify writes XCURSOR_*, fzf color opts, etc. here. Sourcing
+# keeps theming consistent until a sway-native theme broadcast exists.
+_session_env="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
+if [ -f "$_session_env" ]; then
+    # shellcheck disable=SC1090
+    . "$_session_env"
+fi
+unset _session_env
+
+# ─── PATH for sway helpers ────────────────────────────────────────────
+# sway's `exec` uses /bin/sh -c which doesn't read .zshenv, so the
+# helpers (sway-ws, sway-monocle, sway-output-profile, etc.) need to
+# be reachable via PATH from within the compositor itself. Prepending
+# the package dir guarantees that even if the ~/.local/bin/ symlinks
+# are missing.
+if [ -d "$HOME/.dotfiles/sway/.local/bin" ]; then
+    PATH="$HOME/.dotfiles/sway/.local/bin:$PATH"
+fi
+export PATH
+
+# ─── Wayland + toolkit hints ──────────────────────────────────────────
+export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-sway}"
+export XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-wayland}"
+export XDG_SESSION_DESKTOP="${XDG_SESSION_DESKTOP:-sway}"
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-wayland}"
+export MOZ_ENABLE_WAYLAND="${MOZ_ENABLE_WAYLAND:-1}"
+export ELECTRON_OZONE_PLATFORM_HINT="${ELECTRON_OZONE_PLATFORM_HINT:-wayland}"
+export _JAVA_AWT_WM_NONREPARENTING="${_JAVA_AWT_WM_NONREPARENTING:-1}"
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-wayland}"
+
+# ─── DisplayLink / evdi handling ─────────────────────────────────────
+# wlroots refuses to initialise the render backend when evdi is loaded
+# (sway: "!!! Proprietary DisplayLink drivers are in use !!!"). Detect
+# that here and pass --unsupported-gpu, which sway accepts in return
+# for a "don't report issues" warning. Kara sidesteps this via smithay
+# so no flag is needed there.
+_sway_args=""
+if lsmod 2>/dev/null | grep -q '^evdi'; then
+    echo "start-sway: evdi (DisplayLink) detected — launching with --unsupported-gpu."
+    echo "            Expect occasional hotplug / flicker quirks on DisplayLink outputs."
+    _sway_args="--unsupported-gpu"
+fi
+
+# ─── D-Bus session bus ────────────────────────────────────────────────
+# Same logic as /usr/local/bin/kara: prefer an existing user bus
+# (survives compositor restarts), fall back to dbus-run-session.
+_bus="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/bus"
+if [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    exec sway $_sway_args "$@"
+elif [ -S "$_bus" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$_bus"
+    exec sway $_sway_args "$@"
+elif command -v dbus-run-session >/dev/null 2>&1; then
+    exec dbus-run-session -- sway $_sway_args "$@"
+else
+    echo "start-sway: warning: no session D-Bus and dbus-run-session missing" >&2
+    exec sway $_sway_args "$@"
+fi

@@ -1,0 +1,106 @@
+// waybar — ~/.config/waybar/config.jsonc
+//
+// Glyphs written as JSON \u escapes so source + on-disk bytes are
+// always readable ASCII and waybar's JSON parser resolves them to
+// the right codepoints at read time.
+{
+    "layer": "top",
+    "position": "top",
+    "height": 26,
+    "spacing": 4,
+    "margin-top": 0,
+    "margin-left": 0,
+    "margin-right": 0,
+    // No `output` filter — waybar renders on whatever outputs are
+    // currently connected. Docked: all three externals. Undocked:
+    // just eDP-1. Hotplug is handled automatically.
+
+    "modules-left":   ["sway/workspaces", "sway/mode"],
+    "modules-center": ["sway/window"],
+    "modules-right":  ["memory", "cpu", "custom/claude", "pulseaudio", "network", "battery", "clock"],
+
+    "sway/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": false,
+        // Show leading number (workspaces are named "<N>:<output>").
+        "format": "{index}"
+    },
+
+    "sway/mode": {
+        "format": "<span style=\"italic\"> {}</span>"
+    },
+
+    "sway/window": {
+        "max-length": 70,
+        "tooltip": false
+    },
+
+    "clock": {
+        //  = calendar (cleaner than clock-o at bar size)
+        "format": " {:%a %d %b %H:%M}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
+    "cpu": {
+        //  = microchip
+        "format": " {usage}%",
+        "tooltip": false,
+        "interval": 2
+    },
+
+    "memory": {
+        //  = md-memory (RAM-stick look). Falls back to 
+        // database if the glyph isn't mapped in the installed font.
+        "format": " {}%",
+        "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
+        "interval": 5
+    },
+
+    "custom/claude": {
+        // Claude 5-hour session utilization, via ~/.local/bin/claude-usage.
+        // The script already prefixes its own nerd-font robot glyph and
+        // "{pct}%" text, so format is just {}.
+        "format": "{}",
+        "exec": "claude-usage",
+        "interval": 30,
+        "tooltip": false
+    },
+
+    "network": {
+        // Direct interface name — waybar's glob matcher doesn't accept
+        // comma-separated lists, so the earlier "wl*,en*,eth*" pattern
+        // silently failed and fell back to lo. If you switch to wired,
+        // change to your eth device name (ip -brief link to list).
+        "interface": "wlan0",
+        "format-wifi":         "  {signalStrength}%",
+        "format-ethernet":     " {ifname}",
+        "format-disconnected": " offline",
+        "format-linked":       " linked",
+        "tooltip-format":      "{ifname}: {ipaddr}/{cidr}"
+    },
+
+    "battery": {
+        "states":          { "warning": 30, "critical": 15 },
+        // Ramp icons — pick changes with charge level.
+        "format":          "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-plugged":  " {capacity}%",
+        "format-full":     " {capacity}%",
+        "format-icons":    ["", "", "", "", ""],
+        "tooltip-format":  "{timeTo} ({power}W)"
+    },
+
+    "pulseaudio": {
+        // Reactive icons — glyph swaps with volume level. {icon} picks
+        // from format-icons.default based on (volume / (max/len)).
+        "format":           "{icon} {volume}%",
+        "format-muted":     " muted",
+        "format-bluetooth": " {volume}%",
+        "format-icons": {
+            "default": ["", "", ""]
+        },
+        "on-click":         "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-click-right":   "kara-toe-client --app-id=pulsemixer -e pulsemixer",
+        "scroll-step": 5
+    }
+}

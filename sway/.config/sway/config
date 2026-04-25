@@ -1,0 +1,378 @@
+# sway — ~/.config/sway/config
+#
+# Ported from ~/.config/kara/kara-gate.conf. Keybinds and monitor
+# layout mirror kara 1:1 where sway has an equivalent; the three
+# kara-only actions (workspace-sync toggle, theme switcher, named
+# scratchpad autostart) are called out inline.
+#
+# Reload: mod+Shift+r. Exit: mod+Shift+q.
+
+# ─── Modifier ────────────────────────────────────────────────────────
+# Super. Matches kara's `mod`.
+set $mod Mod4
+
+# ─── App launch shortcuts (names mirror kara's commands block) ───────
+set $terminal     kara-toe-client
+set $browser      floorp
+set $file_manager kara-toe-client --app-id=yazi yazi
+set $launcher     fuzzel
+set $menu         fuzzel
+
+# ─── Monitor layout ──────────────────────────────────────────────────
+# Matches kara-gate.conf:
+#   [DVI-I-2 portrait] [DVI-I-1 1440p landscape center] [DP-2 portrait]
+#     0..1080              1080..3640                      3640..4720
+#
+# LG UltraGear 1440p center: same cable-bandwidth caveat as kara — if
+# the active DP/HDMI cable is <1.4/2.0, the 2560x1440@144 line silently
+# falls back to 1080p@120. See kara-gate.conf for the full context.
+# Output configuration is applied dynamically by sway-output-profile
+# (daemon exec'd below) so unplugging the dock falls back to eDP and
+# plugging it back in restores the 3-monitor layout without reloading.
+# Keeping a static bg directive here though — it's a no-op on absent
+# outputs and fires the moment an output appears.
+output * bg #111111 solid_color
+
+# Primary focus on dock (kara: `primary` on DVI-I-1).
+# Sway has no `primary` concept — workspace focus follows wherever
+# you leave it; nothing to set here.
+
+# ─── Input ───────────────────────────────────────────────────────────
+# Stub block for later. Kara's [input] section is empty defaults too.
+# input "type:keyboard" {
+#     xkb_layout us
+#     xkb_options caps:escape
+# }
+# input "type:touchpad" {
+#     tap enabled
+#     natural_scroll enabled
+#     dwt enabled
+# }
+
+# ─── Cursor ──────────────────────────────────────────────────────────
+# Matches kara-gate.conf [general] cursor_theme / cursor_size.
+seat seat0 xcursor_theme Bibata-Modern-Classic 20
+# Hide the cursor after 2s of no pointer movement. Any mouse motion
+# brings it back instantly. Override via sway-cursor if you tweak
+# the cursor theme.
+seat seat0 hide_cursor 2000
+
+# ─── Appearance ──────────────────────────────────────────────────────
+# Colors sourced from kara's theme block in kara-gate.conf:
+#   bg=#111111  surface=#1b1b1b  text=#f2f2f2  accent=#6bacac
+#   accent_soft=#458588  border=#353535
+#
+# class              border   background text    indicator child_border
+client.focused          #6bacac #111111    #f2f2f2 #6bacac   #6bacac
+client.focused_inactive #353535 #111111    #f2f2f2 #353535   #353535
+client.unfocused        #353535 #111111    #5c5c5c #353535   #353535
+client.urgent           #bf616a #111111    #f2f2f2 #bf616a   #bf616a
+
+font pango:FiraCode Nerd Font 10
+default_border pixel 2
+default_floating_border pixel 2
+# smart_borders hid the focus outline on workspaces with only one
+# window (frequent on the portrait monitors). Off → always show.
+gaps inner 8
+gaps outer 0
+focus_follows_mouse no
+mouse_warping none
+focus_wrapping workspace
+hide_edge_borders none
+
+# ─── Environment ─────────────────────────────────────────────────────
+# start-sway already exports these, but sway's env is scoped to
+# processes it spawns — re-export here so sway-run children (fuzzel,
+# mako, waybar) see them in every restart path.
+exec_always /bin/sh -c 'systemctl --user import-environment 2>/dev/null; \
+    dbus-update-activation-environment --systemd \
+        DISPLAY WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE 2>/dev/null || true'
+
+# ─── Autostart ───────────────────────────────────────────────────────
+# exec vs exec_always: `exec` runs only on initial sway launch;
+# `exec_always` re-runs on every `reload`. Daemons = exec.
+# Dynamic output profile: applies the docked 3-monitor layout when
+# externals are plugged in, otherwise brings eDP-1 online as a
+# laptop-only fallback. Stays attached to sway's output-event stream
+# to re-apply on any hotplug.
+exec sway-output-profile
+
+exec mako
+exec waybar
+
+# Fib / master-stack layout: sway has no native fibonacci mode, but
+# `autotiling-rs` flips new containers between splith/splitv based on
+# the focused container's aspect ratio — which produces the exact
+# dwm-style fib layout (master on the left, stack spiraling inward on
+# the right). Installed via: paru -S autotiling-rs-git
+# Try the Python `autotiling` binary first (same behavior, lighter
+# deps) then fall back to the Rust one. Silent no-op if neither is
+# installed.
+exec sh -c 'if command -v autotiling    >/dev/null; then exec autotiling;    \
+            elif command -v autotiling-rs >/dev/null; then exec autotiling-rs; \
+            fi'
+
+# Initial focus + floorp autostart. Picks the right workspace based
+# on what's currently active: DVI-I-1 (center) when docked, eDP-1
+# (or whatever's up) when not. Hardcoding 1:DVI-I-1 would create a
+# phantom workspace on a disconnected output when undocked, which
+# clashes with the per-output 1:eDP-1 the user actually reaches via
+# mod+1 — producing two "1"s in the bar.
+exec sh -c 'sleep 2 && \
+    primary=$(swaymsg -t get_outputs --raw \
+        | jq -r "[.[] | select(.active) | .name] \
+                 | (index(\"DVI-I-1\") as \$c | if \$c != null then .[\$c] else .[0] end)") && \
+    [ -n "$primary" ] && swaymsg "workspace 1:$primary; exec floorp"'
+# kara-toe server (the terminal client we kept). Launching the
+# server up front means every kara-toe-client invocation spawns a
+# window instantly instead of cold-starting.
+exec kara-toe --server
+# Screen-share / screenshot portal for wlroots compositors.
+exec /usr/lib/xdg-desktop-portal-wlr
+# Clipboard history and polkit agent slots — wire these when you
+# pick daemons (cliphist, gnome-keyring, etc.)
+# exec cliphist
+# exec /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+
+# ─── swayidle: lock on idle, DPMS off after that ─────────────────────
+exec swayidle -w \
+    timeout 600  'swaylock -f -c 111111' \
+    timeout 900  'swaymsg "output * power off"' \
+    resume       'swaymsg "output * power on"' \
+    before-sleep 'swaylock -f -c 111111'
+
+# ─── Per-output workspaces (kara-style) ──────────────────────────────
+# Each output gets its own independent 1-9, keyed by "<N>:<output>".
+# Workspace bindings run through the sway-ws helper (~/.local/bin/sway-ws)
+# which resolves the focused output and switches to "<N>:<that output>".
+# Explicit pinning keeps each workspace on its home output after creation.
+workspace 1:DVI-I-2 output DVI-I-2
+workspace 2:DVI-I-2 output DVI-I-2
+workspace 3:DVI-I-2 output DVI-I-2
+workspace 4:DVI-I-2 output DVI-I-2
+workspace 5:DVI-I-2 output DVI-I-2
+workspace 6:DVI-I-2 output DVI-I-2
+workspace 7:DVI-I-2 output DVI-I-2
+workspace 8:DVI-I-2 output DVI-I-2
+workspace 9:DVI-I-2 output DVI-I-2
+workspace 1:DVI-I-1 output DVI-I-1
+workspace 2:DVI-I-1 output DVI-I-1
+workspace 3:DVI-I-1 output DVI-I-1
+workspace 4:DVI-I-1 output DVI-I-1
+workspace 5:DVI-I-1 output DVI-I-1
+workspace 6:DVI-I-1 output DVI-I-1
+workspace 7:DVI-I-1 output DVI-I-1
+workspace 8:DVI-I-1 output DVI-I-1
+workspace 9:DVI-I-1 output DVI-I-1
+workspace 1:DP-2 output DP-2
+workspace 2:DP-2 output DP-2
+workspace 3:DP-2 output DP-2
+workspace 4:DP-2 output DP-2
+workspace 5:DP-2 output DP-2
+workspace 6:DP-2 output DP-2
+workspace 7:DP-2 output DP-2
+workspace 8:DP-2 output DP-2
+workspace 9:DP-2 output DP-2
+
+# Kara's docked-profile app placement (from kara-gate.conf autostart):
+#   center (DVI-I-1) → floorp, workspace 1
+#   right  (DP-2)    → thunderbird, workspace 1
+#
+# NOTE: Floorp has no `assign` rule because Charlton wants the initial
+# autostart to land on center, but subsequent floorp windows (new
+# windows / popups / file-picker) to open on the currently focused
+# workspace — normal browser behavior. The floorp launch below runs
+# it explicitly on 1:DVI-I-1, which also sets initial focus to center.
+assign [app_id="thunderbird"]     workspace 1:DP-2
+assign [app_id="thunderbird-esr"] workspace 1:DP-2
+
+# Don't let scratchpad windows (spawned in autostart, moved to
+# scratchpad by for_window) steal focus on their brief appearance.
+# Without this, the initial focus flashes to center then jumps to
+# wherever the last scratchpad mapped.
+no_focus [app_id="scratch-main"]
+no_focus [app_id="spotatui"]
+
+# ─── Scratchpads (named, kara-style) ─────────────────────────────────
+# Sway's scratchpad is one shared pool, not named. Simulate named
+# scratchpads by matching per-app-id: spawn distinct windows with
+# distinct app_ids, capture each into the pool on first map, then
+# toggle by matching its selector.
+#
+# The `sleep 1` races around `kara-toe --server` — the server is
+# exec'd above but may not be listening yet when -client connects.
+
+for_window [app_id="scratch-main"] floating enable, move scratchpad, resize set 1400 900
+for_window [app_id="spotatui"]     floating enable, move scratchpad, resize set 1400 900
+
+# `main` — plain kara-toe terminal. Use it for whatever (tmux attach,
+# glances, scratch nvim). Keeping the autostart simple avoids the
+# earlier tmux-split-session chain that fought shell quoting.
+exec sh -c 'sleep 1 && kara-toe-client --app-id=scratch-main'
+
+# `music` — spotatui in its own tmux session so it survives compositor
+# restarts (kara used the same pattern).
+exec sh -c 'sleep 1 && kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui'
+
+# ─── Floating rules (matches kara's rules block) ─────────────────────
+for_window [app_id="pavucontrol"]  floating enable
+for_window [app_id="pulsemixer"]   floating enable
+for_window [app_id="mpv"]          floating enable
+# kara's transient dialog behavior — common floats sway won't catch:
+for_window [window_role="pop-up"]       floating enable
+for_window [window_role="bubble"]       floating enable
+for_window [window_role="dialog"]       floating enable
+for_window [window_type="dialog"]       floating enable
+
+# ═══════════════════════════════════════════════════════════════════
+# Keybinds — ported from kara-gate.conf [binds] block.
+# ═══════════════════════════════════════════════════════════════════
+
+# ─── App launch ──────────────────────────────────────────────────────
+bindsym $mod+Return       exec $terminal
+bindsym $mod+d            exec $launcher
+bindsym $mod+e            exec $file_manager
+bindsym $mod+Shift+v      exec rofi-videos
+bindsym $mod+m            exec kara-toe-client --app-id=pulsemixer -e pulsemixer
+
+# ─── Screenshots (kara-glimpse → grim + slurp) ───────────────────────
+# Fullscreen — mirrors `Print` in kara (no modifier).
+bindsym Print             exec sh -c 'grim ~/Pictures/screenshot-$(date +%s).png'
+# Region — mirrors mod+Shift+s in kara.
+bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/png'
+
+# ─── Scratchpads (named by app_id) ───────────────────────────────────
+bindsym $mod+apostrophe   [app_id="scratch-main"]  scratchpad show
+bindsym $mod+semicolon    [app_id="spotatui"]      scratchpad show
+
+# ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
+# If monocle is active, j/k cycle the hidden stack (swap visible
+# window). Otherwise sway-focus-cycle walks the ordered list of
+# tiled windows on the current workspace — more robust than sway's
+# native `focus next sibling` (too shallow in deep autotiling trees)
+# and guarantees we stay on the current workspace/monitor.
+bindsym $mod+j            exec sh -c 'sway-monocle cycle-next || sway-focus-cycle next'
+bindsym $mod+k            exec sh -c 'sway-monocle cycle-prev || sway-focus-cycle prev'
+bindsym $mod+h            focus output left
+bindsym $mod+l            focus output right
+bindsym $mod+Shift+h      move container to output left,  focus output left
+bindsym $mod+Shift+l      move container to output right, focus output right
+
+# ─── Master area resize + zoom (kara: mfact / zoom_master) ───────────
+# With autotiling producing master-stack layout, the "master" is the
+# leftmost window. resize on the focused container grows/shrinks it
+# horizontally — effectively adjusting the master/stack split.
+bindsym $mod+bracketleft  resize shrink width 80 px or 5 ppt
+bindsym $mod+bracketright resize grow   width 80 px or 5 ppt
+# Swap focused with master (the leftmost window in the current
+# workspace). If already on master, no-op. Mirrors kara's zoom_master.
+bindsym $mod+Shift+Return exec sway-zoom-master
+
+# ─── Layout ──────────────────────────────────────────────────────────
+# mod+f = true kara-style monocle via sway-monocle script: every other
+# window on the workspace is parked in the scratchpad (marked per-ws
+# for later restore), leaving ONLY the focused window visible with no
+# tab bar, no titlebar residue. mod+j/mod+k cycle through the hidden
+# stack while active; Toggle again to restore.
+# mod+Shift+f = output-level fullscreen (covers bar).
+bindsym $mod+f            exec sway-monocle toggle
+bindsym $mod+Shift+f      fullscreen
+bindsym $mod+t            floating toggle
+# mod+Shift+t (kara theme switcher) → no sway equivalent. Left unbound.
+
+# ─── Window management ───────────────────────────────────────────────
+# sway-kill wraps `kill` so that if monocle is active and we destroy
+# the only visible window, a hidden monocle window is auto-promoted
+# into view (otherwise the workspace goes empty with stuff still in
+# the __mono_<ws>__ holding workspace).
+bindsym $mod+q            exec sway-kill
+bindsym $mod+Shift+r      reload
+bindsym $mod+Shift+q      exit
+bindsym $mod+Shift+x      exec swaylock -f -c 111111
+
+# ─── Wallpaper + cursor pickers (preview-cycle modes) ────────────────
+# mod+Shift+w / mod+Shift+c enter a dedicated sway mode. Left/Right (or
+# h/l) cycle through the list with live preview. Return commits the
+# current preview to ~/.config/sway/config.d/*.conf; Escape reverts
+# to whatever was active before the mode opened.
+#
+# Wallpapers live at ~/.local/state/sway/wallpapers/ (override via
+# SWAY_WALLPAPER_DIR). Cursor themes scanned from /usr/share/icons,
+# ~/.local/share/icons, and ~/.icons.
+bindsym $mod+Shift+w      exec sway-wallpaper start; mode "wallpaper"
+bindsym $mod+Shift+c      exec sway-cursor start;    mode "cursor"
+
+mode "wallpaper" {
+    bindsym Right   exec sway-wallpaper next
+    bindsym l       exec sway-wallpaper next
+    bindsym Down    exec sway-wallpaper next
+    bindsym j       exec sway-wallpaper next
+    bindsym Left    exec sway-wallpaper prev
+    bindsym h       exec sway-wallpaper prev
+    bindsym Up      exec sway-wallpaper prev
+    bindsym k       exec sway-wallpaper prev
+    bindsym Return  exec sway-wallpaper commit, mode default
+    bindsym Escape  exec sway-wallpaper revert, mode default
+    bindsym q       exec sway-wallpaper revert, mode default
+}
+
+mode "cursor" {
+    bindsym Right   exec sway-cursor next
+    bindsym l       exec sway-cursor next
+    bindsym Down    exec sway-cursor next
+    bindsym j       exec sway-cursor next
+    bindsym Left    exec sway-cursor prev
+    bindsym h       exec sway-cursor prev
+    bindsym Up      exec sway-cursor prev
+    bindsym k       exec sway-cursor prev
+    bindsym Return  exec sway-cursor commit, mode default
+    bindsym Escape  exec sway-cursor revert, mode default
+    bindsym q       exec sway-cursor revert, mode default
+}
+
+# mod+s (kara toggle_sync) → no sway equivalent. Left unbound.
+# mod+slash (kara show_keybinds overlay) → no sway built-in. Run
+# `swaymsg -t get_binding_modes` + grep config for a cheatsheet, or
+# wire up a fuzzel-based keybind browser later. Left unbound.
+
+# ─── Workspaces (per-output, via sway-ws helper) ─────────────────────
+# `sway-ws switch N` = focus workspace N on the CURRENTLY focused output.
+# `sway-ws move N`   = send focused container to workspace N on current output.
+# Giving each monitor its own 1-9 matches kara's sync_workspaces=false feel.
+bindsym $mod+1 exec sway-ws switch 1
+bindsym $mod+2 exec sway-ws switch 2
+bindsym $mod+3 exec sway-ws switch 3
+bindsym $mod+4 exec sway-ws switch 4
+bindsym $mod+5 exec sway-ws switch 5
+bindsym $mod+6 exec sway-ws switch 6
+bindsym $mod+7 exec sway-ws switch 7
+bindsym $mod+8 exec sway-ws switch 8
+bindsym $mod+9 exec sway-ws switch 9
+bindsym $mod+Shift+1 exec sway-ws move 1
+bindsym $mod+Shift+2 exec sway-ws move 2
+bindsym $mod+Shift+3 exec sway-ws move 3
+bindsym $mod+Shift+4 exec sway-ws move 4
+bindsym $mod+Shift+5 exec sway-ws move 5
+bindsym $mod+Shift+6 exec sway-ws move 6
+bindsym $mod+Shift+7 exec sway-ws move 7
+bindsym $mod+Shift+8 exec sway-ws move 8
+bindsym $mod+Shift+9 exec sway-ws move 9
+
+# ─── Floating with mouse ─────────────────────────────────────────────
+floating_modifier $mod normal
+
+# ─── Media / volume / brightness keys ────────────────────────────────
+bindsym --locked XF86AudioRaiseVolume  exec wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym --locked XF86AudioLowerVolume  exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym --locked XF86AudioMute         exec wpctl set-mute   @DEFAULT_AUDIO_SINK@ toggle
+bindsym --locked XF86MonBrightnessUp   exec brightnessctl set +10%
+bindsym --locked XF86MonBrightnessDown exec brightnessctl set 10%-
+bindsym --locked XF86AudioPlay         exec playerctl play-pause
+bindsym --locked XF86AudioNext         exec playerctl next
+bindsym --locked XF86AudioPrev         exec playerctl previous
+
+# ─── Include user overrides ──────────────────────────────────────────
+# Machine-local tweaks go in ~/.config/sway/config.d/*.conf — they
+# stay outside the stow-managed tree so you can edit them without
+# a dotfiles commit.
+include ~/.config/sway/config.d/*.conf

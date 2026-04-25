@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+# sway-zoom-master — swap the focused window with the "master" slot
+# (leftmost window in the current workspace). Mirrors kara's
+# zoom_master / dwm's master-stack promote.
+#
+# With autotiling running, the first window opened on a workspace
+# takes the master slot on the left and subsequent windows stack in
+# the right column. Pressing this swap brings any stack window into
+# the master slot (and evicts whatever was there into the stack).
+
+set -eu
+
+focused=$(swaymsg -t get_tree | jq '
+    .. | objects
+    | select(.focused == true and (.type == "con" or .type == "floating_con"))
+    | .id' | head -1)
+[ -n "$focused" ] || exit 0
+
+ws=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name')
+[ -n "$ws" ] || exit 0
+
+master=$(swaymsg -t get_tree | jq --arg ws "$ws" '
+    [.. | objects | select(.type == "workspace" and .name == $ws)][0]
+    | [.. | objects | select((.type == "con" or .type == "floating_con") and ((.nodes // []) == []))]
+    | sort_by(.rect.x) | .[0].id')
+[ -n "$master" ] && [ "$master" != "null" ] || exit 0
+
+# Already on master — nothing to do.
+[ "$focused" = "$master" ] && exit 0
+
+swaymsg "[con_id=$focused] swap container with con_id $master" >/dev/null
+swaymsg "[con_id=$master] focus" >/dev/null

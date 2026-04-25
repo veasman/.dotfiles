@@ -1,0 +1,108 @@
+#!/usr/bin/env sh
+# sway-cursor — preview-cycle cursor-theme picker.
+#
+# Paired with the "cursor" sway mode (mod+Shift+c enters). Left/Right
+# cycle through installed Xcursor themes, each press applied live via
+# `swaymsg seat seat0 xcursor_theme`. Return persists to config.d,
+# Escape reverts to the theme that was active before the mode opened.
+#
+# Actions:
+#   start          snapshot, apply first theme
+#   next | prev    cycle live (non-committing)
+#   commit         persist current preview
+#   revert         restore pre-start state
+#   pick <theme>   set a specific theme and persist
+#   list           print detected theme names (one per line)
+#
+# Env:
+#   SWAY_CURSOR_SIZE=20   cursor size in pixels
+
+set -eu
+
+size="${SWAY_CURSOR_SIZE:-20}"
+persist="$HOME/.config/sway/config.d/cursor.conf"
+state_dir="${XDG_RUNTIME_DIR:-/tmp}/sway-cursor"
+list_file="$state_dir/list"
+pos_file="$state_dir/pos"
+revert_file="$state_dir/revert.conf"
+
+mkdir -p "$(dirname "$persist")"
+
+list_themes() {
+    for base in /usr/share/icons "$HOME/.local/share/icons" "$HOME/.icons"; do
+        [ -d "$base" ] || continue
+        for d in "$base"/*; do
+            [ -d "$d/cursors" ] && basename "$d"
+        done
+    done | sort -u
+}
+
+apply_theme() {
+    swaymsg "seat seat0 xcursor_theme $1 $size" >/dev/null
+}
+
+write_persist_theme() {
+    printf '# managed by sway-cursor\nseat seat0 xcursor_theme %s %s\n' "$1" "$size" > "$persist"
+}
+
+restore_from_revert() {
+    if [ -f "$revert_file" ]; then
+        cp "$revert_file" "$persist"
+        saved=$(awk '/xcursor_theme/ {print $4; exit}' "$revert_file" 2>/dev/null || true)
+        [ -n "$saved" ] && apply_theme "$saved"
+    fi
+}
+
+action="${1:-start}"
+case "$action" in
+    start)
+        mkdir -p "$state_dir"
+        if [ -f "$persist" ]; then cp "$persist" "$revert_file"; else rm -f "$revert_file"; fi
+        list_themes > "$list_file"
+        if [ ! -s "$list_file" ]; then
+            notify-send -u low "sway-cursor" "No cursor themes found" 2>/dev/null || true
+            rm -rf "$state_dir"
+            exit 0
+        fi
+        echo 0 > "$pos_file"
+        first=$(head -1 "$list_file")
+        apply_theme "$first"
+        notify-send -u low -t 1500 "cursor" "$first — ← → cycle · Enter commit · Esc revert" 2>/dev/null || true
+        ;;
+    next|prev)
+        [ -s "$list_file" ] && [ -f "$pos_file" ] || exit 0
+        n=$(wc -l < "$list_file")
+        pos=$(cat "$pos_file")
+        case "$action" in
+            next) pos=$(( (pos + 1) % n )) ;;
+            prev) pos=$(( (pos - 1 + n) % n )) ;;
+        esac
+        echo "$pos" > "$pos_file"
+        theme=$(sed -n "$((pos+1))p" "$list_file")
+        apply_theme "$theme"
+        notify-send -u low -t 1200 "cursor" "$theme" 2>/dev/null || true
+        ;;
+    commit)
+        if [ -s "$list_file" ] && [ -f "$pos_file" ]; then
+            pos=$(cat "$pos_file")
+            theme=$(sed -n "$((pos+1))p" "$list_file")
+            write_persist_theme "$theme"
+        fi
+        rm -rf "$state_dir"
+        ;;
+    revert)
+        restore_from_revert
+        rm -rf "$state_dir"
+        ;;
+    pick)
+        [ -n "${2:-}" ] || { echo "usage: sway-cursor pick <theme>" >&2; exit 2; }
+        apply_theme "$2"; write_persist_theme "$2"
+        ;;
+    list)
+        list_themes
+        ;;
+    *)
+        echo "usage: sway-cursor {start|next|prev|commit|revert|pick <theme>|list}" >&2
+        exit 2
+        ;;
+esac

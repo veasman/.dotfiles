@@ -541,16 +541,20 @@ stow_dotfiles() {
     local packages=(
         floorp
         fonts
+        fuzzel
         git
         kitty
         latex
+        mako
         nvim
         pmux
         rofi
         scripts
         shell
+        sway
         tmux
         vwm
+        waybar
         xdg
         xinit-desktop
         xresources
@@ -559,6 +563,18 @@ stow_dotfiles() {
     for pkg in "${packages[@]}"; do
         stow_package_force "$pkg"
     done
+
+    # The sway package excludes .local from stow (see sway/.stow-local-ignore
+    # for why — pre-existing absolute-symlink entries in the scripts package
+    # abort sibling-tree analysis). Symlink each helper script into
+    # ~/.local/bin/ manually so they're on $PATH.
+    if [[ -d "$DOTFILES_DIR/sway/.local/bin" ]]; then
+        run_cmd mkdir -p "$HOME/.local/bin"
+        for helper in "$DOTFILES_DIR"/sway/.local/bin/*; do
+            [[ -f "$helper" ]] || continue
+            run_cmd ln -sf "$helper" "$HOME/.local/bin/$(basename "$helper")"
+        done
+    fi
 
     run_cmd fc-cache -f
 }
