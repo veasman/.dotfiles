@@ -1,0 +1,109 @@
+/* waybar — ~/.config/waybar/hyprland-style.css
+ *
+ * Hyprland-specific waybar theme. Pillier than the sway version —
+ * leans into rounded modules, soft shadows, and a small inset from
+ * the screen edge so it floats above the workspace instead of
+ * docking flush. Theme colors match kara: bg=#111111 surface=#1b1b1b
+ * text=#f2f2f2 accent=#6bacac border=#353535.
+ */
+
+* {
+    font-family: "FiraCode Nerd Font", "FiraCode Nerd Font Mono", "Symbols Nerd Font", monospace;
+    font-size: 11pt;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: transparent;
+    color: #f2f2f2;
+    margin-top: 6px;
+}
+
+/* The top-level boxes. Waybar wraps each module group in
+ * .modules-left/right/center, but for individual styling we hit the
+ * modules themselves via #ID. Use `box` blocks where possible to
+ * give the bar an inset, pill look. */
+
+#workspaces,
+#window,
+#clock,
+#cpu,
+#memory,
+#network,
+#battery,
+#pulseaudio,
+#submap,
+#custom-claude {
+    background: rgba(17, 17, 17, 0.85);
+    color: #f2f2f2;
+    border: 1px solid #353535;
+    border-radius: 999px;
+    padding: 2px 12px;
+    margin: 0 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Workspaces module — buttons inside the pill */
+#workspaces {
+    padding: 0 4px;
+}
+
+#workspaces button {
+    color: #5c5c5c;
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 2px 9px;
+    margin: 2px 1px;
+    transition: color 120ms ease, background 120ms ease;
+}
+
+#workspaces button.active,
+#workspaces button.focused {
+    color: #111111;
+    background: #6bacac;
+}
+
+#workspaces button.urgent {
+    color: #f2f2f2;
+    background: #bf616a;
+}
+
+#workspaces button:hover {
+    color: #f2f2f2;
+    background: #1b1b1b;
+}
+
+/* Submap (mode equivalent) */
+#submap {
+    background: #6bacac;
+    color: #111111;
+    font-style: italic;
+}
+
+/* Window title in the middle */
+#window {
+    color: #c5c5c5;
+    font-style: italic;
+}
+
+/* Specific module accents */
+#battery.warning {
+    color: #ebcb8b;
+}
+#battery.critical {
+    color: #bf616a;
+}
+#battery.charging {
+    color: #6bacac;
+}
+
+#pulseaudio.muted {
+    color: #5c5c5c;
+}
+
+#network.disconnected {
+    color: #5c5c5c;
+}

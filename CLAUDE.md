@@ -113,21 +113,34 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 The `hyprland/` stow package is a parallel scaffolding to test Hyprland as a sway alternative — primarily to recover kara's per-workspace dim+blur on scratchpads (Hyprland's "special workspaces" do this natively) and to get tunable animations. **Sway is not affected** — both packages live independently and start-sway / start-hyprland pick the session.
 
 Layout:
-- `hyprland/.config/hypr/hyprland.conf` — main config (master layout, per-output workspaces 1-9 via offset ranges, special-workspace scratchpads with dim/blur).
-- `hyprland/.config/waybar/hyprland.jsonc` — separate waybar config; uses `hyprland/workspaces` and maps absolute IDs back to per-output 1-9 via `format-icons`.
+- `hyprland/.config/hypr/hyprland.conf` — main config (master layout, per-output workspaces 1-9 via offset ranges, special-workspace scratchpads with dim+blur, snappy animations).
+- `hyprland/.config/hypr/hyprpaper.conf` — wallpaper daemon config.
+- `hyprland/.config/hypr/hypridle.conf` — idle orchestration (lock at 10m, DPMS at 15m, suspend at 30m).
+- `hyprland/.config/hypr/hyprlock.conf` — lock screen (themed, blurred wallpaper backdrop).
+- `hyprland/.config/swaync/{config.json,style.css}` — themed notification daemon + center.
+- `hyprland/.config/fuzzel/fuzzel-hyprland.ini` — Hyprland-side fuzzel theme (rounded, translucent).
+- `hyprland/.config/waybar/hyprland.jsonc` + `hyprland-style.css` — separate waybar config (pillier theme).
 - `hyprland/.local/bin/start-hyprland` — TTY launcher.
 - `hyprland/.local/bin/hyprland-ws` — per-output workspace switcher (mod+1..9 → eDP-1=1-9, DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39).
 - `hyprland/.local/bin/hyprland-scratch-show` — spawn-on-demand wrapper for `togglespecialworkspace`.
+- `hyprland/.local/bin/hyprland-monocle` — kara-style monocle via `fullscreenstate 1` (maximize). Bar/gaps/borders stay; cycle-next/prev atomically swap maximize state to the next leaf in one IPC call.
 - `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
 
 Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manually after stow.
 
-To test:
-1. `paru -S hyprland` (and `swaylock` / `wpctl` / `grim` / `slurp` / `wl-clipboard` if not already in for sway).
-2. `stow -t ~ hyprland`, then `ln -sf ~/.dotfiles/hyprland/.local/bin/* ~/.local/bin/`.
-3. Log out, switch TTY, run `start-hyprland`. Logs at `~/.cache/hypr/start-hyprland.log`.
+To test, install Hyprland and the native ecosystem tools:
+```
+paru -S hyprland hyprpaper hypridle hyprlock swaync
+```
+(Also requires the existing sway dependencies — wpctl, grim, slurp, wl-clipboard, brightnessctl, playerctl.)
+Then:
+```
+stow -t ~ hyprland
+for f in ~/.dotfiles/hyprland/.local/bin/*; do ln -sf "$f" ~/.local/bin/$(basename "$f"); done
+```
+Log out, switch TTY, run `start-hyprland`. Logs at `~/.cache/hypr/start-hyprland.log` and Hyprland's own at `~/.local/share/hyprland/hyprland.log` (and a richer per-instance log in `/run/user/$UID/hypr/<sig>/`).
 
-Not yet ported (use sway equivalents or fall back to native hyprctl): hyprland-output-profile (docked/undocked monitor profile + hotplug), hyprland-monocle (cycle-while-fullscreen), hyprland-zoom-master (use built-in `swapwithmaster master`), wallpaper/cursor pickers.
+Not yet ported: hyprland-output-profile (docked/undocked monitor profile + hotplug — for now Hyprland's catch-all `monitor=,preferred,auto,1` plus the named overrides handle laptop-only cleanly; docked profile may need refinement), wallpaper/cursor pickers.
 
 ### Things kara had that sway doesn't replicate
 

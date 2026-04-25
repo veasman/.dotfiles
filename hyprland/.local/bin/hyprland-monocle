@@ -1,0 +1,97 @@
+#!/usr/bin/env sh
+# hyprland-monocle — kara-style monocle.
+#
+# Uses Hyprland's "maximize" mode (fullscreenstate INTERNAL=1).
+# Maximize fills the available workspace area but respects gaps,
+# borders, and reserved bar space — exactly what kara's monocle did.
+# Other windows on the workspace stay in their tile positions but
+# are hidden behind the maximized one. No hidden workspace, no
+# waybar pollution, no IPC-churn moving windows.
+#
+# Cycling (cycle-next / cycle-prev) atomically swaps maximize state
+# to the next leaf via `hyprctl --batch`, so it's a single round-trip
+# and visually instant.
+#
+# Actions:
+#   toggle       enter/exit monocle on the focused window
+#   cycle-next   cycle focus; if monocle is on, move it to the next leaf
+#   cycle-prev   ditto, reverse
+#   is-active    exit 0 if focused window is maximized
+
+set -eu
+
+active_json() {
+    hyprctl activewindow -j 2>/dev/null
+}
+
+# Hyprland's `fullscreen` field: 0 = none, 1 = maximize, 2 = fullscreen.
+# Newer versions split into `fullscreen` (internal) and
+# `fullscreenClient` (client-requested). We treat both 1 and 2 as
+# "monocle-ish active" for cycling purposes.
+fs_internal() {
+    active_json | jq -r '.fullscreen // 0'
+}
+
+active_addr() {
+    active_json | jq -r '.address // empty'
+}
+
+leaves_on_active_ws() {
+    ws_id=$(active_json | jq -r '.workspace.id // empty')
+    [ -n "$ws_id" ] || return 1
+    hyprctl clients -j | jq --argjson w "$ws_id" -r \
+        '[.[] | select(.workspace.id == $w) | .address] | .[]'
+}
+
+target_addr() {
+    direction="$1"
+    focused="$2"
+    ids=$(leaves_on_active_ws) || return 1
+    count=$(printf '%s\n' "$ids" | grep -c . || true)
+    [ "$count" -gt 1 ] || return 1
+
+    idx=$(printf '%s\n' "$ids" | awk -v f="$focused" '$0 == f { print NR; exit }')
+    [ -n "$idx" ] || return 1
+
+    case "$direction" in
+        next) t=$(( idx % count + 1 )) ;;
+        prev) t=$(( (idx - 2 + count) % count + 1 )) ;;
+    esac
+    printf '%s\n' "$ids" | sed -n "${t}p"
+}
+
+action="${1:-toggle}"
+case "$action" in
+    toggle)
+        # `fullscreenstate INTERNAL CLIENT`: -1 leaves CLIENT alone.
+        # If currently 1, set to 0; otherwise set to 1.
+        if [ "$(fs_internal)" = "1" ]; then
+            hyprctl dispatch fullscreenstate 0 -1 >/dev/null
+        else
+            hyprctl dispatch fullscreenstate 1 -1 >/dev/null
+        fi
+        ;;
+    cycle-next|cycle-prev)
+        focused=$(active_addr)
+        [ -n "$focused" ] || exit 1
+        direction=${action#cycle-}
+        target=$(target_addr "$direction" "$focused") || exit 0
+
+        if [ "$(fs_internal)" = "0" ]; then
+            # Not in monocle — just move focus.
+            hyprctl dispatch focuswindow "address:$target" >/dev/null
+        else
+            # Atomic swap: clear maximize on current, focus target,
+            # set maximize on target. `--batch` runs them in one IPC.
+            hyprctl --batch "dispatch fullscreenstate 0 -1; dispatch focuswindow address:$target; dispatch fullscreenstate 1 -1" >/dev/null
+        fi
+        ;;
+    is-active)
+        fs=$(fs_internal)
+        [ "$fs" != "0" ]
+        ;;
+    *)
+        echo "usage: hyprland-monocle {toggle|cycle-next|cycle-prev|is-active}" >&2
+        exit 2
+        ;;
+esac

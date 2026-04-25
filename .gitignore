@@ -37,6 +37,7 @@ scripts/.local/bin/start-hyprland
 scripts/.local/bin/hyprland-ws
 scripts/.local/bin/hyprland-scratch-show
 scripts/.local/bin/hyprland-float-toggle
+scripts/.local/bin/hyprland-monocle
 scripts/.local/bin/sway-output-profile
 scripts/.local/bin/sway-scratch-show
 scripts/.local/bin/sway-wallpaper
