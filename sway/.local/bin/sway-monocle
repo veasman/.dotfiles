@@ -1,98 +1,102 @@
 #!/usr/bin/env sh
-# sway-monocle — kara-style monocle mode for sway.
+# sway-monocle — kara-style monocle via native sway fullscreen.
 #
-# Only the focused window is visible; every other window on the
-# current workspace is moved to a HIDDEN per-workspace holding
-# workspace (named `__mono_<current-ws>__`). Cycling swaps the
-# focused window with the next/prev hidden one.
-#
-# Why a hidden workspace, not the scratchpad? sway's scratchpad
-# forces windows into floating state and strips their tile geometry.
-# Restoring from scratchpad means extra `floating disable` calls and
-# a visible "jump" as the window flops back into the tiling. A
-# hidden sibling workspace keeps windows tiled the whole time, so
-# cycling is instant and autotiling stays out of the way.
+# The focused window is fullscreened; every other window on the
+# workspace stays in its tile position but is hidden by the
+# fullscreen. Cycling swaps fullscreen to a different window atomically
+# in a single swaymsg IPC call, so it's near-instant — no window-move
+# IPC churn, no hidden workspace on the sway tree, no waybar
+# pollution from `__mono_*__` workspaces.
 #
 # Actions:
-#   toggle       enter/exit monocle for current workspace
-#   cycle-next   (only when active) swap focused with next hidden
-#   cycle-prev   (only when active) swap focused with prev hidden
-#   is-active    exit 0 if monocle is active on current workspace
+#   toggle       enter/exit monocle (toggle fullscreen on focused)
+#   cycle-next   focus next leaf; if fullscreen is on, move it along
+#   cycle-prev   ditto, reverse
+#   is-active    exit 0 if focused window is fullscreened
+#
+# "Leaf" = any tiled or floating container with no child nodes. Sway's
+# `focus next sibling` walks the tree shallowly and misses deep
+# autotiling layouts, so we enumerate leaves from get_tree ourselves.
 
 set -eu
 
-ws=$(swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name')
-ws_sanitized=$(printf '%s' "$ws" | sed 's/[^A-Za-z0-9]/_/g')
-mark="mono_${ws_sanitized}"
-hidden_ws="__mono_${ws_sanitized}__"
-
-get_marked_ids() {
-    swaymsg -t get_tree | jq -r --arg m "$mark" '
-        [.. | objects | select(.marks? // [] | any(. == $m)) | .id] | .[]'
+focused_info() {
+    # Emit: "<id> <fullscreen_mode>"
+    swaymsg -t get_tree | jq -r '
+        [.. | objects
+         | select(.focused == true and (.type == "con" or .type == "floating_con"))]
+        | first
+        | if . then "\(.id) \(.fullscreen_mode // 0)" else "" end'
 }
 
-is_active() {
-    [ -n "$(get_marked_ids | head -1)" ]
-}
-
-enter() {
-    focused_id=$(swaymsg -t get_tree | jq -r '
-        .. | objects | select(.focused == true and (.type == "con" or .type == "floating_con"))
-        | .id' | head -1)
-    [ -n "$focused_id" ] || return 1
-
-    ids=$(swaymsg -t get_tree | jq -r --arg ws "$ws" --argjson fid "$focused_id" '
-        [.. | objects | select(.type == "workspace" and .name == $ws)][0] // empty
+leaves_on_current_ws() {
+    swaymsg -t get_tree | jq -r '
+        [.. | objects | select(.type == "workspace" and .focused == true)]
+        | first
         | [.. | objects
            | select((.type == "con" or .type == "floating_con")
                     and ((.nodes // []) | length == 0)
-                    and .id != $fid)
+                    and ((.floating_nodes // []) | length == 0))
            | .id]
-        | .[]')
-
-    for id in $ids; do
-        swaymsg "[con_id=$id] mark --add $mark"                   >/dev/null
-        swaymsg "[con_id=$id] move container to workspace $hidden_ws" >/dev/null
-    done
+        | .[]'
 }
 
-exit_mono() {
-    for id in $(get_marked_ids); do
-        swaymsg "[con_id=$id] move container to workspace $ws" >/dev/null
-        swaymsg "[con_id=$id] unmark $mark"                    >/dev/null
-    done
-}
-
-cycle() {
+target_id() {
     direction="$1"
-    is_active || return 1
+    focused="$2"
+    ids=$(leaves_on_current_ws) || return 1
+    count=$(printf '%s\n' "$ids" | grep -c . || echo 0)
+    [ "$count" -gt 1 ] || return 1
 
-    focused_id=$(swaymsg -t get_tree | jq -r '
-        .. | objects | select(.focused == true and (.type == "con" or .type == "floating_con"))
-        | .id' | head -1)
-    [ -n "$focused_id" ] || return 1
+    # Determine focused's 0-based index in the list.
+    focused_idx=-1
+    i=0
+    for id in $ids; do
+        if [ "$id" = "$focused" ]; then
+            focused_idx=$i
+        fi
+        i=$((i + 1))
+    done
+    [ "$focused_idx" -ge 0 ] || return 1
 
-    ids=$(get_marked_ids)
     case "$direction" in
-        next) target=$(printf '%s\n' "$ids" | head -1) ;;
-        prev) target=$(printf '%s\n' "$ids" | tail -1) ;;
+        next) t=$(( (focused_idx + 1) % count )) ;;
+        prev) t=$(( (focused_idx - 1 + count) % count )) ;;
     esac
-    [ -n "$target" ] || return 1
-
-    # Hide current, then reveal target. Keep tiling context intact
-    # by moving between workspaces (no scratchpad, no floating flip).
-    swaymsg "[con_id=$focused_id] mark --add $mark"                          >/dev/null
-    swaymsg "[con_id=$focused_id] move container to workspace $hidden_ws"    >/dev/null
-    swaymsg "[con_id=$target]     move container to workspace $ws"           >/dev/null
-    swaymsg "[con_id=$target]     unmark $mark"                              >/dev/null
-    swaymsg "[con_id=$target]     focus"                                     >/dev/null
+    printf '%s\n' "$ids" | sed -n "$((t + 1))p"
 }
 
 action="${1:-toggle}"
 case "$action" in
-    toggle)      if is_active; then exit_mono; else enter; fi ;;
-    cycle-next)  cycle next ;;
-    cycle-prev)  cycle prev ;;
-    is-active)   is_active ;;
-    *)           echo "usage: sway-monocle {toggle|cycle-next|cycle-prev|is-active}" >&2; exit 2 ;;
+    toggle)
+        swaymsg fullscreen toggle >/dev/null
+        ;;
+    cycle-next|cycle-prev)
+        info=$(focused_info)
+        [ -n "$info" ] || exit 0
+        focused_id=${info% *}
+        fs_mode=${info#* }
+        direction=${action#cycle-}
+
+        target=$(target_id "$direction" "$focused_id") || exit 0
+        if [ "$fs_mode" = "0" ]; then
+            # Not in monocle — just cycle focus. Caller will usually
+            # pair this with `|| sway-focus-cycle next` in keybinds,
+            # but cycling as a fallback is still the right thing.
+            swaymsg "[con_id=$target] focus" >/dev/null
+        else
+            # Monocle active: atomic fullscreen swap in one IPC call.
+            swaymsg "[con_id=$focused_id] fullscreen disable; [con_id=$target] focus; [con_id=$target] fullscreen enable" >/dev/null
+        fi
+        ;;
+    is-active)
+        info=$(focused_info)
+        [ -n "$info" ] || exit 1
+        fs_mode=${info#* }
+        [ "$fs_mode" != "0" ]
+        ;;
+    *)
+        echo "usage: sway-monocle {toggle|cycle-next|cycle-prev|is-active}" >&2
+        exit 2
+        ;;
 esac

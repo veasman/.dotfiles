@@ -186,25 +186,37 @@ workspace 9:DP-2 output DP-2
 assign [app_id="thunderbird"]     workspace 1:DP-2
 assign [app_id="thunderbird-esr"] workspace 1:DP-2
 
-# ─── Scratchpads (full-screen overlay workspaces, kara-style) ────────
-# Sway has no native named scratchpad and no per-workspace dim/blur,
-# so we simulate kara's `scratchpad "main"` / `scratchpad "music"` by
-# pinning preset windows to dedicated hidden workspaces. Toggling
-# switches to the scratchpad workspace on the currently focused
-# output (full-screen, since it IS a workspace); re-toggle returns to
-# where you came from. Lazy autostart in sway-scratchpad-ws respawns
-# preset windows if they've all closed.
+# ─── Scratchpads (native sway scratchpad, kara-style overlay) ────────
+# Avoids any hidden workspace so waybar never sees helper entries
+# and monocle/scratchpad don't pollute the workspace list.
 #
-# Preset windows carry unique app_ids so `assign` pins them on first
-# map — even before the user ever toggles the scratchpad.
-assign [app_id="scratch-main-glances"] workspace __scratch_main__
-assign [app_id="scratch-main-todo"]    workspace __scratch_main__
-assign [app_id="spotatui"]             workspace __scratch_music__
-
-# Don't steal focus when the preset windows first map at startup.
-no_focus [app_id="scratch-main-glances"]
-no_focus [app_id="scratch-main-todo"]
+# Preset windows:
+#   main  = one kara-toe-client running a persistent tmux session with
+#           glances (left) and nvim TODO.md (right) as panes. Pane
+#           switching via tmux keybinds. Kara had two sway-tiled
+#           windows; sway's scratchpad is single-window so we fold
+#           them into tmux splits instead.
+#   music = one kara-toe-client running spotatui inside a persistent
+#           tmux session (same as kara).
+#
+# `for_window` catches each window into the scratchpad pool on first
+# map and sizes it to 100% of the output — so toggling really does
+# fill the screen, not kara's earlier 1400x900 mini-window. Windows
+# keep their scratchpad state across re-shows; the size persists once
+# set because sway remembers floating geometry per window.
+#
+# No `assign`, no hidden workspace, no extra toggle helper — the
+# bindings just call sway's native `scratchpad show`.
+no_focus [app_id="scratch-main"]
 no_focus [app_id="spotatui"]
+
+for_window [app_id="scratch-main"] floating enable, move scratchpad, resize set width 100 ppt height 100 ppt
+for_window [app_id="spotatui"]     floating enable, move scratchpad, resize set width 100 ppt height 100 ppt
+
+# Autostart the preset windows so they're ready in the scratchpad
+# pool when the user first toggles them.
+exec kara-toe-client --app-id=scratch-main sway-scratch-main-launcher
+exec kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui
 
 # ─── Floating rules (matches kara's rules block) ─────────────────────
 for_window [app_id="pavucontrol"]  floating enable
@@ -233,9 +245,9 @@ bindsym Print             exec sh -c 'grim ~/Pictures/screenshot-$(date +%s).png
 # Region — mirrors mod+Shift+s in kara.
 bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/png'
 
-# ─── Scratchpads (overlay workspaces — sway-scratchpad-ws) ───────────
-bindsym $mod+apostrophe   exec sway-scratchpad-ws toggle __scratch_main__
-bindsym $mod+semicolon    exec sway-scratchpad-ws toggle __scratch_music__
+# ─── Scratchpads (native sway scratchpad pool, full-screen sized) ────
+bindsym $mod+apostrophe   [app_id="scratch-main"] scratchpad show
+bindsym $mod+semicolon    [app_id="spotatui"]     scratchpad show
 
 # ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
 # If monocle is active, j/k cycle the hidden stack (swap visible

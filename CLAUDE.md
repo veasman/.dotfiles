@@ -63,12 +63,12 @@ These are NOT stowed via the package's `.local/bin` — sway's `.stow-local-igno
 - **`start-sway`** — TTY launcher. Wraps in `dbus-run-session` if no user bus exists, exports Wayland/Qt/Mozilla/Java env hints, refuses to launch if `WAYLAND_DISPLAY` is set (prevents accidental nesting in another compositor). Auto-detects evdi (DisplayLink) and passes `--unsupported-gpu`. Logs to `~/.cache/sway/start-sway.log`.
 - **`sway-output-profile`** — Detects connected outputs and applies docked vs. undocked profile. Daemonizes after the initial pass to handle hotplug. Consolidates orphan `<N>:<output>` workspaces from disconnected outputs into the surviving primary so the bar doesn't show duplicate workspace numbers.
 - **`sway-ws`** — Per-output workspace switcher. Workspaces are named `<N>:<output>` (e.g. `1:DVI-I-1`, `1:eDP-1`) so each monitor has its own independent 1–9. `mod+1`–`mod+9` go through this script; falls through `swaymsg workspace`.
-- **`sway-monocle`** — Kara-style monocle. Moves all but the focused window to a hidden per-workspace holding workspace named `__mono_<ws>__` (NOT scratchpad — scratchpad forces floating, which causes visible jumps). `cycle-next`/`cycle-prev` swaps focused with hidden. `is-active` returns 0 when active so keybinds can chain `sway-monocle cycle-next || sway-focus-cycle next`.
+- **`sway-monocle`** — Kara-style monocle via native sway `fullscreen`. The focused window is fullscreened; other windows stay in their tile positions but are hidden. `cycle-next`/`cycle-prev` atomically swap fullscreen to a different leaf in a single swaymsg IPC call (disable fs, focus target, enable fs), so cycling is near-instant. Previous implementation moved windows between a `__mono_<ws>__` hidden workspace — too slow (4 IPC calls per cycle) and polluted waybar with a `-1` workspace button. `is-active` returns 0 when active so keybinds can chain `sway-monocle cycle-next || sway-focus-cycle next`.
 - **`sway-focus-cycle`** — Robust cycle through tiled windows on the current workspace. Replaces `focus next sibling` (too shallow in deep autotiling trees) and `focus next` (jumps unexpectedly).
 - **`sway-zoom-master`** — Swaps focused window with the leftmost window in the current workspace. Mirrors kara's `zoom_master` / dwm's master promote. Pairs with autotiling-rs's fib layout where the leftmost window IS the master.
 - **`sway-kill`** — `mod+q` wrapper. Aware of monocle: if killing the visible window leaves the workspace empty but hidden monocle windows exist, auto-restores one to view.
 - **`sway-wallpaper`** / **`sway-cursor`** — Preview-cycle pickers driven by sway modes (`mod+Shift+w` / `mod+Shift+c`). Left/Right cycles with live preview, Enter commits, Esc reverts. State persists to `~/.config/sway/config.d/{wallpaper,cursor}.conf`.
-- **`sway-scratchpad-ws`** — Toggle a named "overlay" workspace on the focused output, kara-style. Preset windows are `assign`ed to hidden workspaces (`__scratch_main__`, `__scratch_music__`) and lazily autostarted by this script on first toggle (or after all preset windows have closed). Returns to the prior workspace on re-toggle. No native per-workspace dim/blur in sway, so the scratchpad fills the screen rather than overlaying the current workspace — the dim effect from kara-gate isn't replicable without patching the compositor.
+- **`sway-scratch-main-launcher`** — Sets up the main scratchpad's tmux session (kara parity: glances + nvim TODO.md as side-by-side panes). Idempotent: attaches if the session already exists. Invoked as the command arg to `kara-toe-client` in sway's autostart, so the terminal window embeds the tmux session and lands in sway's native scratchpad pool.
 
 ### Output topology (Charlton's machine)
 
@@ -99,8 +99,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+q`                 | sway-kill                    |
 | `mod+1`–`mod+9`         | sway-ws switch (per-output)  |
 | `mod+Shift+1`–`9`       | sway-ws move                 |
-| `mod+apostrophe`        | sway-scratchpad-ws main (glances + TODO.md) |
-| `mod+semicolon`         | sway-scratchpad-ws music (spotatui)         |
+| `mod+apostrophe`        | scratchpad main (tmux: glances + TODO.md) |
+| `mod+semicolon`         | scratchpad music (spotatui)               |
 | `mod+Shift+x`           | swaylock                     |
 | `mod+Shift+w`           | wallpaper picker mode        |
 | `mod+Shift+c`           | cursor picker mode           |
@@ -112,7 +112,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 - `sync_workspaces` toggle (`mod+s`) — sway has no concept; per-output independent is the only mode.
 - Theme switcher (`mod+Shift+t`) — kara-beautify ran across many apps; needs a sway target in loom-rs to replicate.
 - Keybind overlay (`mod+slash`) — sway has no built-in; could wire fuzzel-based later.
-- Scratchpad dim/blur — kara dimmed and blurred the workspace underneath a scratchpad overlay. Sway can't do per-workspace visual effects; scratchpad-ws workaround is a dedicated full-screen workspace instead (see `sway-scratchpad-ws`).
+- Scratchpad dim/blur — kara dimmed and blurred the workspace underneath a scratchpad overlay. Sway can't do per-workspace visual effects. Since our scratchpad covers 100% of the output, there's nothing peeking through to dim — but the layered visual effect from kara-gate isn't replicable without patching the compositor.
+- Multi-window scratchpads — kara packed multiple tiled windows into a single scratchpad. Sway's scratchpad pool is single-window; we fold the main scratchpad's glances + TODO.md into tmux panes inside one terminal instead. Pane switching uses tmux keybinds rather than sway window focus.
 
 ### Stow notes
 

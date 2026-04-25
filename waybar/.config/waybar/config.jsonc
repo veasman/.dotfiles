@@ -23,18 +23,7 @@
         "disable-scroll": true,
         "all-outputs": false,
         // Show leading number (workspaces are named "<N>:<output>").
-        "format": "{index}",
-        // Hide internal helper workspaces whose names start with `__`
-        // (sway-scratchpad-ws: __scratch_main__ / __scratch_music__;
-        // sway-monocle: __mono_<ws>__). They have num=-1 and would
-        // otherwise render as a "-1" button. When focus is on one of
-        // these, no workspace button highlights — which is the
-        // desired "invisible" behavior for emulated overlays.
-        // Regex must match the FULL workspace name (waybar uses
-        // std::regex_match, not regex_search). `^…$` anchors are
-        // implicit. Covers __scratch_main__, __scratch_music__, and
-        // sway-monocle's __mono_<ws>__.
-        "ignore-list": ["__.*"]
+        "format": "{index}"
     },
 
     "sway/mode": {

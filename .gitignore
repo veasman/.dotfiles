@@ -30,7 +30,7 @@ scripts/.local/bin/sway-focus-cycle
 scripts/.local/bin/sway-kill
 scripts/.local/bin/sway-monocle
 scripts/.local/bin/sway-output-profile
-scripts/.local/bin/sway-scratchpad-ws
+scripts/.local/bin/sway-scratch-main-launcher
 scripts/.local/bin/sway-wallpaper
 scripts/.local/bin/sway-ws
 scripts/.local/bin/sway-zoom-master
