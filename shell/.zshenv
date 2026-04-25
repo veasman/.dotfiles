@@ -1,6 +1,6 @@
 export EDITOR="nvim"
 export VISUAL="nvim"
-export TERMINAL="kitty"
+export TERMINAL="kara-toe-client"
 export BROWSER="floorp"
 
 # Sway helpers live in the sway stow package (they can't go under

@@ -2,8 +2,7 @@
 
 Artix Linux (OpenRC) dotfiles using:
 
-- vwm
-- rofi
+- sway (Wayland)
 - stow-managed configs
 
 ---

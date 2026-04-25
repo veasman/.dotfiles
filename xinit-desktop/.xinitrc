@@ -24,5 +24,6 @@ exec dbus-run-session -- sh -lc '
         fi
     fi
 
-    exec vwm
+    # TODO: choose an X11 fallback WM (vwm removed). Leave session idle.
+    exec sh
 '

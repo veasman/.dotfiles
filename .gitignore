@@ -5,7 +5,6 @@ nvim/.config/nvim/lazy-lock.json
 
 # binaries
 scripts/.local/bin/loom
-scripts/.local/bin/vwm
 scripts/.local/bin/pmux
 scripts/.local/bin/pmux-run
 scripts/.local/bin/pmux-cheat

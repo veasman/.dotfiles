@@ -32,7 +32,6 @@ fi
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 REPOS_DIR="${REPOS_DIR:-$HOME/repos}"
 
-VWM_REPO="${VWM_REPO:-git@github.com:veasman/vwm.git}"
 SIGIL_REPO="${SIGIL_REPO:-git@github.com:veasman/sigil.git}"
 PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 
@@ -40,7 +39,6 @@ PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 # LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
 # LOOM_DIR="$REPOS_DIR/loom"
 
-VWM_DIR="$REPOS_DIR/vwm"
 SIGIL_DIR="$REPOS_DIR/sigil"
 PMUX_DIR="$REPOS_DIR/pmux"
 PARU_DIR="$REPOS_DIR/paru"
@@ -375,7 +373,7 @@ install_base_packages() {
     pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
 
     step 8 "Installing shell and terminal tools"
-    pacman_install zsh kitty tmux fzf tree ripgrep fd jq btop xclip
+    pacman_install zsh tmux fzf tree ripgrep fd jq btop xclip
 
     step 12 "Installing X11 desktop utilities"
     pacman_install \
@@ -394,11 +392,6 @@ install_base_packages() {
 
     step 22 "Installing bluetooth"
     pacman_install bluez bluez-utils bluez-openrc
-
-    step 25 "Installing VWM build dependencies"
-    pacman_install \
-        libx11 libxcb xcb-util-wm xcb-util-keysyms libxft fontconfig \
-        cairo libxrender libxext
 
     step 28 "Installing sigil build dependencies"
     pacman_install libxrandr libpng
@@ -484,11 +477,6 @@ clone_or_update_repo() {
     run_shell "git clone '$repo_url' '$target_dir'"
 }
 
-install_vwm() {
-    clone_or_update_repo "$VWM_REPO" "$VWM_DIR"
-    run_shell "cd '$VWM_DIR' && make && sudo make install"
-}
-
 install_sigil() {
     clone_or_update_repo "$SIGIL_REPO" "$SIGIL_DIR"
     run_shell "cd '$SIGIL_DIR' && make && sudo make install"
@@ -543,7 +531,6 @@ stow_dotfiles() {
         fonts
         fuzzel
         git
-        kitty
         latex
         mako
         nvim
@@ -553,7 +540,6 @@ stow_dotfiles() {
         shell
         sway
         tmux
-        vwm
         waybar
         xdg
         xinit-desktop
@@ -719,9 +705,6 @@ main() {
 
     step 60 "Enabling Bluetooth"
     enable_bluetooth
-
-    step 63 "Building and installing vwm"
-    install_vwm
 
     step 68 "Building and installing sigil"
     install_sigil

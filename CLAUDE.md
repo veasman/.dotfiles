@@ -28,7 +28,7 @@ make tampermonkey-capture
 
 Each top-level directory (e.g., `nvim/`, `shell/`, `tmux/`) is a standalone stow package. The directory structure inside each package mirrors `$HOME`. For example, `nvim/.config/nvim/init.lua` symlinks to `~/.config/nvim/init.lua`.
 
-The bootstrap installer deploys these packages: floorp, fonts, **fuzzel**, git, kitty, latex, **mako**, nvim, pmux, rofi, scripts, shell, **sway**, tmux, vwm, **waybar**, xprofile-desktop, xresources.
+The bootstrap installer deploys these packages: floorp, fonts, **fuzzel**, git, latex, **mako**, nvim, pmux, rofi, scripts, shell, **sway**, tmux, **waybar**, xdg, xinit-desktop, xresources.
 
 ### Bootstrap System
 
@@ -37,11 +37,10 @@ The bootstrap installer deploys these packages: floorp, fonts, **fuzzel**, git, 
 
 ### Theme System (Loom)
 
-Loom is a custom theme manager that propagates a single theme (currently gruvbox) across applications. Generated theme files live in `~/.local/state/loom/generated/` and are sourced by kitty, tmux, rofi, and the vwm status bar. Neovim's theme is generated to `nvim/.config/nvim/lua/oracle/generated/theme.lua`.
+Loom is a custom theme manager that propagates a single theme (currently gruvbox) across applications. Generated theme files live in `~/.local/state/loom/generated/` and are sourced by tmux and rofi. Neovim's theme is generated to `nvim/.config/nvim/lua/oracle/generated/theme.lua`.
 
 ### Custom Tools
 
-- **vwm** — Custom tiling window manager (built from external repo during bootstrap; X11)
 - **loom / loom-ui** — Theme manager binaries
 - **pmux / pmux-run / pmux-cheat** — Project multiplexer for tmux sessions
 - **kara-toe-client** — Foot-fork terminal vendored at `~/repos/kara/crates/kara-toe/` and installed via `kara` repo. Default `$TERMINAL` system-wide.
@@ -120,7 +119,7 @@ The `sway` package has a `.stow-local-ignore` excluding `.local` because the `sc
 ### Key Conventions
 
 - XDG Base Directory spec is followed throughout
-- Default editor: Neovim (nightly), terminal: Kitty, browser: Floorp, shell: Zsh
+- Default editor: Neovim (nightly), terminal: kara-toe-client, browser: Floorp, shell: Zsh
 - Neovim config is modular Lua with lazy.nvim plugin manager
 - Makefile uses `>` as recipe prefix instead of TAB (`.RECIPEPREFIX := >`)
-- Binaries built from source (vwm, loom, pmux) are gitignored; only wrapper scripts are tracked in `scripts/`
+- Binaries built from source (loom, pmux) are gitignored; only wrapper scripts are tracked in `scripts/`
