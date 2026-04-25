@@ -68,6 +68,7 @@ These are NOT stowed via the package's `.local/bin` — sway's `.stow-local-igno
 - **`sway-zoom-master`** — Swaps focused window with the leftmost window in the current workspace. Mirrors kara's `zoom_master` / dwm's master promote. Pairs with autotiling-rs's fib layout where the leftmost window IS the master.
 - **`sway-kill`** — `mod+q` wrapper. Aware of monocle: if killing the visible window leaves the workspace empty but hidden monocle windows exist, auto-restores one to view.
 - **`sway-wallpaper`** / **`sway-cursor`** — Preview-cycle pickers driven by sway modes (`mod+Shift+w` / `mod+Shift+c`). Left/Right cycles with live preview, Enter commits, Esc reverts. State persists to `~/.config/sway/config.d/{wallpaper,cursor}.conf`.
+- **`sway-scratchpad-ws`** — Toggle a named "overlay" workspace on the focused output, kara-style. Preset windows are `assign`ed to hidden workspaces (`__scratch_main__`, `__scratch_music__`) and lazily autostarted by this script on first toggle (or after all preset windows have closed). Returns to the prior workspace on re-toggle. No native per-workspace dim/blur in sway, so the scratchpad fills the screen rather than overlaying the current workspace — the dim effect from kara-gate isn't replicable without patching the compositor.
 
 ### Output topology (Charlton's machine)
 
@@ -98,8 +99,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+q`                 | sway-kill                    |
 | `mod+1`–`mod+9`         | sway-ws switch (per-output)  |
 | `mod+Shift+1`–`9`       | sway-ws move                 |
-| `mod+apostrophe`        | scratchpad-main              |
-| `mod+semicolon`         | scratchpad-music (spotatui)  |
+| `mod+apostrophe`        | sway-scratchpad-ws main (glances + TODO.md) |
+| `mod+semicolon`         | sway-scratchpad-ws music (spotatui)         |
 | `mod+Shift+x`           | swaylock                     |
 | `mod+Shift+w`           | wallpaper picker mode        |
 | `mod+Shift+c`           | cursor picker mode           |
@@ -111,6 +112,7 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 - `sync_workspaces` toggle (`mod+s`) — sway has no concept; per-output independent is the only mode.
 - Theme switcher (`mod+Shift+t`) — kara-beautify ran across many apps; needs a sway target in loom-rs to replicate.
 - Keybind overlay (`mod+slash`) — sway has no built-in; could wire fuzzel-based later.
+- Scratchpad dim/blur — kara dimmed and blurred the workspace underneath a scratchpad overlay. Sway can't do per-workspace visual effects; scratchpad-ws workaround is a dedicated full-screen workspace instead (see `sway-scratchpad-ws`).
 
 ### Stow notes
 

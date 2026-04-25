@@ -186,33 +186,25 @@ workspace 9:DP-2 output DP-2
 assign [app_id="thunderbird"]     workspace 1:DP-2
 assign [app_id="thunderbird-esr"] workspace 1:DP-2
 
-# Don't let scratchpad windows (spawned in autostart, moved to
-# scratchpad by for_window) steal focus on their brief appearance.
-# Without this, the initial focus flashes to center then jumps to
-# wherever the last scratchpad mapped.
-no_focus [app_id="scratch-main"]
-no_focus [app_id="spotatui"]
-
-# ─── Scratchpads (named, kara-style) ─────────────────────────────────
-# Sway's scratchpad is one shared pool, not named. Simulate named
-# scratchpads by matching per-app-id: spawn distinct windows with
-# distinct app_ids, capture each into the pool on first map, then
-# toggle by matching its selector.
+# ─── Scratchpads (full-screen overlay workspaces, kara-style) ────────
+# Sway has no native named scratchpad and no per-workspace dim/blur,
+# so we simulate kara's `scratchpad "main"` / `scratchpad "music"` by
+# pinning preset windows to dedicated hidden workspaces. Toggling
+# switches to the scratchpad workspace on the currently focused
+# output (full-screen, since it IS a workspace); re-toggle returns to
+# where you came from. Lazy autostart in sway-scratchpad-ws respawns
+# preset windows if they've all closed.
 #
-# The `sleep 1` races around `kara-toe --server` — the server is
-# exec'd above but may not be listening yet when -client connects.
+# Preset windows carry unique app_ids so `assign` pins them on first
+# map — even before the user ever toggles the scratchpad.
+assign [app_id="scratch-main-glances"] workspace __scratch_main__
+assign [app_id="scratch-main-todo"]    workspace __scratch_main__
+assign [app_id="spotatui"]             workspace __scratch_music__
 
-for_window [app_id="scratch-main"] floating enable, move scratchpad, resize set 1400 900
-for_window [app_id="spotatui"]     floating enable, move scratchpad, resize set 1400 900
-
-# `main` — plain kara-toe terminal. Use it for whatever (tmux attach,
-# glances, scratch nvim). Keeping the autostart simple avoids the
-# earlier tmux-split-session chain that fought shell quoting.
-exec sh -c 'sleep 1 && kara-toe-client --app-id=scratch-main'
-
-# `music` — spotatui in its own tmux session so it survives compositor
-# restarts (kara used the same pattern).
-exec sh -c 'sleep 1 && kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui'
+# Don't steal focus when the preset windows first map at startup.
+no_focus [app_id="scratch-main-glances"]
+no_focus [app_id="scratch-main-todo"]
+no_focus [app_id="spotatui"]
 
 # ─── Floating rules (matches kara's rules block) ─────────────────────
 for_window [app_id="pavucontrol"]  floating enable
@@ -241,9 +233,9 @@ bindsym Print             exec sh -c 'grim ~/Pictures/screenshot-$(date +%s).png
 # Region — mirrors mod+Shift+s in kara.
 bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/png'
 
-# ─── Scratchpads (named by app_id) ───────────────────────────────────
-bindsym $mod+apostrophe   [app_id="scratch-main"]  scratchpad show
-bindsym $mod+semicolon    [app_id="spotatui"]      scratchpad show
+# ─── Scratchpads (overlay workspaces — sway-scratchpad-ws) ───────────
+bindsym $mod+apostrophe   exec sway-scratchpad-ws toggle __scratch_main__
+bindsym $mod+semicolon    exec sway-scratchpad-ws toggle __scratch_music__
 
 # ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
 # If monocle is active, j/k cycle the hidden stack (swap visible
