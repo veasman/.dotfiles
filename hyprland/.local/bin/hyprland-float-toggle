@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# hyprland-float-toggle — toggle floating with sane geometry.
+#
+# Tiled  → floating: enable floating, size to ~70x75%, center.
+# Float  → tiled:    just toggle floating off.
+#
+# Hyprland's bare `togglefloating` keeps the tile-time geometry,
+# producing the same skinny-strip/off-output placement complaints
+# we hit on sway.
+
+set -eu
+
+floating=$(hyprctl activewindow -j 2>/dev/null | jq -r '.floating // false')
+
+if [ "$floating" = "true" ]; then
+    hyprctl dispatch togglefloating >/dev/null
+else
+    hyprctl dispatch togglefloating >/dev/null
+    hyprctl dispatch resizeactive exact 70% 75% >/dev/null
+    hyprctl dispatch centerwindow >/dev/null
+fi

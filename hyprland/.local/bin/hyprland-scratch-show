@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# hyprland-scratch-show — spawn-if-empty then toggle a special workspace.
+#
+# Hyprland's `togglespecialworkspace` toggles the named overlay. If
+# the special workspace has no windows yet (first toggle after login,
+# or after the user has closed every window in it), this helper runs
+# the supplied spawn command and waits briefly for the window to
+# register before issuing the toggle. The window's
+# `windowrulev2 = workspace special:NAME silent` rule routes it into
+# place automatically.
+#
+# Usage:
+#   hyprland-scratch-show <special-name> <spawn-command...>
+
+set -eu
+
+ws_name="${1:?special workspace name required}"
+shift
+spawn="$*"
+[ -n "$spawn" ] || { echo "spawn command required" >&2; exit 1; }
+
+count_in_special() {
+    hyprctl clients -j | jq --arg ws "special:$ws_name" \
+        '[.[] | select(.workspace.name == $ws)] | length'
+}
+
+if [ "$(count_in_special)" = "0" ]; then
+    setsid -f sh -c "$spawn" >/dev/null 2>&1 || true
+    # Poll up to ~2s for the window to map and the windowrulev2 to
+    # park it on the special workspace.
+    tries=20
+    while [ "$tries" -gt 0 ]; do
+        [ "$(count_in_special)" != "0" ] && break
+        sleep 0.1
+        tries=$((tries - 1))
+    done
+fi
+
+hyprctl dispatch togglespecialworkspace "$ws_name" >/dev/null

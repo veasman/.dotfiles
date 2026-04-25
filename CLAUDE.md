@@ -108,6 +108,27 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `Print`                 | grim full-screen             |
 | `mod+Shift+s`           | grim region → wl-copy        |
 
+### Hyprland (experimental, side-by-side with sway)
+
+The `hyprland/` stow package is a parallel scaffolding to test Hyprland as a sway alternative — primarily to recover kara's per-workspace dim+blur on scratchpads (Hyprland's "special workspaces" do this natively) and to get tunable animations. **Sway is not affected** — both packages live independently and start-sway / start-hyprland pick the session.
+
+Layout:
+- `hyprland/.config/hypr/hyprland.conf` — main config (master layout, per-output workspaces 1-9 via offset ranges, special-workspace scratchpads with dim/blur).
+- `hyprland/.config/waybar/hyprland.jsonc` — separate waybar config; uses `hyprland/workspaces` and maps absolute IDs back to per-output 1-9 via `format-icons`.
+- `hyprland/.local/bin/start-hyprland` — TTY launcher.
+- `hyprland/.local/bin/hyprland-ws` — per-output workspace switcher (mod+1..9 → eDP-1=1-9, DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39).
+- `hyprland/.local/bin/hyprland-scratch-show` — spawn-on-demand wrapper for `togglespecialworkspace`.
+- `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
+
+Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manually after stow.
+
+To test:
+1. `paru -S hyprland` (and `swaylock` / `wpctl` / `grim` / `slurp` / `wl-clipboard` if not already in for sway).
+2. `stow -t ~ hyprland`, then `ln -sf ~/.dotfiles/hyprland/.local/bin/* ~/.local/bin/`.
+3. Log out, switch TTY, run `start-hyprland`. Logs at `~/.cache/hypr/start-hyprland.log`.
+
+Not yet ported (use sway equivalents or fall back to native hyprctl): hyprland-output-profile (docked/undocked monitor profile + hotplug), hyprland-monocle (cycle-while-fullscreen), hyprland-zoom-master (use built-in `swapwithmaster master`), wallpaper/cursor pickers.
+
 ### Things kara had that sway doesn't replicate
 
 - `sync_workspaces` toggle (`mod+s`) — sway has no concept; per-output independent is the only mode.

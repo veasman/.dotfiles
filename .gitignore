@@ -29,6 +29,14 @@ scripts/.local/bin/sway-cursor
 scripts/.local/bin/sway-float-toggle
 scripts/.local/bin/sway-focus-cycle
 scripts/.local/bin/sway-monocle
+
+# Hyprland helper symlinks (mirrors the sway pattern — bootstrap
+# symlinks each hyprland/.local/bin/* into ~/.local/bin/, which is
+# itself a symlink to scripts/.local/bin/).
+scripts/.local/bin/start-hyprland
+scripts/.local/bin/hyprland-ws
+scripts/.local/bin/hyprland-scratch-show
+scripts/.local/bin/hyprland-float-toggle
 scripts/.local/bin/sway-output-profile
 scripts/.local/bin/sway-scratch-show
 scripts/.local/bin/sway-wallpaper
