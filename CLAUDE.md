@@ -128,9 +128,9 @@ Layout:
 
 Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manually after stow.
 
-To test, install Hyprland and the native ecosystem tools:
+To test, install Hyprland and the native ecosystem tools (all in the Artix `world`/`galaxy` repos — no AUR needed):
 ```
-paru -S hyprland hyprpaper hypridle hyprlock swaync
+sudo pacman -S hyprland hyprpaper hypridle hyprlock swaync
 ```
 (Also requires the existing sway dependencies — wpctl, grim, slurp, wl-clipboard, brightnessctl, playerctl.)
 Then:
