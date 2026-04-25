@@ -246,8 +246,12 @@ bindsym Print             exec sh -c 'grim ~/Pictures/screenshot-$(date +%s).png
 bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/png'
 
 # ─── Scratchpads (native sway scratchpad pool, full-screen sized) ────
-bindsym $mod+apostrophe   [app_id="scratch-main"] scratchpad show
-bindsym $mod+semicolon    [app_id="spotatui"]     scratchpad show
+# sway-scratch-show spawns the window on first press if it doesn't
+# exist yet, then toggles it. Avoids the footgun where `exec`
+# autostart only runs on initial sway launch (not on swaymsg reload),
+# leaving the scratchpad mysteriously empty after a reload.
+bindsym $mod+apostrophe   exec sway-scratch-show scratch-main "kara-toe-client --app-id=scratch-main sway-scratch-main-launcher"
+bindsym $mod+semicolon    exec sway-scratch-show spotatui "kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui"
 
 # ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
 # If monocle is active, j/k cycle the hidden stack (swap visible

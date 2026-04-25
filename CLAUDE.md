@@ -68,7 +68,8 @@ These are NOT stowed via the package's `.local/bin` — sway's `.stow-local-igno
 - **`sway-zoom-master`** — Swaps focused window with the leftmost window in the current workspace. Mirrors kara's `zoom_master` / dwm's master promote. Pairs with autotiling-rs's fib layout where the leftmost window IS the master.
 - **`sway-kill`** — `mod+q` wrapper. Aware of monocle: if killing the visible window leaves the workspace empty but hidden monocle windows exist, auto-restores one to view.
 - **`sway-wallpaper`** / **`sway-cursor`** — Preview-cycle pickers driven by sway modes (`mod+Shift+w` / `mod+Shift+c`). Left/Right cycles with live preview, Enter commits, Esc reverts. State persists to `~/.config/sway/config.d/{wallpaper,cursor}.conf`.
-- **`sway-scratch-main-launcher`** — Sets up the main scratchpad's tmux session (kara parity: glances + nvim TODO.md as side-by-side panes). Idempotent: attaches if the session already exists. Invoked as the command arg to `kara-toe-client` in sway's autostart, so the terminal window embeds the tmux session and lands in sway's native scratchpad pool.
+- **`sway-scratch-show`** — Spawn-if-missing then toggle a scratchpad window by app_id. Belt-and-braces wrapper around `[app_id=X] scratchpad show` so the binding works even after `swaymsg reload` (which doesn't re-run `exec` autostart) or after a scratchpad window has been killed. Caller passes the app_id and the spawn command; the helper polls briefly for the window to map after spawn before issuing `scratchpad show`.
+- **`sway-scratch-main-launcher`** — Sets up the main scratchpad's tmux session (kara parity: glances + nvim TODO.md as side-by-side panes). Idempotent: attaches if the session already exists. Invoked as the command arg to `kara-toe-client` by sway-scratch-show, so the terminal window embeds the tmux session and lands in sway's native scratchpad pool.
 
 ### Output topology (Charlton's machine)
 

@@ -1,0 +1,40 @@
+#!/usr/bin/env sh
+# sway-scratch-show — spawn-if-missing then toggle a native sway
+# scratchpad window. Avoids the `exec`-only-runs-at-sway-launch
+# footgun: if the user reloaded sway (or the scratchpad window died),
+# the first keypress spawns the window on demand.
+#
+# The caller supplies:
+#   $1  app_id of the target window
+#   $2  shell command to run if no window with that app_id exists
+#
+# The sway config's `for_window [app_id=X] move scratchpad` rule
+# catches newly spawned windows into the scratchpad pool, so the
+# final `scratchpad show` reveals them uniformly — whether the window
+# was spawned moments ago or at sway startup.
+
+set -eu
+
+app_id=${1:?app_id required}
+spawn=${2:?spawn command required}
+
+count_windows() {
+    swaymsg -t get_tree | jq --arg a "$app_id" '
+        [.. | objects | select(.app_id? == $a)] | length'
+}
+
+if [ "$(count_windows)" = "0" ]; then
+    # Detach the spawn so it outlives this helper.
+    setsid -f sh -c "$spawn" >/dev/null 2>&1 || true
+
+    # Poll until the window appears (or we give up). 2s budget covers
+    # a cold start of kara-toe-client + a new tmux session.
+    tries=20
+    while [ "$tries" -gt 0 ]; do
+        [ "$(count_windows)" != "0" ] && break
+        sleep 0.1
+        tries=$((tries - 1))
+    done
+fi
+
+swaymsg "[app_id=\"$app_id\"] scratchpad show" >/dev/null

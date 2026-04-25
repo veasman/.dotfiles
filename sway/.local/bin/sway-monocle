@@ -4,21 +4,23 @@
 # The focused window is fullscreened; every other window on the
 # workspace stays in its tile position but is hidden by the
 # fullscreen. Cycling swaps fullscreen to a different window atomically
-# in a single swaymsg IPC call, so it's near-instant — no window-move
-# IPC churn, no hidden workspace on the sway tree, no waybar
-# pollution from `__mono_*__` workspaces.
+# in a single swaymsg IPC call — near-instant, no hidden workspace,
+# no waybar pollution.
 #
 # Actions:
 #   toggle       enter/exit monocle (toggle fullscreen on focused)
 #   cycle-next   focus next leaf; if fullscreen is on, move it along
 #   cycle-prev   ditto, reverse
 #   is-active    exit 0 if focused window is fullscreened
-#
-# "Leaf" = any tiled or floating container with no child nodes. Sway's
-# `focus next sibling` walks the tree shallowly and misses deep
-# autotiling layouts, so we enumerate leaves from get_tree ourselves.
 
 set -eu
+
+current_ws() {
+    # Sway's `get_tree` workspace objects don't carry a reliable
+    # `.focused` field, so look the focused workspace up from
+    # get_workspaces (same approach sway-focus-cycle uses).
+    swaymsg -t get_workspaces | jq -r '.[] | select(.focused) | .name'
+}
 
 focused_info() {
     # Emit: "<id> <fullscreen_mode>"
@@ -29,41 +31,38 @@ focused_info() {
         | if . then "\(.id) \(.fullscreen_mode // 0)" else "" end'
 }
 
-leaves_on_current_ws() {
-    swaymsg -t get_tree | jq -r '
-        [.. | objects | select(.type == "workspace" and .focused == true)]
-        | first
-        | [.. | objects
-           | select((.type == "con" or .type == "floating_con")
-                    and ((.nodes // []) | length == 0)
-                    and ((.floating_nodes // []) | length == 0))
-           | .id]
+leaves_on_ws() {
+    ws="$1"
+    swaymsg -t get_tree | jq -r --arg ws "$ws" '
+        [.. | objects | select(.type == "workspace" and .name == $ws)][0]
+        | if . then
+            [.. | objects
+             | select((.type == "con" or .type == "floating_con")
+                      and ((.nodes // []) | length == 0)
+                      and ((.floating_nodes // []) | length == 0))
+             | .id]
+          else [] end
         | .[]'
 }
 
 target_id() {
     direction="$1"
     focused="$2"
-    ids=$(leaves_on_current_ws) || return 1
-    count=$(printf '%s\n' "$ids" | grep -c . || echo 0)
+    ws=$(current_ws)
+    [ -n "$ws" ] || return 1
+    ids=$(leaves_on_ws "$ws")
+    count=$(printf '%s\n' "$ids" | grep -c . || true)
     [ "$count" -gt 1 ] || return 1
 
-    # Determine focused's 0-based index in the list.
-    focused_idx=-1
-    i=0
-    for id in $ids; do
-        if [ "$id" = "$focused" ]; then
-            focused_idx=$i
-        fi
-        i=$((i + 1))
-    done
-    [ "$focused_idx" -ge 0 ] || return 1
+    # 1-based index of focused window in the ordered list.
+    idx=$(printf '%s\n' "$ids" | awk -v f="$focused" '$0 == f { print NR; exit }')
+    [ -n "$idx" ] || return 1
 
     case "$direction" in
-        next) t=$(( (focused_idx + 1) % count )) ;;
-        prev) t=$(( (focused_idx - 1 + count) % count )) ;;
+        next) t=$(( idx % count + 1 )) ;;
+        prev) t=$(( (idx - 2 + count) % count + 1 )) ;;
     esac
-    printf '%s\n' "$ids" | sed -n "$((t + 1))p"
+    printf '%s\n' "$ids" | sed -n "${t}p"
 }
 
 action="${1:-toggle}"
@@ -73,16 +72,14 @@ case "$action" in
         ;;
     cycle-next|cycle-prev)
         info=$(focused_info)
-        [ -n "$info" ] || exit 0
+        [ -n "$info" ] || exit 1
         focused_id=${info% *}
         fs_mode=${info#* }
         direction=${action#cycle-}
 
-        target=$(target_id "$direction" "$focused_id") || exit 0
+        target=$(target_id "$direction" "$focused_id") || exit 1
         if [ "$fs_mode" = "0" ]; then
-            # Not in monocle — just cycle focus. Caller will usually
-            # pair this with `|| sway-focus-cycle next` in keybinds,
-            # but cycling as a fallback is still the right thing.
+            # Not in monocle — just cycle focus to the next leaf.
             swaymsg "[con_id=$target] focus" >/dev/null
         else
             # Monocle active: atomic fullscreen swap in one IPC call.
