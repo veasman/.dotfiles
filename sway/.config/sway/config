@@ -186,41 +186,29 @@ workspace 9:DP-2 output DP-2
 assign [app_id="thunderbird"]     workspace 1:DP-2
 assign [app_id="thunderbird-esr"] workspace 1:DP-2
 
-# ─── Scratchpads (native sway scratchpad, kara-style overlay) ────────
-# Avoids any hidden workspace so waybar never sees helper entries
-# and monocle/scratchpad don't pollute the workspace list.
+# ─── Scratchpads (native sway scratchpad, lazy-spawn) ────────────────
+# Each binding (further down) routes through sway-scratch-show, which
+# spawns the window on first press and toggles it after that. No
+# hidden workspace, so waybar never sees helper entries.
 #
-# Preset windows:
-#   main  = one kara-toe-client running a persistent tmux session with
-#           glances (left) and nvim TODO.md (right) as panes. Pane
-#           switching via tmux keybinds. Kara had two sway-tiled
-#           windows; sway's scratchpad is single-window so we fold
-#           them into tmux splits instead.
-#   music = one kara-toe-client running spotatui inside a persistent
-#           tmux session (same as kara).
-#
-# `for_window` catches each window into the scratchpad pool on first
-# map and sizes it to 100% of the output — so toggling really does
-# fill the screen, not kara's earlier 1400x900 mini-window. Windows
-# keep their scratchpad state across re-shows; the size persists once
-# set because sway remembers floating geometry per window.
-#
-# No `assign`, no hidden workspace, no extra toggle helper — the
-# bindings just call sway's native `scratchpad show`.
-no_focus [app_id="scratch-main"]
+# Pop-up scratchpads (TODO, pulsemixer) are sized smaller and
+# centered. Full-screen scratchpads (glances, spotatui) cover the
+# whole output. The for_window rule fires once on map: it floats the
+# window, sizes it, centers if appropriate, then parks it in the
+# scratchpad pool. Sway remembers per-window floating geometry, so
+# subsequent `scratchpad show` toggles preserve size and position.
+no_focus [app_id="scratch-todo"]
+no_focus [app_id="scratch-glances"]
 no_focus [app_id="spotatui"]
+no_focus [app_id="pulsemixer"]
 
-for_window [app_id="scratch-main"] floating enable, move scratchpad, resize set width 100 ppt height 100 ppt
-for_window [app_id="spotatui"]     floating enable, move scratchpad, resize set width 100 ppt height 100 ppt
-
-# Autostart the preset windows so they're ready in the scratchpad
-# pool when the user first toggles them.
-exec kara-toe-client --app-id=scratch-main sway-scratch-main-launcher
-exec kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui
+for_window [app_id="scratch-todo"]    floating enable, resize set width 60 ppt height 70 ppt, move position center, move scratchpad
+for_window [app_id="scratch-glances"] floating enable, resize set width 100 ppt height 100 ppt, move scratchpad
+for_window [app_id="spotatui"]        floating enable, resize set width 100 ppt height 100 ppt, move scratchpad
+for_window [app_id="pulsemixer"]      floating enable, resize set width 50 ppt height 50 ppt, move position center, move scratchpad
 
 # ─── Floating rules (matches kara's rules block) ─────────────────────
 for_window [app_id="pavucontrol"]  floating enable
-for_window [app_id="pulsemixer"]   floating enable
 for_window [app_id="mpv"]          floating enable
 # kara's transient dialog behavior — common floats sway won't catch:
 for_window [window_role="pop-up"]       floating enable
@@ -237,7 +225,7 @@ bindsym $mod+Return       exec $terminal
 bindsym $mod+d            exec $launcher
 bindsym $mod+e            exec $file_manager
 bindsym $mod+Shift+v      exec rofi-videos
-bindsym $mod+m            exec kara-toe-client --app-id=pulsemixer -e pulsemixer
+bindsym $mod+m            exec sway-scratch-show pulsemixer "kara-toe-client --app-id=pulsemixer pulsemixer"
 
 # ─── Screenshots (kara-glimpse → grim + slurp) ───────────────────────
 # Fullscreen — mirrors `Print` in kara (no modifier).
@@ -245,13 +233,17 @@ bindsym Print             exec sh -c 'grim ~/Pictures/screenshot-$(date +%s).png
 # Region — mirrors mod+Shift+s in kara.
 bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/png'
 
-# ─── Scratchpads (native sway scratchpad pool, full-screen sized) ────
-# sway-scratch-show spawns the window on first press if it doesn't
-# exist yet, then toggles it. Avoids the footgun where `exec`
-# autostart only runs on initial sway launch (not on swaymsg reload),
-# leaving the scratchpad mysteriously empty after a reload.
-bindsym $mod+apostrophe   exec sway-scratch-show scratch-main "kara-toe-client --app-id=scratch-main sway-scratch-main-launcher"
+# ─── Scratchpads (sway-scratch-show: spawn-on-demand then toggle) ────
+# First press spawns; subsequent presses toggle visibility. Sizing
+# and centering are handled by `for_window` rules at the top of the
+# file so the geometry sticks across re-shows.
+#   mod+'  TODO.md popup (nvim)     — floating, ~60×70%
+#   mod+;  music (spotatui in tmux) — full screen
+#   mod+g  glances                  — full screen
+#   mod+m  pulsemixer popup         — floating, 50×50% (binding above)
+bindsym $mod+apostrophe   exec sway-scratch-show scratch-todo "kara-toe-client --app-id=scratch-todo nvim $HOME/.dotfiles/personal/TODO.md"
 bindsym $mod+semicolon    exec sway-scratch-show spotatui "kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui"
+bindsym $mod+g            exec sway-scratch-show scratch-glances "kara-toe-client --app-id=scratch-glances glances"
 
 # ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
 # If monocle is active, j/k cycle the hidden stack (swap visible
