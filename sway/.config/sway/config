@@ -243,7 +243,7 @@ bindsym $mod+Shift+s      exec sh -c 'grim -g "$(slurp)" - | wl-copy -t image/pn
 #   mod+m  pulsemixer popup         — floating, 50×50% (binding above)
 bindsym $mod+apostrophe   exec sway-scratch-show scratch-todo "kara-toe-client --app-id=scratch-todo nvim $HOME/.dotfiles/personal/TODO.md"
 bindsym $mod+semicolon    exec sway-scratch-show spotatui "kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui"
-bindsym $mod+g            exec sway-scratch-show scratch-glances "kara-toe-client --app-id=scratch-glances glances"
+bindsym $mod+g            exec sway-scratch-show scratch-glances "kara-toe-client --app-id=scratch-glances glances --time 5"
 
 # ─── Focus — kara uses j/k for tree siblings, h/l for monitors ───────
 # If monocle is active, j/k cycle the hidden stack (swap visible
