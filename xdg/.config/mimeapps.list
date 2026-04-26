@@ -16,6 +16,14 @@ application/x-gnome-saved-search=lf-open.desktop
 x-scheme-handler/io.element.nightly=element-desktop-nightly.desktop
 x-scheme-handler/element=element-desktop-nightly.desktop
 x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+image/png=imv.desktop
+image/jpeg=imv.desktop
+image/jpg=imv.desktop
+image/webp=imv.desktop
+image/gif=imv.desktop
+image/bmp=imv.desktop
+image/avif=imv.desktop
+image/tiff=imv.desktop
 
 [Added Associations]
 x-scheme-handler/http=userapp-Floorp-TVDXM3.desktop;
