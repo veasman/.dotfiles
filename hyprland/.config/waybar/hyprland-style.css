@@ -9,8 +9,9 @@
 /* ── reset ──────────────────────────────────────────────────────── */
 * {
     font-family: "FiraCode Nerd Font", "Symbols Nerd Font", monospace;
-    font-size: 12.5pt;
+    font-size: 13pt;
     font-weight: 500;
+    letter-spacing: 0.02em;
     min-height: 0;
     border: none;
     border-radius: 0;
@@ -25,16 +26,16 @@
 window#waybar {
     background: rgba(17, 17, 17, 0.22);
     color: #f2f2f2;
-    border-radius: 14px;
-    border: 1px solid rgba(53, 53, 53, 0.35);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.30);
+    border-radius: 18px;
+    border: 1px solid rgba(53, 53, 53, 0.40);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 /* ── module groups ──────────────────────────────────────────────── */
 .modules-left,
 .modules-center,
 .modules-right {
-    padding: 0 6px;
+    padding: 0 10px;
 }
 
 /* default module styling — most right-side modules use this */
@@ -47,8 +48,8 @@ window#waybar {
 #custom-claude,
 #submap,
 #window {
-    padding: 2px 12px;
-    margin: 4px 3px;
+    padding: 4px 16px;
+    margin: 5px 4px;
     color: #f2f2f2;
     /* Solid pills against the near-transparent bar so they read
      * cleanly regardless of wallpaper. */
@@ -69,7 +70,8 @@ window#waybar {
     border: none;
     color: #c5c5c5;
     font-style: italic;
-    margin: 4px 8px;
+    padding: 4px 14px;
+    margin: 5px 12px;
 }
 
 #submap {
@@ -83,8 +85,8 @@ window#waybar {
     background: rgba(20, 20, 20, 0.92);
     border: 1px solid rgba(80, 80, 80, 0.55);
     border-radius: 999px;
-    margin: 4px 6px;
-    padding: 0 4px;
+    margin: 5px 6px;
+    padding: 0 6px;
 }
 
 #workspaces button {
@@ -92,9 +94,9 @@ window#waybar {
     background: transparent;
     border: none;
     border-radius: 999px;
-    padding: 0 11px;
+    padding: 2px 13px;
     margin: 3px 2px;
-    min-width: 22px;
+    min-width: 26px;
     transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
@@ -111,7 +113,7 @@ window#waybar {
 
 #workspaces button:hover {
     color: #f2f2f2;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     box-shadow: none;
 }
 

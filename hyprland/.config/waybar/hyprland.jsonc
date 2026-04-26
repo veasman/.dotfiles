@@ -9,11 +9,12 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 32,
-    "spacing": 6,
-    "margin-top": 6,
-    "margin-left": 10,
-    "margin-right": 10,
+    "height": 40,
+    "spacing": 10,
+    "margin-top": 10,
+    "margin-bottom": 0,
+    "margin-left": 16,
+    "margin-right": 16,
 
     "modules-left":   ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["hyprland/window"],
