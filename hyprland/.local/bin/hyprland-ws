@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+# hyprland-ws — per-output workspace switcher (port of sway-ws).
+#
+# Per-output workspace ranges are defined in hyprland.conf:
+#     r[1-9]   → eDP-1
+#     r[11-19] → DVI-I-2
+#     r[21-29] → DVI-I-1
+#     r[31-39] → DP-2
+#
+# This translates `mod+1..9` / `mod+Shift+1..9` into the right
+# absolute workspace ID based on which monitor is currently focused.
+# Waybar's hyprland.jsonc has a format-icons map that displays the
+# tens-stripped digit so the bar shows 1-9 regardless of monitor.
+#
+# Usage:
+#   hyprland-ws switch <1..9>   focus workspace N on focused output
+#   hyprland-ws move   <1..9>   send focused window to N on focused output
+
+set -eu
+
+cmd="${1:?usage: hyprland-ws {switch|move} <N>}"
+n="${2:?usage: hyprland-ws {switch|move} <N>}"
+
+monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
+case "$monitor" in
+    eDP-1)   base=0  ;;
+    DVI-I-2) base=10 ;;
+    DVI-I-1) base=20 ;;
+    DP-2)    base=30 ;;
+    *)       base=40 ;;
+esac
+
+ws=$((base + n))
+
+case "$cmd" in
+    switch) hyprctl dispatch workspace "$ws" >/dev/null ;;
+    move)   hyprctl dispatch movetoworkspace "$ws" >/dev/null ;;
+    *)
+        echo "usage: hyprland-ws {switch|move} <N>" >&2
+        exit 1
+        ;;
+esac

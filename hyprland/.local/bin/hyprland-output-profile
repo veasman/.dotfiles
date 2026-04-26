@@ -1,0 +1,63 @@
+#!/usr/bin/env sh
+# hyprland-output-profile — port of sway-output-profile for Hyprland.
+#
+# Detects whether the dock's external monitors are present and picks
+# the right layout:
+#
+#   Docked (any of DVI-I-1 / DVI-I-2 / DP-2 connected):
+#     DVI-I-2  portrait-left   @ 0 0       (transform 3 = 270°)
+#     DVI-I-1  1440p center    @ 1080 0
+#     DP-2     portrait-right  @ 3640 0    (transform 1 = 90°)
+#     eDP-1    disabled
+#
+#   Undocked (only eDP-1 present):
+#     eDP-1    enabled at preferred mode/auto position
+#
+# Stays attached to Hyprland's `socket2` event stream, so any
+# monitoradded / monitorremoved event re-applies the right profile
+# automatically.
+
+set -eu
+
+EXTERNALS="DVI-I-1 DVI-I-2 DP-2"
+
+apply_profile() {
+    connected=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' || true)
+
+    has_external=0
+    for ext in $EXTERNALS; do
+        if printf '%s\n' "$connected" | grep -Fxq "$ext"; then
+            has_external=1
+            break
+        fi
+    done
+
+    if [ "$has_external" = "1" ]; then
+        # Docked.
+        hyprctl keyword monitor "DVI-I-2,1920x1080,0x0,1,transform,3"   >/dev/null 2>&1 || true
+        hyprctl keyword monitor "DVI-I-1,2560x1440@144,1080x0,1"        >/dev/null 2>&1 || true
+        hyprctl keyword monitor "DP-2,1920x1080,3640x0,1,transform,1"   >/dev/null 2>&1 || true
+        hyprctl keyword monitor "eDP-1,disable"                         >/dev/null 2>&1 || true
+    else
+        # Undocked — laptop only.
+        hyprctl keyword monitor "eDP-1,preferred,auto,1"                >/dev/null 2>&1 || true
+    fi
+}
+
+# Initial pass.
+apply_profile
+
+# Subscribe to Hyprland's socket2 event stream and re-apply on any
+# output add/remove. Format is "eventName>>data\n".
+SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr/${HYPRLAND_INSTANCE_SIGNATURE:-}/.socket2.sock"
+[ -S "$SOCK" ] || exit 0
+
+if command -v socat >/dev/null 2>&1; then
+    socat -U - "UNIX-CONNECT:$SOCK" 2>/dev/null | while IFS= read -r line; do
+        case "$line" in
+            monitoradded*|monitorremoved*|monitoraddedv2*|monitorremovedv2*)
+                apply_profile
+                ;;
+        esac
+    done
+fi

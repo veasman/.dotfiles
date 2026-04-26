@@ -102,6 +102,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+semicolon`         | scratchpad: spotatui ↔ pulsemixer (monocle)|
 | `mod+Shift+w`           | wallpaper picker submap                    |
 | `mod+Shift+c`           | cursor picker submap                       |
+| `mod+1`–`mod+9`         | hyprland-ws switch (per-output)            |
+| `mod+Shift+1`–`9`       | hyprland-ws move (per-output)              |
 | `mod+Shift+x`           | swaylock                     |
 | `mod+Shift+w`           | wallpaper picker mode        |
 | `mod+Shift+c`           | cursor picker mode           |
@@ -125,15 +127,20 @@ Layout:
 - `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
 - `hyprland/.local/bin/hyprland-wallpaper` — preview-cycle wallpaper picker driven by the `wallpaper` submap (mod+Shift+w). Pushes via `hyprctl hyprpaper`; persists selection to `~/.local/state/hypr/wallpaper-current`. Re-applied on session start by an `exec-once`. Wallpaper dir defaults to `~/.local/state/sway/wallpapers/` (overridable via `$HYPR_WALLPAPER_DIR`).
 - `hyprland/.local/bin/hyprland-cursor` — analogous cursor-theme picker driven by the `cursor` submap (mod+Shift+c). Pushes via `hyprctl setcursor`; persists to `~/.local/state/hypr/cursor-current`.
+- `hyprland/.local/bin/hyprland-output-profile` — docked vs. undocked monitor profile + hot-plug handler. Detects `DVI-I-1`/`DVI-I-2`/`DP-2` presence at startup and applies the kara dock layout (DVI-I-2 left portrait, DVI-I-1 1440p center, DP-2 right portrait, eDP-1 disabled); falls back to eDP-1-only when undocked. Subscribes to Hyprland's `socket2` event stream so `monitoradded`/`monitorremoved` events re-apply automatically — plug/unplug the dock without re-login.
+- `hyprland/.local/bin/hyprland-ws` — per-output workspace switcher. mod+1..9 / mod+Shift+1..9 translate to absolute IDs based on focused monitor (eDP-1=1-9, DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39). Waybar's format-icons strips the tens digit so the bar shows 1-9 on every output.
 
 Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manually after stow.
 
-To test, install Hyprland and the native ecosystem tools (all in the Artix `world`/`galaxy` repos — no AUR needed):
+To test, install Hyprland and the native ecosystem tools:
 ```
-sudo pacman -S hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker swaync
+sudo pacman -S hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker swaync socat
+paru -S swayosd-git    # AUR — volume/brightness OSD for media keys
 ```
 - `hyprshot` powers `Print` (output), `mod+Shift+s` (region), `mod+Print` (window).
 - `hyprpicker` powers `mod+Shift+p` (copy color under cursor to clipboard).
+- `socat` is required by `hyprland-output-profile` for the Hyprland event subscription socket.
+- `swayosd` provides the slider OSD popup for volume/brightness key presses; `swayosd-server` is launched from `hyprland.conf` exec-once.
 (Also requires the existing sway dependencies — wpctl, grim, slurp, wl-clipboard, brightnessctl, playerctl.)
 Then:
 ```
