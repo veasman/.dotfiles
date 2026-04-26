@@ -44,10 +44,13 @@ case "$mode" in
 
         # `notify-send -A` implies --wait. The action name printed to
         # stdout is what we case on. "default" fires when the user
-        # clicks the notification body itself.
+        # clicks the notification body itself. Use the symbolic
+        # camera icon (small monochrome) instead of the raw
+        # screenshot path — the latter loads the full image as the
+        # notification icon, which swaync renders huge.
         action=$(notify-send -t 5000 \
             -h "string:x-canonical-private-synchronous:screenshot" \
-            -i "$path" \
+            -i "camera-photo-symbolic" \
             --action="default=Open folder" \
             "" \
             "Screenshot <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">$filename</span>" 2>/dev/null) || action=""
