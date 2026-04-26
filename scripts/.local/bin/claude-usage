@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # claude-usage — Claude 5-hour usage for a status bar module.
 #
-# Caches the last successful reading so transient failures (rate
-# limits, brief network outages, expired token between refreshes)
-# don't drop the module from the bar — instead we re-output the
-# cached number, which keeps the icon and last-known % visible until
-# a fresh successful read replaces it.
+# Output format: "{icon} {pct}% · {time_to_reset}"
+# Example: "󰫢 63% · 1h23m"
 #
-# Always exits 0 so waybar's custom-module poller doesn't disable
-# the slot on non-zero exits.
+# Caches the most recent successful read at $XDG_CACHE_HOME/claude-usage/last
+# (two lines: percentage on line 1, ISO resets_at on line 2). On API
+# failure (rate limit, brief network outage, expired token between
+# refreshes), falls back to those cached values — the bar module
+# stays visible with the most recent percentage and a fresh
+# countdown derived from the cached reset timestamp.
+#
+# Always exits 0 so waybar's poller never marks the slot as failed.
 
 set -u
 
@@ -18,26 +21,60 @@ CREDS="$HOME/.claude/.credentials.json"
 URL="https://api.anthropic.com/api/oauth/usage"
 
 # nf-md-star-four-points (U+F0AE2) — Gemini-style four-point twinkle.
-# Bash's $'\U…' wants exactly 8 hex digits, so pad U+F0AE2 to
-# 000F0AE2 (otherwise the parser eats only 4 hex chars, leaves `2`
-# as a stray literal).
+# Bash's $'\U…' wants exactly 8 hex digits; pad U+F0AE2 to 000F0AE2.
 ICON=$'\U000F0AE2'
 
 mkdir -p "$CACHE_DIR"
 
-emit_cached() {
-    if [[ -s "$CACHE_FILE" ]]; then
-        printf '%s %s\n' "$ICON" "$(cat "$CACHE_FILE")"
+# Format an ISO-8601 reset timestamp into a compact "1h23m" / "47m"
+# countdown. Outputs nothing if already past or unparseable.
+human_until() {
+    local iso="$1"
+    [ -z "$iso" ] || [ "$iso" = "null" ] && return 0
+
+    local target now delta h m
+    target=$(date -d "$iso" +%s 2>/dev/null) || return 0
+    now=$(date +%s)
+    delta=$((target - now))
+    [ "$delta" -gt 0 ] || return 0
+
+    h=$((delta / 3600))
+    m=$(((delta % 3600) / 60))
+    if [ "$h" -gt 0 ]; then
+        printf '%dh%dm' "$h" "$m"
     else
-        printf '%s ?\n' "$ICON"
+        printf '%dm' "$m"
+    fi
+}
+
+# Emit a formatted line and exit 0.
+emit() {
+    local pct="$1" iso="$2"
+    local until
+    until=$(human_until "$iso")
+    if [ -n "$until" ]; then
+        printf '%s %s · %s\n' "$ICON" "$pct" "$until"
+    else
+        printf '%s %s\n' "$ICON" "$pct"
     fi
     exit 0
 }
 
-[[ -f "$CREDS" ]] || emit_cached
+emit_cached() {
+    if [ -s "$CACHE_FILE" ]; then
+        local pct iso
+        pct=$(sed -n '1p' "$CACHE_FILE")
+        iso=$(sed -n '2p' "$CACHE_FILE")
+        emit "${pct:-?}" "$iso"
+    fi
+    printf '%s ?\n' "$ICON"
+    exit 0
+}
+
+[ -f "$CREDS" ] || emit_cached
 
 TOKEN=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS" 2>/dev/null)
-[[ -n "$TOKEN" ]] || emit_cached
+[ -n "$TOKEN" ] || emit_cached
 
 RESPONSE=$(curl -sf --max-time 5 \
     -H "Authorization: Bearer $TOKEN" \
@@ -45,9 +82,13 @@ RESPONSE=$(curl -sf --max-time 5 \
     "$URL") || emit_cached
 
 PCT=$(echo "$RESPONSE" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
-[[ -n "$PCT" ]] || emit_cached
+[ -n "$PCT" ] || emit_cached
 
-# Persist and emit.
+RESETS_AT=$(echo "$RESPONSE" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
+
 PCT_FMT=$(printf '%.0f%%' "$PCT")
-printf '%s\n' "$PCT_FMT" > "$CACHE_FILE"
-printf '%s %s\n' "$ICON" "$PCT_FMT"
+
+# Persist both lines (percentage, then ISO timestamp).
+printf '%s\n%s\n' "$PCT_FMT" "$RESETS_AT" > "$CACHE_FILE"
+
+emit "$PCT_FMT" "$RESETS_AT"
