@@ -121,7 +121,6 @@ Layout:
 - `hyprland/.config/fuzzel/fuzzel-hyprland.ini` — Hyprland-side fuzzel theme (rounded, translucent).
 - `hyprland/.config/waybar/hyprland.jsonc` + `hyprland-style.css` — separate waybar config (pillier theme).
 - `hyprland/.local/bin/start-hyprland` — TTY launcher.
-- `hyprland/.local/bin/hyprland-scratch-show` — spawn-on-demand wrapper for `togglespecialworkspace`. Uses `hyprctl dispatch exec '[workspace special:NAME silent] CMD'` so the workspace assignment happens at spawn time (avoids the windowrule race where the window briefly visible-flashes in the active workspace before being moved).
 - `hyprland/.local/bin/hyprland-monocle` — kara-style monocle via `fullscreenstate 1` (maximize). Bar/gaps/borders stay; cycle-next/prev atomically swap maximize state to the next leaf in one IPC call.
 - `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
 
