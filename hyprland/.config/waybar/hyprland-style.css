@@ -9,9 +9,8 @@
 /* ── reset ──────────────────────────────────────────────────────── */
 * {
     font-family: "FiraCode Nerd Font", "Symbols Nerd Font", monospace;
-    font-size: 13pt;
+    font-size: 10.5pt;
     font-weight: 500;
-    letter-spacing: 0.02em;
     min-height: 0;
     border: none;
     border-radius: 0;
@@ -35,7 +34,7 @@ window#waybar {
 .modules-left,
 .modules-center,
 .modules-right {
-    padding: 0 10px;
+    padding: 0 6px;
 }
 
 /* default module styling — most right-side modules use this */
@@ -48,8 +47,8 @@ window#waybar {
 #custom-claude,
 #submap,
 #window {
-    padding: 4px 16px;
-    margin: 5px 4px;
+    padding: 1px 11px;
+    margin: 3px 3px;
     color: #f2f2f2;
     /* Solid pills against the near-transparent bar so they read
      * cleanly regardless of wallpaper. */
@@ -70,8 +69,8 @@ window#waybar {
     border: none;
     color: #c5c5c5;
     font-style: italic;
-    padding: 4px 14px;
-    margin: 5px 12px;
+    padding: 1px 10px;
+    margin: 3px 8px;
 }
 
 #submap {
@@ -85,8 +84,8 @@ window#waybar {
     background: rgba(20, 20, 20, 0.92);
     border: 1px solid rgba(80, 80, 80, 0.55);
     border-radius: 999px;
-    margin: 5px 6px;
-    padding: 0 6px;
+    margin: 3px 4px;
+    padding: 0 4px;
 }
 
 #workspaces button {
@@ -94,9 +93,9 @@ window#waybar {
     background: transparent;
     border: none;
     border-radius: 999px;
-    padding: 2px 13px;
-    margin: 3px 2px;
-    min-width: 26px;
+    padding: 0 9px;
+    margin: 2px 1px;
+    min-width: 20px;
     transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
