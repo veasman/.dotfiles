@@ -1,0 +1,57 @@
+/* swayosd — apple-style HUD for volume/brightness/caps-lock.
+ *
+ * Rounded translucent panel with a soft shadow, sitting near the
+ * top of the screen (top-margin set in start args, see hyprland.conf).
+ * swayosd is positioned center-horizontal by the layer-shell anchor;
+ * moving it to actual top-right requires patching the binary.
+ */
+
+window {
+    background: transparent;
+}
+
+#osd {
+    background: rgba(28, 28, 28, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    padding: 10px 18px;
+    margin: 12px;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+    color: #f2f2f2;
+    min-width: 360px;
+    min-height: 38px;
+}
+
+image {
+    color: #f2f2f2;
+    margin-right: 12px;
+    -gtk-icon-effect: none;
+}
+
+label {
+    color: #f2f2f2;
+    font-family: "FiraCode Nerd Font", "Inter", system-ui, sans-serif;
+    font-size: 11pt;
+    font-weight: 500;
+}
+
+progressbar {
+    background: transparent;
+    border: none;
+    min-height: 4px;
+    margin: 0 4px;
+}
+
+progressbar trough {
+    background: rgba(255, 255, 255, 0.10);
+    border: none;
+    border-radius: 999px;
+    min-height: 4px;
+}
+
+progressbar progress {
+    background: #f2f2f2;
+    border: none;
+    border-radius: 999px;
+    min-height: 4px;
+}
