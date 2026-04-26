@@ -40,7 +40,9 @@
     min-width: 160px;
     min-height: 100px;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.04);
+    /* No placeholder bg — let the image sit on the card surface so
+     * a small source isn't framed by a visible rectangle around it. */
+    background: transparent;
 }
 
 .summary {
