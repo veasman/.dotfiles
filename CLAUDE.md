@@ -98,10 +98,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+q`                 | kill (native)                |
 | `mod+1`–`mod+9`         | sway-ws switch (per-output)  |
 | `mod+Shift+1`–`9`       | sway-ws move                 |
-| `mod+apostrophe`        | scratchpad TODO.md popup (nvim)            |
-| `mod+semicolon`         | scratchpad music (spotatui in tmux)        |
-| `mod+g`                 | scratchpad glances (full screen)           |
-| `mod+m`                 | scratchpad pulsemixer popup                |
+| `mod+apostrophe`        | scratchpad: TODO.md ↔ glances (monocle)    |
+| `mod+semicolon`         | scratchpad: spotatui ↔ pulsemixer (monocle)|
 | `mod+Shift+x`           | swaylock                     |
 | `mod+Shift+w`           | wallpaper picker mode        |
 | `mod+Shift+c`           | cursor picker mode           |
