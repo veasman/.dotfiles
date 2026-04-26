@@ -22,23 +22,7 @@
     "hyprland/workspaces": {
         "disable-scroll": true,
         "all-outputs": false,
-        // Workspaces are namespaced by monitor (eDP-1=1-9,
-        // DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39 — see
-        // hyprland.conf workspace= rules + hyprland-ws). The map
-        // strips the tens digit so the bar shows 1-9 on every
-        // output. Special workspaces are not listed → they don't
-        // appear at all in the bar (which is what we want).
-        "format": "{icon}",
-        "format-icons": {
-            "1":  "1", "2":  "2", "3":  "3", "4":  "4", "5":  "5",
-            "6":  "6", "7":  "7", "8":  "8", "9":  "9",
-            "11": "1", "12": "2", "13": "3", "14": "4", "15": "5",
-            "16": "6", "17": "7", "18": "8", "19": "9",
-            "21": "1", "22": "2", "23": "3", "24": "4", "25": "5",
-            "26": "6", "27": "7", "28": "8", "29": "9",
-            "31": "1", "32": "2", "33": "3", "34": "4", "35": "5",
-            "36": "6", "37": "7", "38": "8", "39": "9"
-        },
+        "format": "{name}",
         "on-click": "activate"
     },
 
