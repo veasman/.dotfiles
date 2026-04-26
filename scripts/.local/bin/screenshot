@@ -46,13 +46,22 @@ esac
 [ -f "$path" ] || { echo "screenshot failed: no file produced" >&2; exit 1; }
 filename=$(basename "$path")
 
-# image-path hint puts the screenshot in swaync's body image slot
-# (square thumbnail, sized via swaync config). No -i flag → no
-# small icon on the left, just the thumbnail and text.
+# swaync renders body-image at the source's natural size (it does
+# NOT upscale), so a tiny region screenshot lands as a tiny
+# thumbnail in an otherwise-empty card. Pre-render a fixed-size
+# 200x125 letterboxed thumbnail via magick — fits the source while
+# preserving aspect, pads with the kara surface color so the card
+# always looks the same shape regardless of source dimensions.
+thumb="${XDG_CACHE_HOME:-$HOME/.cache}/screenshot-thumb.png"
+mkdir -p "$(dirname "$thumb")"
+magick "$path" -resize 200x125 -background '#1b1b1b' -gravity center \
+    -extent 200x125 "$thumb" 2>/dev/null || cp "$path" "$thumb"
+
+# image-path hint puts the screenshot in swaync's body image slot.
 # `default` action fires on body click → open in image viewer.
 action=$(notify-send -t 5000 \
     -h "string:x-canonical-private-synchronous:screenshot" \
-    -h "string:image-path:$path" \
+    -h "string:image-path:$thumb" \
     --action="default=Preview" \
     " " "" \
     2>/dev/null) || action=""

@@ -35,14 +35,13 @@
  * tiny in a half-empty card. Pairs with notification-body-image-*
  * dims in config.json which cap the upper bound; this sets the
  * lower bound. */
-/* Target ONLY the body image (image-path hint), not the close-X
- * icon or app-icon — those are also `image` widgets and a generic
- * selector forced them to min-width:160px, blowing up the card. */
+/* Body-image just gets a small rounding. The screenshot script
+ * pre-renders a fixed-size letterboxed thumbnail before passing
+ * it to swaync (since swaync doesn't upscale source images), so
+ * the card is always the same shape regardless of source dims —
+ * no need to enforce min-size in CSS. */
 .notification .body-image {
-    min-width: 160px;
-    min-height: 100px;
     border-radius: 6px;
-    background: transparent;
 }
 
 .summary {
