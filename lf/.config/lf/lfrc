@@ -1,8 +1,9 @@
 # ~/.config/lf/lfrc
 #
-# Minimal lf config. Defaults are kept (dd cut, yy copy, p paste,
-# DD delete, a rename, l/<enter> open). Tweaks are display-only +
-# a mime-aware open dispatch via the helper at ~/.config/lf/open.
+# lf v41+ ships fewer defaults than older versions — bind <enter>
+# and <space> explicitly. `cmd open` delegates to a separate script
+# (~/.config/lf/open). Previews come from another script
+# (~/.config/lf/preview); install `chafa` for image previews.
 
 # ─── Display ─────────────────────────────────────────────────────────
 set hidden true
@@ -11,22 +12,24 @@ set drawbox true
 set icons true
 set scrolloff 4
 set ratios "1:2:3"   # parent : current : preview
+set previewer ~/.config/lf/preview
 
 # ─── Open dispatcher ─────────────────────────────────────────────────
-# Delegated to a separate script — keeps the lfrc free of multi-line
-# shell that's easy to typo.
 cmd open &$HOME/.config/lf/open "$f"
 
 # ─── Convenience commands ────────────────────────────────────────────
-# `a` is "rename" by default. Bind `af` / `am` to prompt-driven
-# touch / mkdir.
 cmd touch %touch -- "$@"
 cmd mkdir %mkdir -p -- "$@"
 map af push :touch<space>
 map am push :mkdir<space>
 
-# ─── Misc keybinds ───────────────────────────────────────────────────
+# ─── Bindings ────────────────────────────────────────────────────────
+# Explicit so lf v41 doesn't warn "unknown mapping <enter>".
+map <enter> open
+map <space> open
+
 # Toggle hidden with `.` (alongside the default zh).
 map . set hidden!
+
 # Quick jump to root.
 map g/ cd /

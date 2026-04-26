@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+# ~/.config/lf/preview — invoked by lf's previewer setting.
+#
+# lf calls: preview <file> <width> <height> <x> <y>
+# We only use file/width/height. Output goes straight to lf's
+# preview pane.
+#
+# Image previews require `chafa` (in extra/world repos). Without
+# it, images fall back to a metadata line.
+
+file="$1"
+w="${2:-80}"
+h="${3:-25}"
+
+mime=$(file --mime-type -bL "$file" 2>/dev/null || echo "application/octet-stream")
+
+case "$mime" in
+    image/*)
+        if command -v chafa >/dev/null 2>&1; then
+            # chafa auto-detects sixel / kitty graphics; falls back
+            # to ANSI blocks. Foot (kara-toe-client's base) supports
+            # sixel, so on the user's terminal images render
+            # full-color.
+            chafa -s "${w}x${h}" --animate=off "$file" 2>/dev/null && exit 0
+        fi
+        printf '[image] %s\n\n' "$file"
+        identify -format '%f  %wx%h  %m  %b\n' "$file" 2>/dev/null \
+            || file -b "$file"
+        ;;
+    text/*|application/json|application/yaml|application/x-shellscript|application/javascript|application/x-perl|application/x-toml|application/xml)
+        head -c 200000 "$file" | head -n "$h"
+        ;;
+    application/pdf)
+        printf '[pdf]\n\n'
+        if command -v pdftotext >/dev/null 2>&1; then
+            pdftotext -layout "$file" - 2>/dev/null | head -n "$h"
+        else
+            file -b "$file"
+        fi
+        ;;
+    inode/directory)
+        ls --color=always -la "$file" | head -n "$h"
+        ;;
+    *)
+        # Binary / unknown — show identification info.
+        file -b "$file"
+        ;;
+esac
