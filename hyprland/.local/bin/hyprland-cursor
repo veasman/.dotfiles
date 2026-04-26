@@ -52,7 +52,14 @@ current_theme() {
 apply() {
     theme="$1"
     [ -n "$theme" ] || return 1
-    hyprctl setcursor "$theme" "$SIZE" >/dev/null 2>&1 || true
+    # Don't silence stderr — if setcursor rejects the theme name we
+    # want to see why, not have the picker silently no-op.
+    hyprctl setcursor "$theme" "$SIZE" >/dev/null || return 1
+    # The compositor only redraws the cursor on the next input event.
+    # Stationary cursor = stale icon, so emit a 1px wiggle to force
+    # a redraw under the current pointer position.
+    hyprctl dispatch movecursorrel 1 0 >/dev/null 2>&1 || true
+    hyprctl dispatch movecursorrel -1 0 >/dev/null 2>&1 || true
 }
 
 cycle() {

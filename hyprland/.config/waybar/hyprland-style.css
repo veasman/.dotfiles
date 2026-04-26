@@ -19,13 +19,15 @@
 }
 
 /* ── bar window ─────────────────────────────────────────────────── */
+/* Low-alpha tint so the layerrule blur is what actually carries the
+ * background. Pills below are kept at high opacity to pop against
+ * the now-near-transparent bar. */
 window#waybar {
-    background: rgba(17, 17, 17, 0.78);
+    background: rgba(17, 17, 17, 0.22);
     color: #f2f2f2;
     border-radius: 14px;
-    border: 1px solid rgba(53, 53, 53, 0.7);
-    /* faint glow so the floating bar reads against any wallpaper */
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(53, 53, 53, 0.35);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.30);
 }
 
 /* ── module groups ──────────────────────────────────────────────── */
@@ -48,16 +50,18 @@ window#waybar {
     padding: 2px 12px;
     margin: 4px 3px;
     color: #f2f2f2;
-    background: rgba(27, 27, 27, 0.85);
-    border: 1px solid rgba(53, 53, 53, 0.6);
+    /* Solid pills against the near-transparent bar so they read
+     * cleanly regardless of wallpaper. */
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(80, 80, 80, 0.55);
     border-radius: 999px;
     transition: background 150ms ease, color 150ms ease;
 }
 
 #clock {
-    background: rgba(107, 172, 172, 0.15);
+    background: rgba(107, 172, 172, 0.25);
     color: #a0d0d0;
-    border-color: rgba(107, 172, 172, 0.3);
+    border-color: rgba(107, 172, 172, 0.5);
 }
 
 #window {
@@ -76,8 +80,8 @@ window#waybar {
 
 /* ── workspaces ─────────────────────────────────────────────────── */
 #workspaces {
-    background: rgba(27, 27, 27, 0.85);
-    border: 1px solid rgba(53, 53, 53, 0.6);
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(80, 80, 80, 0.55);
     border-radius: 999px;
     margin: 4px 6px;
     padding: 0 4px;
