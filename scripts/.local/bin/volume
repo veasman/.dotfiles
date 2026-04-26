@@ -1,0 +1,55 @@
+#!/usr/bin/env sh
+# volume — adjust output sink + emit a swaync progress notification.
+#
+# Usage: volume {up|down|mute}
+#
+# Successive presses replace the in-flight notification (sync hint
+# x-canonical-private-synchronous:volume) so it doesn't stack into
+# a wall.
+
+set -eu
+
+SINK="@DEFAULT_AUDIO_SINK@"
+STEP=5
+
+case "${1:-}" in
+    up)
+        wpctl set-volume -l 1.5 "$SINK" "${STEP}%+"
+        ;;
+    down)
+        wpctl set-volume "$SINK" "${STEP}%-"
+        ;;
+    mute)
+        wpctl set-mute "$SINK" toggle
+        ;;
+    *)
+        echo "usage: $(basename "$0") {up|down|mute}" >&2
+        exit 1
+        ;;
+esac
+
+state=$(wpctl get-volume "$SINK")
+muted=0
+case "$state" in *MUTED*) muted=1 ;; esac
+volume=$(printf '%s' "$state" | awk '{print $2}')
+pct=$(awk -v v="$volume" 'BEGIN { printf "%d", v * 100 + 0.5 }')
+
+if [ "$muted" = "1" ]; then
+    icon="audio-volume-muted"
+    body="muted"
+    value=0
+else
+    if   [ "$pct" -ge 67 ]; then icon="audio-volume-high"
+    elif [ "$pct" -ge 34 ]; then icon="audio-volume-medium"
+    elif [ "$pct" -gt 0 ];  then icon="audio-volume-low"
+    else                         icon="audio-volume-muted"
+    fi
+    body="${pct}%"
+    value=$pct
+fi
+
+notify-send -t 1500 \
+    -h "string:x-canonical-private-synchronous:volume" \
+    -h "int:value:$value" \
+    -i "$icon" \
+    "Volume" "$body"

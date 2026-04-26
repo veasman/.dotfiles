@@ -135,12 +135,11 @@ Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manuall
 To test, install Hyprland and the native ecosystem tools:
 ```
 sudo pacman -S hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker swaync socat
-paru -S swayosd-git    # AUR — volume/brightness OSD for media keys
 ```
 - `hyprshot` powers `Print` (output), `mod+Shift+s` (region), `mod+Print` (window).
 - `hyprpicker` powers `mod+Shift+p` (copy color under cursor to clipboard).
 - `socat` is required by `hyprland-output-profile` for the Hyprland event subscription socket.
-- `swayosd` provides the slider OSD popup for volume/brightness key presses; `swayosd-server` is launched from `hyprland.conf` exec-once.
+- `volume` / `brightness` wrappers (`scripts/.local/bin/`) adjust levels via wpctl/brightnessctl and fire a notify-send with a progress-bar hint — swaync renders the result as a top-right HUD notification with a fill bar (no separate OSD daemon).
 (Also requires the existing sway dependencies — wpctl, grim, slurp, wl-clipboard, brightnessctl, playerctl.)
 Then:
 ```

@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+# brightness — adjust backlight + emit a swaync progress notification.
+#
+# Usage: brightness {up|down}
+
+set -eu
+
+STEP=5
+
+case "${1:-}" in
+    up)   brightnessctl set "+${STEP}%"  >/dev/null ;;
+    down) brightnessctl set "${STEP}%-"  >/dev/null ;;
+    *)
+        echo "usage: $(basename "$0") {up|down}" >&2
+        exit 1
+        ;;
+esac
+
+cur=$(brightnessctl get)
+max=$(brightnessctl max)
+pct=$(awk -v c="$cur" -v m="$max" 'BEGIN { printf "%d", (c / m) * 100 + 0.5 }')
+
+if   [ "$pct" -ge 67 ]; then icon="display-brightness-high-symbolic"
+elif [ "$pct" -ge 34 ]; then icon="display-brightness-medium-symbolic"
+else                         icon="display-brightness-low-symbolic"
+fi
+
+notify-send -t 1500 \
+    -h "string:x-canonical-private-synchronous:brightness" \
+    -h "int:value:$pct" \
+    -i "$icon" \
+    "Brightness" "${pct}%"
