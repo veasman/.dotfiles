@@ -1,0 +1,44 @@
+# ~/.config/lf/lfrc
+#
+# Minimal lf config. Keeps lf's defaults (dd cut, yy copy, p paste,
+# DD delete, a rename) and just tweaks display + the open command
+# so Enter dispatches sensibly by mime type.
+
+# ─── Display ─────────────────────────────────────────────────────────
+set hidden true
+set ignorecase true
+set drawbox true
+set icons true
+set scrolloff 4
+set ratios "1:2:3"   # parent : current : preview
+
+# ─── Open ────────────────────────────────────────────────────────────
+# Enter on a file: dispatch by mime. Text → $EDITOR (nvim).
+# Image/video/audio → mpv. PDF → zathura. Anything else → xdg-open.
+cmd open ${{
+    case "$(file --mime-type -b "$f")" in
+        text/*|application/json|application/yaml|application/x-shellscript|application/x-perl|application/javascript)
+            ${EDITOR:-nvim} "$f" ;;
+        image/*|video/*|audio/*)
+            setsid -f mpv -- "$f" >/dev/null 2>&1 ;;
+        application/pdf|application/epub+zip)
+            setsid -f zathura "$f" >/dev/null 2>&1 ;;
+        *)
+            setsid -f xdg-open "$f" >/dev/null 2>&1 ;;
+    esac
+}}
+
+# ─── Convenience commands ────────────────────────────────────────────
+# Default `a` is "rename" in lf — we override so you get prompts for
+# new files (af) and dirs (am) instead. Plain `a` keeps rename.
+cmd touch %touch -- "$@"
+cmd mkdir %mkdir -p -- "$@"
+
+map af push :touch<space>
+map am push :mkdir<space>
+
+# Toggle hidden with `.` (alongside the default zh).
+map . set hidden!
+
+# `g/` jumps to root, `gh` to home (lf default).
+map g/ cd /

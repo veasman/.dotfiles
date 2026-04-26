@@ -88,7 +88,7 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 |-------------------------|------------------------------|
 | `mod+Return`            | terminal (kara-toe-client)   |
 | `mod+d`                 | fuzzel launcher              |
-| `mod+e`                 | yazi in kara-toe-client      |
+| `mod+e`                 | lf in kara-toe-client        |
 | `mod+f`                 | fullscreen toggle (native)   |
 | `mod+j` / `mod+k`       | cycle (monocle-aware)        |
 | `mod+h` / `mod+l`       | focus output left/right      |

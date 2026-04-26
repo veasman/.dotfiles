@@ -14,7 +14,7 @@ set $mod Mod4
 # ─── App launch shortcuts (names mirror kara's commands block) ───────
 set $terminal     kara-toe-client
 set $browser      floorp
-set $file_manager kara-toe-client --app-id=yazi yazi
+set $file_manager kara-toe-client --app-id=lf lf
 set $launcher     fuzzel
 set $menu         fuzzel
 

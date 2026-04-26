@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=lf
+GenericName=File Manager
+Comment=Open directory in lf (terminal file manager)
+Exec=kara-toe-client --app-id=lf lf %F
+Terminal=false
+Categories=System;FileManager;
+MimeType=inode/directory;
+NoDisplay=false
