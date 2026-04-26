@@ -55,16 +55,12 @@ apply() {
     # Don't silence stderr — if setcursor rejects the theme name we
     # want to see why, not have the picker silently no-op.
     hyprctl setcursor "$theme" "$SIZE" >/dev/null || return 1
-    # Cursor only redraws on next input event, so emit a 1-pixel
-    # wiggle via absolute movecursor (Hyprland has no `movecursorrel`
-    # dispatcher — only `movecursor x y`).
-    pos=$(hyprctl cursorpos 2>/dev/null) || return 0
-    x=$(printf '%s' "$pos" | awk -F',' '{gsub(/ /,"",$1); print $1}')
-    y=$(printf '%s' "$pos" | awk -F',' '{gsub(/ /,"",$2); print $2}')
-    if [ -n "$x" ] && [ -n "$y" ]; then
-        hyprctl dispatch movecursor "$((x + 1))" "$y" >/dev/null 2>&1 || true
-        hyprctl dispatch movecursor "$x" "$y"         >/dev/null 2>&1 || true
-    fi
+    # `setcursor` updates the theme but doesn't repaint the cursor
+    # surface — a stationary pointer keeps showing the old image.
+    # `forcerendererreload` re-renders all outputs (and the cursor
+    # plane along with them) so the new theme appears immediately,
+    # without needing the user to wiggle the mouse.
+    hyprctl dispatch forcerendererreload >/dev/null 2>&1 || true
 }
 
 # Pop a transient swaync notification so the picker has visible
