@@ -1,0 +1,108 @@
+#!/usr/bin/env sh
+# hyprland-wallpaper — preview-cycle wallpaper picker.
+#
+# Driven by the `wallpaper` submap defined in hyprland.conf:
+#   mod+Shift+w  enter the submap
+#   h/l/←/→      cycle prev/next with live preview
+#   Enter        commit the current preview as the new wallpaper
+#   Escape / q   revert to the previously committed wallpaper
+#
+# The applied wallpaper goes through hyprpaper IPC
+# (`hyprctl hyprpaper preload` + `hyprctl hyprpaper wallpaper`) so
+# the change is instant. Selection is persisted to
+# ~/.local/state/hypr/wallpaper-current; the `apply` action restores
+# it on session start (run from hyprland.conf exec-once).
+#
+# Wallpaper directory defaults to the existing sway wallpapers:
+#   ~/.local/state/sway/wallpapers/
+# Override via $HYPR_WALLPAPER_DIR.
+#
+# Actions:
+#   apply    apply the committed wallpaper (no cycling)
+#   next     cycle preview to the next image
+#   prev     cycle preview to the previous image
+#   commit   make the current preview the committed selection
+#   revert   discard the preview, re-apply the committed selection
+
+set -eu
+
+WALLPAPER_DIR="${HYPR_WALLPAPER_DIR:-$HOME/.local/state/sway/wallpapers}"
+STATE_DIR="$HOME/.local/state/hypr"
+CURRENT_FILE="$STATE_DIR/wallpaper-current"
+PREVIEW_FILE="$STATE_DIR/wallpaper-preview"
+
+mkdir -p "$STATE_DIR"
+
+list_wallpapers() {
+    [ -d "$WALLPAPER_DIR" ] || return 0
+    find "$WALLPAPER_DIR" -maxdepth 1 -type f \
+        \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \
+        -o -iname '*.webp' -o -iname '*.bmp' \) | sort
+}
+
+current_path() {
+    if [ -s "$CURRENT_FILE" ]; then
+        cat "$CURRENT_FILE"
+    else
+        list_wallpapers | head -1
+    fi
+}
+
+apply() {
+    p="$1"
+    [ -f "$p" ] || return 1
+    hyprctl hyprpaper preload "$p" >/dev/null 2>&1 || true
+    # Empty monitor name = apply to all outputs.
+    hyprctl hyprpaper wallpaper ",$p" >/dev/null 2>&1 || true
+}
+
+cycle() {
+    direction="$1"
+    list=$(list_wallpapers) || true
+    count=$(printf '%s\n' "$list" | grep -c .)
+    [ "$count" -gt 0 ] || { echo "no wallpapers in $WALLPAPER_DIR" >&2; return 1; }
+
+    if [ -s "$PREVIEW_FILE" ]; then
+        cur=$(cat "$PREVIEW_FILE")
+    else
+        cur=$(current_path)
+    fi
+
+    idx=$(printf '%s\n' "$list" | awk -v p="$cur" '$0 == p { print NR; exit }')
+    [ -n "$idx" ] || idx=1
+    case "$direction" in
+        next) target_idx=$(( idx % count + 1 )) ;;
+        prev) target_idx=$(( (idx - 2 + count) % count + 1 )) ;;
+    esac
+    target=$(printf '%s\n' "$list" | sed -n "${target_idx}p")
+    [ -n "$target" ] || return 1
+
+    apply "$target"
+    printf '%s' "$target" > "$PREVIEW_FILE"
+}
+
+action="${1:-apply}"
+case "$action" in
+    apply)
+        p=$(current_path) || exit 0
+        [ -n "$p" ] && apply "$p"
+        ;;
+    next|prev)
+        cycle "$action"
+        ;;
+    commit)
+        if [ -s "$PREVIEW_FILE" ]; then
+            cp "$PREVIEW_FILE" "$CURRENT_FILE"
+            rm -f "$PREVIEW_FILE"
+        fi
+        ;;
+    revert)
+        rm -f "$PREVIEW_FILE"
+        p=$(current_path) || exit 0
+        [ -n "$p" ] && apply "$p"
+        ;;
+    *)
+        echo "usage: hyprland-wallpaper {apply|next|prev|commit|revert}" >&2
+        exit 1
+        ;;
+esac

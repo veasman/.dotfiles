@@ -100,6 +100,8 @@ Sway has no native fibonacci — `autotiling-rs` (AUR: `autotiling-rs-git`) prov
 | `mod+Shift+1`–`9`       | sway-ws move                 |
 | `mod+apostrophe`        | scratchpad: TODO.md ↔ glances (monocle)    |
 | `mod+semicolon`         | scratchpad: spotatui ↔ pulsemixer (monocle)|
+| `mod+Shift+w`           | wallpaper picker submap                    |
+| `mod+Shift+c`           | cursor picker submap                       |
 | `mod+Shift+x`           | swaylock                     |
 | `mod+Shift+w`           | wallpaper picker mode        |
 | `mod+Shift+c`           | cursor picker mode           |
@@ -121,6 +123,8 @@ Layout:
 - `hyprland/.local/bin/start-hyprland` — TTY launcher.
 - `hyprland/.local/bin/hyprland-monocle` — kara-style monocle via `fullscreenstate 1` (maximize). Bar/gaps/borders stay; cycle-next/prev atomically swap maximize state to the next leaf in one IPC call.
 - `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
+- `hyprland/.local/bin/hyprland-wallpaper` — preview-cycle wallpaper picker driven by the `wallpaper` submap (mod+Shift+w). Pushes via `hyprctl hyprpaper`; persists selection to `~/.local/state/hypr/wallpaper-current`. Re-applied on session start by an `exec-once`. Wallpaper dir defaults to `~/.local/state/sway/wallpapers/` (overridable via `$HYPR_WALLPAPER_DIR`).
+- `hyprland/.local/bin/hyprland-cursor` — analogous cursor-theme picker driven by the `cursor` submap (mod+Shift+c). Pushes via `hyprctl setcursor`; persists to `~/.local/state/hypr/cursor-current`.
 
 Same `.stow-local-ignore` workaround as sway: helpers must be `ln -sf`'d manually after stow.
 
