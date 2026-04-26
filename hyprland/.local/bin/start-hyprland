@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
-# start-hyprland — TTY launcher for Hyprland.
+# start-hyprland — thin wrapper around the official Hyprland launcher
+# (/usr/bin/start-hyprland — an ELF binary shipped with the hyprland
+# package). The official launcher does the proper session bootstrap;
+# Hyprland prints "launched without start-hyprland" when invoked
+# directly via the bare `Hyprland` binary, even from a shell wrapper.
 #
-# Mirrors start-sway's safety + env-export pattern. Wraps in
-# dbus-run-session if no user bus is up. Refuses to launch from
-# inside another Wayland session to prevent accidental nesting.
-# DisplayLink/evdi: Hyprland doesn't expose an "unsupported gpu"
-# flag the way sway does — instead set WLR_DRM_DEVICES to the card
-# IDs you want Hyprland to use. Add a one-liner in
-# ~/.config/hypr/conf.d/local.conf if needed.
+# We keep this wrapper for two reasons: (a) refuse to nest inside an
+# existing Wayland session, (b) capture stdout/stderr to a known log
+# location for grepping.
 
 set -eu
 
@@ -16,28 +16,7 @@ if [ -n "${WAYLAND_DISPLAY:-}" ]; then
     exit 1
 fi
 
-# Wayland / Qt / Java / Mozilla / Electron env hints. Hyprland reads
-# its own `env =` lines from hyprland.conf too, but exporting here
-# makes them visible to anything launched outside Hyprland's exec
-# (e.g. systemd user units that race with the compositor at login).
-export XDG_CURRENT_DESKTOP=Hyprland
-export XDG_SESSION_TYPE=wayland
-export QT_QPA_PLATFORM=wayland
-export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
-export GDK_BACKEND="wayland,x11"
-export MOZ_ENABLE_WAYLAND=1
-export _JAVA_AWT_WM_NONREPARENTING=1
-export ELECTRON_OZONE_PLATFORM_HINT=wayland
-
 mkdir -p "$HOME/.cache/hypr"
 LOG="$HOME/.cache/hypr/start-hyprland.log"
 
-run_hyprland() {
-    if ! systemctl --user is-active --quiet dbus.service 2>/dev/null; then
-        exec dbus-run-session -- Hyprland >> "$LOG" 2>&1
-    else
-        exec Hyprland >> "$LOG" 2>&1
-    fi
-}
-
-run_hyprland
+exec /usr/bin/start-hyprland "$@" >> "$LOG" 2>&1

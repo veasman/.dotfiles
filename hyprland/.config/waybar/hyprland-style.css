@@ -1,52 +1,85 @@
 /* waybar — ~/.config/waybar/hyprland-style.css
  *
- * Hyprland-specific waybar theme. Pillier than the sway version —
- * leans into rounded modules, soft shadows, and a small inset from
- * the screen edge so it floats above the workspace instead of
- * docking flush. Theme colors match kara: bg=#111111 surface=#1b1b1b
- * text=#f2f2f2 accent=#6bacac border=#353535.
+ * Hyprland-side theme. Floating bar with rounded edges, tinted glass
+ * background, and per-module pill backgrounds with subtle shadows.
+ * Theme matches kara/sway: bg=#111111  surface=#1b1b1b  text=#f2f2f2
+ * accent=#6bacac  border=#353535  warn=#ebcb8b  err=#bf616a.
  */
 
+/* ── reset ──────────────────────────────────────────────────────── */
 * {
-    font-family: "FiraCode Nerd Font", "FiraCode Nerd Font Mono", "Symbols Nerd Font", monospace;
-    font-size: 11pt;
+    font-family: "FiraCode Nerd Font", "Symbols Nerd Font", monospace;
+    font-size: 12.5pt;
+    font-weight: 500;
     min-height: 0;
     border: none;
     border-radius: 0;
+    margin: 0;
+    padding: 0;
 }
 
+/* ── bar window ─────────────────────────────────────────────────── */
 window#waybar {
-    background: transparent;
+    background: rgba(17, 17, 17, 0.78);
     color: #f2f2f2;
-    margin-top: 6px;
+    border-radius: 14px;
+    border: 1px solid rgba(53, 53, 53, 0.7);
+    /* faint glow so the floating bar reads against any wallpaper */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
-/* The top-level boxes. Waybar wraps each module group in
- * .modules-left/right/center, but for individual styling we hit the
- * modules themselves via #ID. Use `box` blocks where possible to
- * give the bar an inset, pill look. */
+/* ── module groups ──────────────────────────────────────────────── */
+.modules-left,
+.modules-center,
+.modules-right {
+    padding: 0 6px;
+}
 
-#workspaces,
-#window,
+/* default module styling — most right-side modules use this */
 #clock,
 #cpu,
 #memory,
 #network,
 #battery,
 #pulseaudio,
+#custom-claude,
 #submap,
-#custom-claude {
-    background: rgba(17, 17, 17, 0.85);
-    color: #f2f2f2;
-    border: 1px solid #353535;
-    border-radius: 999px;
+#window {
     padding: 2px 12px;
-    margin: 0 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    margin: 4px 3px;
+    color: #f2f2f2;
+    background: rgba(27, 27, 27, 0.85);
+    border: 1px solid rgba(53, 53, 53, 0.6);
+    border-radius: 999px;
+    transition: background 150ms ease, color 150ms ease;
 }
 
-/* Workspaces module — buttons inside the pill */
+#clock {
+    background: rgba(107, 172, 172, 0.15);
+    color: #a0d0d0;
+    border-color: rgba(107, 172, 172, 0.3);
+}
+
+#window {
+    background: transparent;
+    border: none;
+    color: #c5c5c5;
+    font-style: italic;
+    margin: 4px 8px;
+}
+
+#submap {
+    background: #6bacac;
+    color: #111111;
+    border-color: #6bacac;
+}
+
+/* ── workspaces ─────────────────────────────────────────────────── */
 #workspaces {
+    background: rgba(27, 27, 27, 0.85);
+    border: 1px solid rgba(53, 53, 53, 0.6);
+    border-radius: 999px;
+    margin: 4px 6px;
     padding: 0 4px;
 }
 
@@ -55,15 +88,16 @@ window#waybar {
     background: transparent;
     border: none;
     border-radius: 999px;
-    padding: 2px 9px;
-    margin: 2px 1px;
-    transition: color 120ms ease, background 120ms ease;
+    padding: 0 11px;
+    margin: 3px 2px;
+    min-width: 22px;
+    transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
-#workspaces button.active,
-#workspaces button.focused {
+#workspaces button.active {
     color: #111111;
     background: #6bacac;
+    box-shadow: 0 1px 4px rgba(107, 172, 172, 0.5);
 }
 
 #workspaces button.urgent {
@@ -73,37 +107,34 @@ window#waybar {
 
 #workspaces button:hover {
     color: #f2f2f2;
-    background: #1b1b1b;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
 }
 
-/* Submap (mode equivalent) */
-#submap {
-    background: #6bacac;
-    color: #111111;
-    font-style: italic;
-}
+/* ── per-module accents ─────────────────────────────────────────── */
+#cpu      { color: #88c0d0; }
+#memory   { color: #b48ead; }
+#network  { color: #a3be8c; }
+#network.disconnected { color: #5c5c5c; }
+#custom-claude { color: #6bacac; }
 
-/* Window title in the middle */
-#window {
-    color: #c5c5c5;
-    font-style: italic;
-}
-
-/* Specific module accents */
-#battery.warning {
-    color: #ebcb8b;
-}
+#battery.charging { color: #a3be8c; border-color: rgba(163, 190, 140, 0.4); }
+#battery.warning  { color: #ebcb8b; border-color: rgba(235, 203, 139, 0.4); }
 #battery.critical {
     color: #bf616a;
-}
-#battery.charging {
-    color: #6bacac;
-}
-
-#pulseaudio.muted {
-    color: #5c5c5c;
+    background: rgba(191, 97, 106, 0.15);
+    border-color: rgba(191, 97, 106, 0.5);
 }
 
-#network.disconnected {
-    color: #5c5c5c;
+#pulseaudio.muted { color: #5c5c5c; }
+
+/* ── tray (if added later) ──────────────────────────────────────── */
+#tray {
+    padding: 0 6px;
+}
+#tray > .passive { -gtk-icon-effect: dim; }
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background: rgba(191, 97, 106, 0.2);
+    border-radius: 999px;
 }

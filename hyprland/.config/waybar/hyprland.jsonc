@@ -1,27 +1,29 @@
 // waybar — ~/.config/waybar/hyprland.jsonc
 //
-// Hyprland-specific waybar config. Mirrors the sway config (same
-// modules + style.css) but swaps the workspace module to
-// hyprland/workspaces and uses format-icons to display the per-output
-// 1-9 regardless of the absolute workspace ID (eDP-1=1-9,
-// DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39).
+// Hyprland-side bar. Selected explicitly by hyprland.conf via
+// `waybar -c <this> -s ~/.config/waybar/hyprland-style.css`. The
+// sway-side stays at config.jsonc + style.css.
 //
-// Selected explicitly via start-hyprland: `waybar -c <this file> -s
-// ~/.config/waybar/style.css`. Sway continues to use config.jsonc.
+// Glyphs use \u JSON escapes for portability (so the file is plain
+// ASCII on disk; waybar's parser turns them into Nerd Font glyphs).
 {
     "layer": "top",
     "position": "top",
-    "height": 26,
-    "spacing": 4,
+    "height": 32,
+    "spacing": 6,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
 
     "modules-left":   ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["hyprland/window"],
-    "modules-right":  ["memory", "cpu", "custom/claude", "pulseaudio", "network", "battery", "clock"],
+    "modules-right":  ["custom/claude", "pulseaudio", "memory", "cpu", "network", "battery", "clock"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
         "all-outputs": false,
-        "format": "{name}"
+        "format": "{name}",
+        "on-click": "activate"
     },
 
     "hyprland/submap": {
@@ -29,24 +31,27 @@
     },
 
     "hyprland/window": {
-        "max-length": 70,
+        "max-length": 80,
         "separate-outputs": true
     },
 
     "clock": {
-        "format": " {:%a %d %b %H:%M}",
+        //  = nf-fa-calendar
+        "format": "  {:%a %d %b  %H:%M}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
     },
 
     "cpu": {
-        "format": " {usage}%",
+        //  = nf-fa-microchip
+        "format": "  {usage}%",
         "tooltip": false,
         "interval": 2
     },
 
     "memory": {
-        "format": " {}%",
-        "tooltip-format": "{used:0.1f}G / {total:0.1f}G",
+        //  = nf-md-memory
+        "format": "  {}%",
+        "tooltip-format": "{used:0.1f} G / {total:0.1f} G",
         "interval": 5
     },
 
@@ -59,32 +64,36 @@
 
     "network": {
         "interface": "wlan0",
-        "format-wifi":         "  {signalStrength}%",
-        "format-ethernet":     " {ifname}",
-        "format-disconnected": " offline",
-        "format-linked":       " linked",
+        //  = nf-fa-wifi,  = nf-mdi-ethernet,  = nf-md-network_off
+        "format-wifi":         "  {signalStrength}%",
+        "format-ethernet":     "  {ifname}",
+        "format-disconnected": "  offline",
+        "format-linked":       "  linked",
         "tooltip-format":      "{ifname}: {ipaddr}/{cidr}"
     },
 
     "battery": {
         "states":          { "warning": 30, "critical": 15 },
-        "format":          "{icon} {capacity}%",
-        "format-charging": " {capacity}%",
-        "format-plugged":  " {capacity}%",
-        "format-full":     " {capacity}%",
-        "format-icons":    ["", "", "", "", ""],
-        "tooltip-format":  "{timeTo} ({power}W)"
+        "format":          "{icon}  {capacity}%",
+        //  = bolt,  = plug
+        "format-charging": "  {capacity}%",
+        "format-plugged":  "  {capacity}%",
+        "format-full":     "  {capacity}%",
+        // ramp icons for the regular discharging state
+        "format-icons":    ["", "", "", "", ""],
+        "tooltip-format":  "{timeTo} ({power} W)"
     },
 
     "pulseaudio": {
-        "format":           "{icon} {volume}%",
-        "format-muted":     " muted",
-        "format-bluetooth": " {volume}%",
+        "format":           "{icon}  {volume}%",
+        "format-muted":     "  muted",
+        "format-bluetooth": "  {volume}%",
         "format-icons": {
-            "default": ["", "", ""]
+            // low / mid / high speaker glyphs
+            "default": ["", "", ""]
         },
         "on-click":         "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-click-right":   "hyprland-scratch-show mixer 'kara-toe-client --app-id=pulsemixer pulsemixer'",
+        "on-click-right":   "hyprctl dispatch togglespecialworkspace media",
         "scroll-step": 5
     }
 }
