@@ -1,0 +1,63 @@
+#!/usr/bin/env sh
+# screenshot — hyprshot/grim wrapper that fires a clickable swaync
+# notification. Default-click on the notification opens the saved
+# folder (via xdg-open, so it follows mimeapps.list →
+# inode/directory). Region mode goes to clipboard only.
+#
+# Usage:
+#   screenshot output    full focused output → ~/Pictures/, with notif
+#   screenshot window    focused window     → ~/Pictures/, with notif
+#   screenshot region    drag selection     → clipboard, with notif
+
+set -eu
+
+mode="${1:-output}"
+DIR="$HOME/Pictures"
+mkdir -p "$DIR"
+
+# Pango colors for the body markup.
+DIM='#5c5c5c'
+VAL='#a8a8a8'
+
+case "$mode" in
+    region)
+        grim -g "$(slurp -d)" - | wl-copy -t image/png 2>/dev/null
+        notify-send -t 1500 \
+            -h "string:x-canonical-private-synchronous:screenshot" \
+            -i "image-x-generic-symbolic" \
+            "" \
+            "Region <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">copied</span>"
+        exit 0
+        ;;
+    output|window|active)
+        # --silent: suppress hyprshot's own notification; we send our own.
+        out=$(hyprshot --silent -m "$mode" -o "$DIR" 2>&1 || true)
+        # hyprshot prints the saved path to stdout. Parse defensively;
+        # fall back to "newest .png in DIR".
+        path=$(printf '%s' "$out" | grep -oE '/[^[:space:]]+\.png' | head -1)
+        if [ -z "$path" ] || [ ! -f "$path" ]; then
+            path=$(ls -t "$DIR"/*.png 2>/dev/null | head -1)
+        fi
+        [ -f "$path" ] || { echo "screenshot failed: no file produced" >&2; exit 1; }
+
+        filename=$(basename "$path")
+
+        # `notify-send -A` implies --wait. The action name printed to
+        # stdout is what we case on. "default" fires when the user
+        # clicks the notification body itself.
+        action=$(notify-send -t 5000 \
+            -h "string:x-canonical-private-synchronous:screenshot" \
+            -i "$path" \
+            --action="default=Open folder" \
+            "" \
+            "Screenshot <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">$filename</span>" 2>/dev/null) || action=""
+
+        case "$action" in
+            default) setsid -f xdg-open "$DIR" >/dev/null 2>&1 || true ;;
+        esac
+        ;;
+    *)
+        echo "usage: $(basename "$0") {output|window|region}" >&2
+        exit 1
+        ;;
+esac
