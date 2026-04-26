@@ -30,6 +30,19 @@
     padding: 10px 12px;
 }
 
+/* Body image (image-path hint) — enforce a consistent thumbnail
+ * footprint so small images like region screenshots don't render
+ * tiny in a half-empty card. Pairs with notification-body-image-*
+ * dims in config.json which cap the upper bound; this sets the
+ * lower bound. */
+.notification .body-image,
+.notification image {
+    min-width: 240px;
+    min-height: 140px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
 .summary {
     color: #f2f2f2;
     font-weight: 600;
