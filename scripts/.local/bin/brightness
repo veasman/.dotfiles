@@ -1,19 +1,22 @@
 #!/usr/bin/env sh
 # brightness — adjust backlight + emit a swaync progress notification.
 #
+# Single-line format with a dim middle dot between label and value:
+# "Brightness · 75%". See ./volume for the matching pattern.
+#
 # Usage: brightness {up|down}
 
 set -eu
 
 STEP=5
 
+DIM='#5c5c5c'
+VAL='#a8a8a8'
+
 case "${1:-}" in
-    up)   brightnessctl set "+${STEP}%"  >/dev/null ;;
-    down) brightnessctl set "${STEP}%-"  >/dev/null ;;
-    *)
-        echo "usage: $(basename "$0") {up|down}" >&2
-        exit 1
-        ;;
+    up)   brightnessctl set "+${STEP}%" >/dev/null ;;
+    down) brightnessctl set "${STEP}%-" >/dev/null ;;
+    *)    echo "usage: $(basename "$0") {up|down}" >&2; exit 1 ;;
 esac
 
 cur=$(brightnessctl get)
@@ -25,8 +28,10 @@ elif [ "$pct" -ge 34 ]; then icon="display-brightness-medium-symbolic"
 else                         icon="display-brightness-low-symbolic"
 fi
 
+body="Brightness <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">${pct}%</span>"
+
 notify-send -t 1500 \
     -h "string:x-canonical-private-synchronous:brightness" \
     -h "int:value:$pct" \
     -i "$icon" \
-    "Brightness" "${pct}%"
+    "" "$body"

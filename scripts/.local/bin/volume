@@ -1,31 +1,27 @@
 #!/usr/bin/env sh
 # volume — adjust output sink + emit a swaync progress notification.
 #
-# Usage: volume {up|down|mute}
+# Single-line format: "Volume · 75%" with the dot + value rendered
+# in a dimmer color via pango markup. Empty title so swaync shows
+# only the compact body line + progress bar. Successive presses
+# replace each other via the sync hint.
 #
-# Successive presses replace the in-flight notification (sync hint
-# x-canonical-private-synchronous:volume) so it doesn't stack into
-# a wall.
+# Usage: volume {up|down|mute}
 
 set -eu
 
 SINK="@DEFAULT_AUDIO_SINK@"
 STEP=5
 
+# Pango markup colors — dim grey for separator + value.
+DIM='#5c5c5c'
+VAL='#a8a8a8'
+
 case "${1:-}" in
-    up)
-        wpctl set-volume -l 1.5 "$SINK" "${STEP}%+"
-        ;;
-    down)
-        wpctl set-volume "$SINK" "${STEP}%-"
-        ;;
-    mute)
-        wpctl set-mute "$SINK" toggle
-        ;;
-    *)
-        echo "usage: $(basename "$0") {up|down|mute}" >&2
-        exit 1
-        ;;
+    up)   wpctl set-volume -l 1.5 "$SINK" "${STEP}%+" ;;
+    down) wpctl set-volume "$SINK" "${STEP}%-" ;;
+    mute) wpctl set-mute "$SINK" toggle ;;
+    *)    echo "usage: $(basename "$0") {up|down|mute}" >&2; exit 1 ;;
 esac
 
 state=$(wpctl get-volume "$SINK")
@@ -36,7 +32,7 @@ pct=$(awk -v v="$volume" 'BEGIN { printf "%d", v * 100 + 0.5 }')
 
 if [ "$muted" = "1" ]; then
     icon="audio-volume-muted"
-    body="muted"
+    body="Volume <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">muted</span>"
     value=0
 else
     if   [ "$pct" -ge 67 ]; then icon="audio-volume-high"
@@ -44,7 +40,7 @@ else
     elif [ "$pct" -gt 0 ];  then icon="audio-volume-low"
     else                         icon="audio-volume-muted"
     fi
-    body="${pct}%"
+    body="Volume <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">${pct}%</span>"
     value=$pct
 fi
 
@@ -52,4 +48,4 @@ notify-send -t 1500 \
     -h "string:x-canonical-private-synchronous:volume" \
     -h "int:value:$value" \
     -i "$icon" \
-    "Volume" "$body"
+    "" "$body"
