@@ -140,7 +140,9 @@ bindkey -s '^f' 'pmux\n'
 export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
 
 # NVM (lazy-loaded — sourcing nvm.sh costs 300-600ms, so defer until first use)
-export NVM_DIR="$HOME/.nvm"
+# NVM_DIR is set in .zshenv via $XDG_DATA_HOME; re-asserting here for clarity.
+: "${NVM_DIR:=${XDG_DATA_HOME:-$HOME/.local/share}/nvm}"
+export NVM_DIR
 
 _nvm_load() {
     unset -f nvm node npm npx _nvm_load
@@ -233,3 +235,4 @@ add-zsh-hook precmd _kara_reload_fzf
     source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 pfetch
+#fastfetch
