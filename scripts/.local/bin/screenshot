@@ -55,7 +55,7 @@ action=$(notify-send -t 5000 \
     -h "string:image-path:$path" \
     --action="default=Preview" \
     "" \
-    "Screenshot <span foreground=\"$DIM\">·</span> <span foreground=\"$VAL\">$filename</span>" \
+    "<span foreground=\"$VAL\">$filename</span>" \
     2>/dev/null) || action=""
 
 case "$action" in
