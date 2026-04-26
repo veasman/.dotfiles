@@ -1,23 +1,53 @@
 #!/usr/bin/env bash
-# claude-usage: Outputs Claude 5hr usage for a status bar module.
-# Requires: curl, jq
-# Usage: ./claude-usage.sh
+# claude-usage — Claude 5-hour usage for a status bar module.
+#
+# Caches the last successful reading so transient failures (rate
+# limits, brief network outages, expired token between refreshes)
+# don't drop the module from the bar — instead we re-output the
+# cached number, which keeps the icon and last-known % visible until
+# a fresh successful read replaces it.
+#
+# Always exits 0 so waybar's custom-module poller doesn't disable
+# the slot on non-zero exits.
 
+set -u
+
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/claude-usage"
+CACHE_FILE="$CACHE_DIR/last"
 CREDS="$HOME/.claude/.credentials.json"
 URL="https://api.anthropic.com/api/oauth/usage"
-ICON="󰚩"  # nf-md-robot (Nerd Font)
 
-[[ -f "$CREDS" ]] || { echo "${ICON} ?"; exit 1; }
+# nf-md-star-four-points (U+F0AE2) — Gemini-style four-point twinkle.
+# Bash's $'\U…' wants exactly 8 hex digits, so pad U+F0AE2 to
+# 000F0AE2 (otherwise the parser eats only 4 hex chars, leaves `2`
+# as a stray literal).
+ICON=$'\U000F0AE2'
 
-TOKEN=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS")
-[[ -n "$TOKEN" ]] || { echo "${ICON} ?"; exit 1; }
+mkdir -p "$CACHE_DIR"
+
+emit_cached() {
+    if [[ -s "$CACHE_FILE" ]]; then
+        printf '%s %s\n' "$ICON" "$(cat "$CACHE_FILE")"
+    else
+        printf '%s ?\n' "$ICON"
+    fi
+    exit 0
+}
+
+[[ -f "$CREDS" ]] || emit_cached
+
+TOKEN=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS" 2>/dev/null)
+[[ -n "$TOKEN" ]] || emit_cached
 
 RESPONSE=$(curl -sf --max-time 5 \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "anthropic-beta: oauth-2025-04-20" \
-  "$URL") || { echo "${ICON} err"; exit 1; }
+    -H "Authorization: Bearer $TOKEN" \
+    -H "anthropic-beta: oauth-2025-04-20" \
+    "$URL") || emit_cached
 
-PCT=$(echo "$RESPONSE" | jq -r '.five_hour.utilization // empty')
-[[ -z "$PCT" ]] && { echo "${ICON} ?"; exit 1; }
+PCT=$(echo "$RESPONSE" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
+[[ -n "$PCT" ]] || emit_cached
 
-printf "${ICON} %.0f%%\n" "$PCT"
+# Persist and emit.
+PCT_FMT=$(printf '%.0f%%' "$PCT")
+printf '%s\n' "$PCT_FMT" > "$CACHE_FILE"
+printf '%s %s\n' "$ICON" "$PCT_FMT"
