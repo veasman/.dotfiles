@@ -15,11 +15,26 @@ set ratios "1:2:3"   # parent : current : preview
 set previewer ~/.config/lf/preview
 
 # ─── Open dispatcher ─────────────────────────────────────────────────
-# `$` prefix = sync, terminal-attached. Required so nvim (and any
-# other TUI app) can take over lf's terminal on Enter. The script
-# uses `setsid -f` for windowed apps (mpv, zathura) so they detach
-# and lf's terminal returns immediately.
-cmd open $"$HOME/.config/lf/open" "$f"
+# Multi-line `${{ ... }}` block = sync, terminal-attached. nvim
+# takes over lf's terminal on text files. mpv/zathura/xdg-open are
+# wrapped with `setsid -f` so they detach to their own window and
+# lf's terminal returns immediately.
+cmd open ${{
+    case "$(file --mime-type -bL "$f")" in
+        text/*|application/json|application/yaml|application/x-shellscript|application/x-toml|application/javascript|application/x-perl|application/xml)
+            nvim "$f"
+            ;;
+        image/*|video/*|audio/*)
+            setsid -f mpv -- "$f" >/dev/null 2>&1
+            ;;
+        application/pdf|application/epub+zip)
+            setsid -f zathura "$f" >/dev/null 2>&1
+            ;;
+        *)
+            setsid -f xdg-open "$f" >/dev/null 2>&1
+            ;;
+    esac
+}}
 
 # ─── Convenience commands ────────────────────────────────────────────
 cmd touch %touch -- "$@"
