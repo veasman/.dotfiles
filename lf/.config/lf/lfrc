@@ -20,18 +20,33 @@ set previewer ~/.config/lf/preview
 # wrapped with `setsid -f` so they detach to their own window and
 # lf's terminal returns immediately.
 cmd open ${{
-    case "$(file --mime-type -bL "$f")" in
-        text/*|application/json|application/yaml|application/x-shellscript|application/x-toml|application/javascript|application/x-perl|application/xml)
+    # Extension match first — handles empty files (which file(1)
+    # reports as inode/x-empty, not text/*) and ambiguous text
+    # formats. Falls through to mime detection only if extension
+    # isn't recognized.
+    case "$f" in
+        *.md|*.markdown|*.txt|*.log|*.conf|*.cfg|*.ini|*.toml|*.yaml|*.yml|*.json|*.jsonc|*.xml|*.csv|*.tsv|\
+        *.sh|*.bash|*.zsh|*.fish|*.py|*.rs|*.go|*.lua|*.vim|*.el|*.clj|*.rb|*.pl|*.php|\
+        *.c|*.h|*.cpp|*.hpp|*.cxx|*.cc|*.java|*.kt|*.swift|*.scala|*.hs|*.ex|*.exs|*.erl|*.zig|*.nim|\
+        *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|*.vue|*.svelte|*.html|*.htm|*.css|*.scss|*.sass|*.less|\
+        *.sql|*.graphql|*.gql|*.proto|*.dockerfile|*.tex|*.bib|*.makefile|*.mk|*.cmake)
             nvim "$f"
             ;;
-        image/*|video/*|audio/*)
-            setsid -f mpv -- "$f" >/dev/null 2>&1
-            ;;
-        application/pdf|application/epub+zip)
-            setsid -f zathura "$f" >/dev/null 2>&1
-            ;;
         *)
-            setsid -f xdg-open "$f" >/dev/null 2>&1
+            case "$(file --mime-type -bL "$f")" in
+                text/*|application/json|application/yaml|application/x-shellscript|application/x-toml|application/javascript|application/x-perl|application/xml|inode/x-empty)
+                    nvim "$f"
+                    ;;
+                image/*|video/*|audio/*)
+                    setsid -f mpv -- "$f" >/dev/null 2>&1
+                    ;;
+                application/pdf|application/epub+zip)
+                    setsid -f zathura "$f" >/dev/null 2>&1
+                    ;;
+                *)
+                    setsid -f xdg-open "$f" >/dev/null 2>&1
+                    ;;
+            esac
             ;;
     esac
 }}
