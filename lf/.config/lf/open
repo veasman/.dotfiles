@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# ~/.config/lf/open — invoked by lf's `cmd open`.
+#
+# Dispatches based on mime type so Enter on a file Just Works
+# without bouncing through xdg-open for everything.
+
+set -eu
+
+f="$1"
+[ -n "$f" ] || exit 0
+
+mime=$(file --mime-type -bL "$f" 2>/dev/null || echo "application/octet-stream")
+
+case "$mime" in
+    text/*|application/json|application/yaml|application/x-shellscript|application/x-perl|application/javascript|application/x-toml)
+        exec "${EDITOR:-nvim}" "$f"
+        ;;
+    image/*|video/*|audio/*)
+        setsid -f mpv -- "$f" >/dev/null 2>&1
+        ;;
+    application/pdf|application/epub+zip)
+        setsid -f zathura "$f" >/dev/null 2>&1
+        ;;
+    *)
+        setsid -f xdg-open "$f" >/dev/null 2>&1
+        ;;
+esac
