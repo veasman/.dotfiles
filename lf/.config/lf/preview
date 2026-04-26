@@ -14,6 +14,17 @@ h="${3:-25}"
 
 mime=$(file --mime-type -bL "$file" 2>/dev/null || echo "application/octet-stream")
 
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/lf-preview"
+mkdir -p "$CACHE_DIR"
+
+# Path to a cached PNG thumbnail for the file. Hash by mtime + path
+# so a re-encode of the same path bumps the cache.
+cached_thumb() {
+    src="$1"
+    key=$(stat -c '%n %Y' "$src" 2>/dev/null | sha1sum | cut -c1-16)
+    printf '%s/%s.png' "$CACHE_DIR" "$key"
+}
+
 case "$mime" in
     image/*)
         if command -v chafa >/dev/null 2>&1; then
@@ -26,6 +37,32 @@ case "$mime" in
         printf '[image] %s\n\n' "$file"
         identify -format '%f  %wx%h  %m  %b\n' "$file" 2>/dev/null \
             || file -b "$file"
+        ;;
+    video/*)
+        # Extract a frame ~3s in (fast seek with -ss before -i),
+        # fall back to first frame for short clips. Cache the PNG
+        # so scrolling over the same file reuses it instead of
+        # re-running ffmpeg.
+        if command -v ffmpeg >/dev/null 2>&1 && command -v chafa >/dev/null 2>&1; then
+            thumb=$(cached_thumb "$file")
+            if [ ! -s "$thumb" ]; then
+                ffmpeg -y -loglevel error \
+                    -ss 00:00:03 -i "$file" \
+                    -vframes 1 -vf "scale=480:-1" "$thumb" 2>/dev/null \
+                || ffmpeg -y -loglevel error \
+                    -i "$file" \
+                    -vframes 1 -vf "scale=480:-1" "$thumb" 2>/dev/null
+            fi
+            if [ -s "$thumb" ]; then
+                chafa -s "${w}x${h}" --animate=off "$thumb" 2>/dev/null && exit 0
+            fi
+        fi
+        printf '[video] %s\n\n' "$(basename "$file")"
+        if command -v ffprobe >/dev/null 2>&1; then
+            ffprobe -v quiet \
+                -show_entries format=duration,bit_rate,size:stream=codec_name,width,height \
+                -of default=noprint_wrappers=1 "$file" 2>/dev/null
+        fi
         ;;
     text/*|application/json|application/yaml|application/x-shellscript|application/javascript|application/x-perl|application/x-toml|application/xml)
         head -c 200000 "$file" | head -n "$h"
