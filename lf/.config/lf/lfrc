@@ -15,7 +15,11 @@ set ratios "1:2:3"   # parent : current : preview
 set previewer ~/.config/lf/preview
 
 # ─── Open dispatcher ─────────────────────────────────────────────────
-cmd open &$HOME/.config/lf/open "$f"
+# `$` prefix = sync, terminal-attached. Required so nvim (and any
+# other TUI app) can take over lf's terminal on Enter. The script
+# uses `setsid -f` for windowed apps (mpv, zathura) so they detach
+# and lf's terminal returns immediately.
+cmd open $"$HOME/.config/lf/open" "$f"
 
 # ─── Convenience commands ────────────────────────────────────────────
 cmd touch %touch -- "$@"
