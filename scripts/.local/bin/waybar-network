@@ -1,0 +1,130 @@
+#!/usr/bin/env sh
+# waybar-network — single-pill replacement for waybar's builtin network module.
+#
+# Combines wifi/eth state, signal strength, and a smoothed bandwidth readout
+# into one module so the bar shows a single capsule instead of two adjacent
+# pills with a visible seam. Long-running: waybar execs once and reads JSON
+# lines from stdout (one per INTERVAL).
+#
+# Layout:
+#   wifi connected:    " 64% ↓50K ↑105K"
+#   ethernet:          "  ↓50K ↑105K"
+#   no default route:  "  offline"
+#
+# Notes:
+#  * Signal % comes from `iw dev <iface> link` (dBm), then linearised
+#    (2*(dBm+100)) — consistent across drivers, unlike /proc/net/wireless
+#    which reports a driver-specific quality scale.
+#  * EWMA (alpha=0.4) on top of a 3-second sample plus quantization to
+#    whole KB hides the per-poll jitter that made raw kB/s readings dance.
+#  * On iface change or vanish the sampler resets so the first delta after
+#    reconnect isn't a giant spike from a stale counter.
+
+# waybar reloads (SIGUSR2) leave the previous exec child orphaned —
+# bash builtin `printf` doesn't propagate SIGPIPE so they keep
+# polling forever, just discarding output. Earlier we tried killing
+# siblings at startup, but with one bar per monitor (3 docked) every
+# fresh launch races, and the wrong bars lost their data source. So
+# instead: detect the broken pipe ourselves on emit() and exit. A
+# stale orphan dies on its next 3-second tick; concurrent live
+# siblings (one per bar) are untouched.
+
+INTERVAL=${INTERVAL:-3}
+
+ICON_WIFI=$(printf '\357\207\253')   # nf-fa-wifi U+F1EB
+ICON_ETH=$(printf '\357\233\277')    # nf-mdi-ethernet U+F6FF
+ICON_OFF=$(printf '\357\211\255')    # nf-md-network_off U+F26D
+
+resolve_iface() {
+    ip route show default 2>/dev/null | awk '/^default/ {print $5; exit}'
+}
+
+is_wifi() { [ -d "/sys/class/net/$1/wireless" ]; }
+
+wifi_pct() {
+    dbm=$(iw dev "$1" link 2>/dev/null | awk '/signal:/ {print $2; exit}')
+    [ -z "$dbm" ] && { echo 0; return; }
+    pct=$(( 2 * (dbm + 100) ))
+    [ "$pct" -lt 0 ] && pct=0
+    [ "$pct" -gt 100 ] && pct=100
+    echo "$pct"
+}
+
+ipof() { ip -4 -o addr show dev "$1" 2>/dev/null | awk '{print $4; exit}'; }
+
+read_bytes() { cat "/sys/class/net/$1/statistics/${2}_bytes" 2>/dev/null; }
+
+fmt() {
+    v=$1
+    if   [ "$v" -lt 1024 ];       then printf '%dB' "$v"
+    elif [ "$v" -lt 1048576 ];    then printf '%dK' $((v / 1024))
+    elif [ "$v" -lt 10485760 ];   then t=$((v*10/1048576));   printf '%d.%dM' $((t/10)) $((t%10))
+    elif [ "$v" -lt 1073741824 ]; then printf '%dM' $((v/1048576))
+    else                               t=$((v*10/1073741824)); printf '%d.%dG' $((t/10)) $((t%10))
+    fi
+}
+
+emit() {
+    # JSON payload for waybar; keep it on one line. `|| exit 0` makes
+    # an orphaned instance (parent waybar gone after a reload) die on
+    # its next tick instead of looping forever discarding output.
+    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' "$1" "$2" "$3" || exit 0
+}
+
+prev_iface=
+prev_rx=0; prev_tx=0
+sm_d=0; sm_u=0
+primed=0
+
+while :; do
+    iface=$(resolve_iface)
+    if [ -z "$iface" ]; then
+        emit "$ICON_OFF  offline" disconnected "no default route"
+        primed=0; sm_d=0; sm_u=0
+        sleep "$INTERVAL"; continue
+    fi
+
+    rx=$(read_bytes "$iface" rx)
+    tx=$(read_bytes "$iface" tx)
+    if [ -z "$rx" ] || [ -z "$tx" ]; then
+        emit "$ICON_OFF  $iface" disconnected "$iface vanished"
+        primed=0
+        sleep "$INTERVAL"; continue
+    fi
+
+    if [ "$primed" -eq 0 ] || [ "$iface" != "$prev_iface" ]; then
+        prev_iface=$iface
+        prev_rx=$rx; prev_tx=$tx
+        sm_d=0; sm_u=0
+        primed=1
+        dr=0; du=0
+    else
+        dr=$(( (rx - prev_rx) / INTERVAL ))
+        du=$(( (tx - prev_tx) / INTERVAL ))
+        [ "$dr" -lt 0 ] && dr=0
+        [ "$du" -lt 0 ] && du=0
+        prev_rx=$rx; prev_tx=$tx
+        sm_d=$(( (4 * dr + 6 * sm_d) / 10 ))
+        sm_u=$(( (4 * du + 6 * sm_u) / 10 ))
+    fi
+
+    if is_wifi "$iface"; then
+        sig=$(wifi_pct "$iface")
+        # Quality bucket drives the CSS class, which in turn colors the
+        # whole module — green (good), yellow (fair), red (poor). The %
+        # is intentionally omitted from the bar text; the color is the
+        # at-a-glance health cue, the digits are the throughput cue.
+        if   [ "$sig" -ge 65 ]; then class=wifi-good
+        elif [ "$sig" -ge 40 ]; then class=wifi-fair
+        else                         class=wifi-poor
+        fi
+        text=$(printf '%s  ↓%s ↑%s' "$ICON_WIFI" "$(fmt "$sm_d")" "$(fmt "$sm_u")")
+        tip="$iface: $(ipof "$iface") · signal ${sig}%"
+    else
+        text=$(printf '%s  ↓%s ↑%s' "$ICON_ETH" "$(fmt "$sm_d")" "$(fmt "$sm_u")")
+        class=ethernet
+        tip="$iface: $(ipof "$iface")"
+    fi
+    emit "$text" "$class" "$tip"
+    sleep "$INTERVAL"
+done

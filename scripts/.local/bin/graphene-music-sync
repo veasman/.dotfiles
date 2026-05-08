@@ -1,0 +1,299 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["rich>=13"]
+# ///
+"""
+graphene-music-sync — one-way sync from ~/Music to the GrapheneOS phone over MTP.
+
+Compares files by relative path + size (MTP timestamps via jmtpfs are unreliable).
+Shows a live TUI with progress bars for the scan, copy, and delete phases.
+"""
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
+from rich.prompt import Confirm
+from rich.table import Table
+
+SOURCE = Path.home() / "Music"
+MOUNT_POINT = Path.home() / "graphene-files"
+AUDIO_EXTS = {".mp3", ".m4a", ".flac", ".wav", ".ogg", ".opus", ".aac", ".mp4"}
+
+console = Console()
+
+
+def is_mounted() -> bool:
+    return subprocess.run(
+        ["mountpoint", "-q", str(MOUNT_POINT)]
+    ).returncode == 0
+
+
+def mount_phone() -> tuple[bool, bool]:
+    """Returns (success, did_we_mount_it)."""
+    if is_mounted():
+        return True, False
+    console.print("[cyan]Mounting phone via graphene-files...[/cyan]")
+    rc = subprocess.run(["graphene-files", "mount"]).returncode
+    if rc != 0 or not is_mounted():
+        console.print("[red]✗ Could not mount phone.[/red]")
+        console.print("  Check: phone plugged in, unlocked, USB set to 'File Transfer'.")
+        return False, False
+    return True, True
+
+
+def unmount_phone() -> None:
+    if is_mounted():
+        console.print("[cyan]Unmounting phone...[/cyan]")
+        subprocess.run(["graphene-files", "unmount"])
+
+
+def find_phone_music_dir() -> Path | None:
+    """Find or create the Music dir on the phone."""
+    preferred = [
+        MOUNT_POINT / "Internal shared storage" / "Music",
+        MOUNT_POINT / "Internal storage" / "Music",
+        MOUNT_POINT / "Music",
+    ]
+    for p in preferred:
+        if p.exists():
+            return p
+
+    try:
+        roots = sorted(p for p in MOUNT_POINT.iterdir() if p.is_dir())
+    except OSError as e:
+        console.print(f"[red]Could not list {MOUNT_POINT}: {e}[/red]")
+        return None
+
+    for root in roots:
+        target = root / "Music"
+        if target.exists():
+            return target
+
+    if not roots:
+        console.print(f"[red]No storage roots under {MOUNT_POINT}[/red]")
+        return None
+
+    target = roots[0] / "Music"
+    console.print(f"[yellow]Creating {target}[/yellow]")
+    try:
+        target.mkdir(exist_ok=True)
+    except OSError as e:
+        console.print(f"[red]Could not create {target}: {e}[/red]")
+        return None
+    return target
+
+
+def index_dir(root: Path, label: str) -> dict[str, int]:
+    """Return {relative_path: size} for audio files under root."""
+    index: dict[str, int] = {}
+    with console.status(f"[cyan]Scanning {label}...[/cyan]"):
+        for path in root.rglob("*"):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in AUDIO_EXTS:
+                continue
+            try:
+                rel = path.relative_to(root).as_posix()
+                index[rel] = path.stat().st_size
+            except OSError:
+                continue
+    return index
+
+
+def diff_indexes(src: dict[str, int], dst: dict[str, int]):
+    src_keys = set(src)
+    dst_keys = set(dst)
+    to_add = sorted(src_keys - dst_keys)
+    to_remove = sorted(dst_keys - src_keys)
+    to_update = sorted(k for k in src_keys & dst_keys if src[k] != dst[k])
+    in_sync = (src_keys & dst_keys) - set(to_update)
+    return to_add, to_update, to_remove, in_sync
+
+
+def human_size(n: float) -> str:
+    for unit in ["B", "KB", "MB", "GB", "TB"]:
+        if n < 1024:
+            return f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} PB"
+
+
+def render_summary(src_dir, dst_dir, to_add, to_update, to_remove, in_sync, src_index):
+    table = Table(title="Sync Plan", show_header=True, header_style="bold magenta")
+    table.add_column("Action", style="cyan")
+    table.add_column("Count", justify="right")
+    table.add_column("Size", justify="right")
+
+    add_size = sum(src_index[k] for k in to_add)
+    upd_size = sum(src_index[k] for k in to_update)
+
+    table.add_row("Add (new on phone)", str(len(to_add)), human_size(add_size))
+    table.add_row("Update (size differs)", str(len(to_update)), human_size(upd_size))
+    table.add_row("Remove (not in source)", str(len(to_remove)), "—")
+    table.add_row("Already in sync", str(len(in_sync)), "—")
+
+    console.print(table)
+    console.print(f"  source: [dim]{src_dir}[/dim]")
+    console.print(f"  dest:   [dim]{dst_dir}[/dim]")
+
+
+def copy_files(pairs, total_size, label):
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        DownloadColumn(),
+        TransferSpeedColumn(),
+        TimeRemainingColumn(),
+        TaskProgressColumn(),
+        console=console,
+    )
+    failures = []
+    with progress:
+        task = progress.add_task(label, total=total_size)
+        for i, (src, dst) in enumerate(pairs, 1):
+            progress.update(
+                task,
+                description=f"{label} [{i}/{len(pairs)}] {dst.name[:50]}",
+            )
+            try:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(src, dst)
+                progress.update(task, advance=src.stat().st_size)
+            except Exception as e:
+                failures.append((src, dst, str(e)))
+                progress.console.log(f"[red]Failed:[/red] {dst.name} — {e}")
+    return failures
+
+
+def remove_files(paths, label):
+    progress = Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        console=console,
+    )
+    failures = []
+    with progress:
+        task = progress.add_task(label, total=len(paths))
+        for p in paths:
+            try:
+                p.unlink()
+            except Exception as e:
+                failures.append((p, str(e)))
+                progress.console.log(f"[red]Failed to remove:[/red] {p} — {e}")
+            progress.update(task, advance=1)
+    return failures
+
+
+def cleanup_empty_dirs(root: Path):
+    for dirpath, _, _ in os.walk(root, topdown=False):
+        d = Path(dirpath)
+        if d == root:
+            continue
+        try:
+            if not any(d.iterdir()):
+                d.rmdir()
+        except OSError:
+            pass
+
+
+def main() -> int:
+    console.print(Panel.fit(
+        "[bold]GrapheneOS Music Sync[/bold]\n"
+        f"[dim]Source:[/dim] {SOURCE}\n"
+        f"[dim]Target:[/dim] {MOUNT_POINT} (phone)",
+        border_style="cyan",
+    ))
+
+    if not SOURCE.exists():
+        console.print(f"[red]Source {SOURCE} does not exist.[/red]")
+        return 1
+
+    ok, we_mounted = mount_phone()
+    if not ok:
+        return 1
+
+    try:
+        phone_music = find_phone_music_dir()
+        if phone_music is None:
+            return 1
+        console.print(f"[green]Phone music dir:[/green] {phone_music}")
+
+        src_index = index_dir(SOURCE, "computer library")
+        dst_index = index_dir(phone_music, "phone library")
+
+        console.print(f"  computer: [bold]{len(src_index)}[/bold] tracks")
+        console.print(f"  phone:    [bold]{len(dst_index)}[/bold] tracks")
+
+        to_add, to_update, to_remove, in_sync = diff_indexes(src_index, dst_index)
+        render_summary(SOURCE, phone_music, to_add, to_update, to_remove, in_sync, src_index)
+
+        if not (to_add or to_update or to_remove):
+            console.print("[bold green]✓ Phone is already in sync.[/bold green]")
+            return 0
+
+        delete_extras = False
+        if to_remove:
+            delete_extras = Confirm.ask(
+                f"Delete [bold]{len(to_remove)}[/bold] file(s) on phone that aren't in your library?",
+                default=False,
+            )
+
+        if not Confirm.ask("Proceed with sync?", default=True):
+            console.print("[yellow]Cancelled.[/yellow]")
+            return 0
+
+        copy_pairs = [(SOURCE / k, phone_music / k) for k in (to_add + to_update)]
+        copy_total = sum(src_index[k] for k in (to_add + to_update))
+        copy_fail = []
+        if copy_pairs:
+            copy_fail = copy_files(copy_pairs, copy_total, "Copying to phone")
+
+        remove_fail = []
+        if delete_extras and to_remove:
+            paths = [phone_music / k for k in to_remove]
+            remove_fail = remove_files(paths, "Removing from phone")
+            cleanup_empty_dirs(phone_music)
+
+        console.print()
+        if not (copy_fail or remove_fail):
+            console.print("[bold green]✓ Sync complete.[/bold green]")
+            return 0
+        console.print(
+            f"[yellow]Done with errors: {len(copy_fail)} copy failures, "
+            f"{len(remove_fail)} remove failures.[/yellow]"
+        )
+        return 2
+
+    finally:
+        if we_mounted:
+            unmount_phone()
+        else:
+            console.print("[dim]Leaving phone mounted (was already mounted on entry).[/dim]")
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(130)

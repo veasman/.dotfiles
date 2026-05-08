@@ -373,13 +373,17 @@ install_base_packages() {
     pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
 
     step 8 "Installing shell and terminal tools"
-    pacman_install zsh tmux fzf tree ripgrep fd jq btop xclip
+    pacman_install zsh zsh-autosuggestions zsh-fast-syntax-highlighting \
+                   tmux fzf tree ripgrep fd jq btop \
+                   lf imv chafa glances pulsemixer
 
-    step 12 "Installing X11 desktop utilities"
+    step 12 "Installing Hyprland desktop stack"
     pacman_install \
-        xorg-server xorg-xinit xorg-xrandr xorg-xsetroot \
-        rofi dunst libnotify picom xwallpaper playerctl brightnessctl \
-        arandr xdg-utils xdg-desktop-portal xdg-desktop-portal-gtk
+        hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker \
+        waybar fuzzel mako swaync libnotify \
+        grim slurp wl-clipboard socat playerctl brightnessctl \
+        xdg-utils xdg-desktop-portal xdg-desktop-portal-gtk \
+        xdg-desktop-portal-hyprland
 
     step 16 "Installing audio stack"
     pacman_install \
@@ -457,6 +461,29 @@ install_sunshine() {
     paru_install sunshine-bin
 }
 
+install_swayosd() {
+    # AUR. Tiny GTK HUD daemon used by the volume / brightness wrappers
+    # for centered overlay popups when on Hyprland.
+    paru_install swayosd-git
+}
+
+install_termfilechooser() {
+    # Routes GTK file dialogs (Floorp uploads, etc.) to lf in
+    # kara-toe-client via xdg-desktop-portal-termfilechooser. Config
+    # lives in ~/.config/xdg-desktop-portal-termfilechooser/config and
+    # ~/.config/xdg-desktop-portal/portals.conf (both stowed via the
+    # gtk package).
+    paru_install xdg-desktop-portal-termfilechooser-hunkyburrito-git
+}
+
+install_hyprland_share_picker_preview() {
+    # Replaces the bundled hyprland-share-picker (text-only) with a
+    # Qt UI that shows visual thumbnails of every window/monitor —
+    # so MS Teams and similar prompt you with what you'd actually
+    # share rather than a raw output-name list.
+    paru_install hyprland-share-picker-preview-git
+}
+
 # ---------------------------------------------------------------------------
 # Custom projects (clone + make install)
 # ---------------------------------------------------------------------------
@@ -531,32 +558,30 @@ stow_dotfiles() {
         fonts
         fuzzel
         git
+        gtk
+        hyprland
         latex
-        mako
         nvim
         pmux
-        rofi
         scripts
         shell
-        sway
         tmux
         waybar
         xdg
-        xinit-desktop
-        xresources
     )
 
     for pkg in "${packages[@]}"; do
         stow_package_force "$pkg"
     done
 
-    # The sway package excludes .local from stow (see sway/.stow-local-ignore
-    # for why — pre-existing absolute-symlink entries in the scripts package
-    # abort sibling-tree analysis). Symlink each helper script into
-    # ~/.local/bin/ manually so they're on $PATH.
-    if [[ -d "$DOTFILES_DIR/sway/.local/bin" ]]; then
+    # The hyprland package excludes .local from stow (see
+    # hyprland/.stow-local-ignore — pre-existing absolute-symlink
+    # entries in the scripts package abort sibling-tree analysis).
+    # Symlink each helper script into ~/.local/bin/ manually so it's
+    # on $PATH.
+    if [[ -d "$DOTFILES_DIR/hyprland/.local/bin" ]]; then
         run_cmd mkdir -p "$HOME/.local/bin"
-        for helper in "$DOTFILES_DIR"/sway/.local/bin/*; do
+        for helper in "$DOTFILES_DIR"/hyprland/.local/bin/*; do
             [[ -f "$helper" ]] || continue
             run_cmd ln -sf "$helper" "$HOME/.local/bin/$(basename "$helper")"
         done
@@ -702,6 +727,15 @@ main() {
 
     step 56 "Installing Neovim nightly"
     install_neovim_nightly
+
+    step 58 "Installing swayosd (HUD daemon)"
+    install_swayosd
+
+    step 59 "Installing xdg-desktop-portal-termfilechooser (lf for GTK file dialogs)"
+    install_termfilechooser
+
+    step 59 "Installing hyprland-share-picker-preview (visual screencast picker)"
+    install_hyprland_share_picker_preview
 
     step 60 "Enabling Bluetooth"
     enable_bluetooth

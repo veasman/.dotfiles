@@ -1,14 +1,27 @@
 #!/usr/bin/env sh
-# volume — adjust output sink + emit a swaync progress notification.
+# volume — adjust output sink + render a HUD.
 #
-# Single-line format: "Volume · 75%" with the dot + value rendered
-# in a dimmer color via pango markup. Empty title so swaync shows
-# only the compact body line + progress bar. Successive presses
-# replace each other via the sync hint.
+# Path A (preferred): when swayosd-server is running, delegate the
+# whole thing to swayosd-client — small centered OSD, native pill,
+# no full-width notification card. swayosd handles the wpctl/pactl
+# query and the bar rendering itself.
+#
+# Path B (fallback): emit a swaync progress notification with the
+# dim-dot pango pattern. Used when no swayosd-server is up — i.e.
+# in sway/kara sessions or before swayosd autostarts.
 #
 # Usage: volume {up|down|mute}
 
 set -eu
+
+if pgrep -x swayosd-server >/dev/null 2>&1; then
+    case "${1:-}" in
+        up)   exec swayosd-client --output-volume raise ;;
+        down) exec swayosd-client --output-volume lower ;;
+        mute) exec swayosd-client --output-volume mute-toggle ;;
+        *)    echo "usage: $(basename "$0") {up|down|mute}" >&2; exit 1 ;;
+    esac
+fi
 
 SINK="@DEFAULT_AUDIO_SINK@"
 STEP=5

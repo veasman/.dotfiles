@@ -1,0 +1,12 @@
+#!/bin/bash
+source ~/.config/quantvps/creds
+
+xfreerdp3 \
+    /v:64.44.101.87 \
+    /u:Administrator \
+    /d:"" \
+    /p:"$PASSWORD" \
+    /size:1920x1080 \
+    /dynamic-resolution \
+    /cert:tofu \
+    +clipboard

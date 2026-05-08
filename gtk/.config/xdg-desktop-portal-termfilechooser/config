@@ -1,0 +1,19 @@
+[filechooser]
+# Route Floorp's (and any other GTK/portal-aware app's) file dialogs
+# through lf in kara-toe-client. Replaces the GTK chooser whose
+# 96px image previews were unreadable for receipt photos.
+cmd=lf-wrapper.sh
+default_dir=$HOME
+
+# Wrapper does `$termcmd lf -selection-path <out> <start_dir>`.
+# kara-toe-client takes a positional command, so this expands to
+# `kara-toe-client --app-id=lf-portal lf -selection-path ...`.
+# The app-id is matched by a windowrule in hyprland.conf so the
+# picker opens as a floating, centered modal instead of tiling
+# into whatever workspace is current.
+env=TERMCMD=kara-toe-client --app-id=lf-portal
+
+# `suggested` honors the calling app's hint (Open vs Save). lf's
+# enter binding writes the selection to -selection-path and exits.
+open_mode=suggested
+save_mode=suggested

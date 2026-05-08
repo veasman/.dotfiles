@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""
+grab.py — download YouTube or Spotify URLs (playlist / album / song / video)
+to ~/Downloads using yt-dlp (YouTube) and spotdl (Spotify).
+
+Requires: yt-dlp, spotdl, ffmpeg
+    pip install -U yt-dlp spotdl
+    # ffmpeg: brew install ffmpeg | apt install ffmpeg | choco install ffmpeg
+
+Usage:
+    python grab.py <url> [<url> ...] [--audio] [--out DIR]
+"""
+import argparse
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+from urllib.parse import urlparse
+
+
+def have(tool: str) -> bool:
+    return shutil.which(tool) is not None
+
+
+def detect(url: str) -> str:
+    host = urlparse(url).netloc.lower()
+    if "youtube.com" in host or "youtu.be" in host:
+        return "youtube"
+    if "spotify.com" in host or url.startswith("spotify:"):
+        return "spotify"
+    raise ValueError(f"Unrecognized URL: {url}")
+
+
+def dl_youtube(url: str, out: Path, audio_only: bool) -> int:
+    # Playlists drop into a subfolder; single videos sit at the root.
+    template = str(out / "%(playlist_title|)s/%(title)s [%(id)s].%(ext)s")
+    cmd = [
+        "yt-dlp",
+        "-o", template,
+        "--no-mtime",
+        "--embed-metadata",
+        "--embed-thumbnail",
+        "--ignore-errors",
+        "--retries", "10",
+    ]
+    if audio_only:
+        cmd += ["-x", "--audio-format", "mp3", "--audio-quality", "0"]
+    else:
+        # Best video+audio merged to mp4 when possible.
+        cmd += ["-f", "bv*+ba/b", "--merge-output-format", "mp4"]
+    cmd.append(url)
+    return subprocess.call(cmd)
+
+
+def dl_spotify(url: str, out: Path) -> int:
+    # spotdl pulls Spotify metadata (title/artist/album/cover) then fetches
+    # the matching audio from YouTube and tags the file.
+    cmd = [
+        "spotdl", "download", url,
+        "--output", str(out / "{artist} - {title}.{output-ext}"),
+        "--format", "mp3",
+    ]
+    return subprocess.call(cmd)
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Download YouTube/Spotify URLs.")
+    p.add_argument("urls", nargs="+", help="YouTube or Spotify URLs")
+    p.add_argument("--audio", action="store_true",
+                   help="Audio-only (mp3) for YouTube. Spotify is always audio.")
+    p.add_argument("--out", type=Path, default=Path.home() / "Downloads",
+                   help="Output directory (default: ~/Downloads)")
+    args = p.parse_args()
+
+    args.out.mkdir(parents=True, exist_ok=True)
+
+    if not have("ffmpeg"):
+        print("warning: ffmpeg not found — merging/conversion will fail", file=sys.stderr)
+
+    rc = 0
+    for url in args.urls:
+        try:
+            kind = detect(url)
+        except ValueError as e:
+            print(e, file=sys.stderr); rc = 1; continue
+
+        tool = "yt-dlp" if kind == "youtube" else "spotdl"
+        if not have(tool):
+            print(f"{tool} not found — `pip install -U {tool}`", file=sys.stderr)
+            rc = 1; continue
+
+        print(f"[{kind}] {url}  →  {args.out}")
+        result = dl_youtube(url, args.out, args.audio) if kind == "youtube" \
+                 else dl_spotify(url, args.out)
+        if result != 0:
+            rc = result
+
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

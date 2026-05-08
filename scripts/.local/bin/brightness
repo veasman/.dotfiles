@@ -1,12 +1,21 @@
 #!/usr/bin/env sh
-# brightness — adjust backlight + emit a swaync progress notification.
+# brightness — adjust backlight + render a HUD.
 #
-# Single-line format with a dim middle dot between label and value:
-# "Brightness · 75%". See ./volume for the matching pattern.
+# When swayosd-server is running, delegate to swayosd-client for a
+# small centered OSD pill. Otherwise fall back to a swaync progress
+# notification (the dim-dot pango pattern, see ./volume).
 #
 # Usage: brightness {up|down}
 
 set -eu
+
+if pgrep -x swayosd-server >/dev/null 2>&1; then
+    case "${1:-}" in
+        up)   exec swayosd-client --brightness raise ;;
+        down) exec swayosd-client --brightness lower ;;
+        *)    echo "usage: $(basename "$0") {up|down}" >&2; exit 1 ;;
+    esac
+fi
 
 STEP=5
 

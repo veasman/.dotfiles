@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VIDEO_DIR=~/Downloads
+VIDEO_DIR=~/Downloads/PO
 
 ask_delete() {
     choice=$(echo -e "Yes\nNo" | rofi -dmenu -p "Delete this video?")
