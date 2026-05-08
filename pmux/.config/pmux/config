@@ -11,5 +11,4 @@ PMUX_FIXED_PROJECTS=(
 
 PMUX_PROJECT_ROOTS=(
     "$HOME/repos"
-    "$HOME/aur"
 )

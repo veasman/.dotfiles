@@ -8,6 +8,7 @@ scripts/.local/bin/loom
 scripts/.local/bin/pmux
 scripts/.local/bin/pmux-run
 scripts/.local/bin/pmux-cheat
+scripts/.local/bin/decepticon
 
 # user-local install pointers — version-pinned absolute symlinks that
 # auto-update on every release. They aren't portable across machines

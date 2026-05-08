@@ -236,3 +236,10 @@ add-zsh-hook precmd _kara_reload_fzf
 
 pfetch
 #fastfetch
+
+# bun completions
+[ -s "/home/oracle/.bun/_bun" ] && source "/home/oracle/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
