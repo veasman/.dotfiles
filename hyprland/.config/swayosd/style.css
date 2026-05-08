@@ -1,0 +1,46 @@
+/* swayosd — kara palette HUD pill.
+ * bg=#111111, fg=#f2f2f2, accent=#6bacac, border=#353535.
+ * Compact rounded pill matching swaync's notification card style. */
+
+window#osd {
+    border-radius: 14px;
+    border: 1px solid #353535;
+    background: rgba(17, 17, 17, 0.94);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+window#osd #container {
+    margin: 12px 16px;
+}
+
+window#osd image,
+window#osd label {
+    color: #f2f2f2;
+}
+
+window#osd progressbar:disabled,
+window#osd image:disabled {
+    opacity: 0.5;
+}
+
+window#osd progressbar {
+    min-height: 6px;
+    border-radius: 999px;
+    background: transparent;
+    border: none;
+    min-width: 180px;
+}
+
+window#osd trough {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: #353535;
+}
+
+window#osd progress {
+    min-height: inherit;
+    border-radius: inherit;
+    border: none;
+    background: #6bacac;
+}

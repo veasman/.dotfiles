@@ -9,21 +9,38 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 35,
-    "spacing": 10,
-    "margin-top": 10,
+    "height": 32,
+    "spacing": 4,
+    "margin-top": 8,
     "margin-bottom": 0,
-    "margin-left": 16,
-    "margin-right": 16,
+    "margin-left": 8,
+    "margin-right": 8,
 
     "modules-left":   ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["hyprland/window"],
-    "modules-right":  ["custom/claude", "pulseaudio", "memory", "cpu", "network", "battery", "clock"],
+    "modules-right":  ["custom/claude", "pulseaudio", "memory", "custom/network", "battery", "clock"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
         "all-outputs": false,
-        "format": "{name}",
+        // Numeric labels — position alone (dots) wasn't enough to tell
+        // workspaces apart at a glance. The per-output ranges (eDP-1
+        // 1-9, DVI-I-2 11-19, DVI-I-1 21-29, DP-2 31-39) all collapse
+        // to the single visible digit 1-9 via this map. Active/urgent
+        // styling is handled in CSS via .active / .urgent so the glyph
+        // stays the digit and the pill carries the state.
+        "format": "{icon}",
+        "format-icons": {
+            "1": "1", "11": "1", "21": "1", "31": "1",
+            "2": "2", "12": "2", "22": "2", "32": "2",
+            "3": "3", "13": "3", "23": "3", "33": "3",
+            "4": "4", "14": "4", "24": "4", "34": "4",
+            "5": "5", "15": "5", "25": "5", "35": "5",
+            "6": "6", "16": "6", "26": "6", "36": "6",
+            "7": "7", "17": "7", "27": "7", "37": "7",
+            "8": "8", "18": "8", "28": "8", "38": "8",
+            "9": "9", "19": "9", "29": "9", "39": "9"
+        },
         "on-click": "activate"
     },
 
@@ -51,6 +68,7 @@
 
     "memory": {
         //  = nf-md-memory
+        "states":         { "warning": 75, "critical": 90 },
         "format": "  {}%",
         "tooltip-format": "{used:0.1f} G / {total:0.1f} G",
         "interval": 5
@@ -63,14 +81,9 @@
         "tooltip": false
     },
 
-    "network": {
-        "interface": "wlan0",
-        //  = nf-fa-wifi,  = nf-mdi-ethernet,  = nf-md-network_off
-        "format-wifi":         "  {signalStrength}%",
-        "format-ethernet":     "  {ifname}",
-        "format-disconnected": "  offline",
-        "format-linked":       "  linked",
-        "tooltip-format":      "{ifname}: {ipaddr}/{cidr}"
+    "custom/network": {
+        "exec": "waybar-network",
+        "return-type": "json"
     },
 
     "battery": {

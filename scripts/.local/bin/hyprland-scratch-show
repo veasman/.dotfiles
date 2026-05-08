@@ -1,0 +1,59 @@
+#!/usr/bin/env sh
+# hyprland-scratch-show — toggle a special workspace, respawning any
+# expected windows that have been killed since last open.
+#
+# Usage: hyprland-scratch-show <name>
+#
+# Scratchpad definitions live below as `name)` cases. Each line in the
+# `windows` block is `<app_id>|<spawn-cmd>`. The script:
+#   1. snapshots current Hyprland clients,
+#   2. for each defined window whose app_id is missing, runs the spawn
+#      cmd in the background (windowrules in hyprland.conf silently
+#      route them to the right special workspace),
+#   3. waits a tick for the spawn to map (only if anything spawned),
+#   4. toggles the special workspace.
+#
+# Adding a new scratchpad: add a `name)` block here, an autostart
+# `exec-once` in hyprland.conf, the matching windowrule, and a bind.
+
+set -eu
+
+name="${1:?usage: hyprland-scratch-show <name>}"
+
+case "$name" in
+    todo)
+        windows="scratch-todo|kara-toe-client --app-id=scratch-todo nvim $HOME/.dotfiles/personal/TODO.md
+scratch-glances|kara-toe-client --app-id=scratch-glances glances --time 5"
+        ;;
+    media)
+        windows='spotatui|kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui
+pulsemixer|kara-toe-client --app-id=pulsemixer pulsemixer'
+        ;;
+    mail)
+        windows='floorp-mail|floorp --class=floorp-mail --new-window https://outlook.cloud.microsoft/mail/'
+        ;;
+    *)
+        echo "hyprland-scratch-show: unknown scratchpad '$name'" >&2
+        exit 1
+        ;;
+esac
+
+existing=$(hyprctl clients -j 2>/dev/null | jq -r '.[].class' 2>/dev/null || true)
+
+spawned=0
+while IFS='|' read -r app_id cmd; do
+    [ -n "$app_id" ] || continue
+    if ! printf '%s\n' "$existing" | grep -qFx "$app_id"; then
+        sh -c "$cmd" >/dev/null 2>&1 &
+        spawned=1
+    fi
+done <<EOF
+$windows
+EOF
+
+# Give freshly spawned windows a moment to map so the windowrule can
+# route them to the special workspace before we toggle it. Skip the
+# wait if nothing was spawned — toggling is instant in that case.
+[ "$spawned" -eq 1 ] && sleep 0.5
+
+hyprctl dispatch togglespecialworkspace "$name" >/dev/null 2>&1

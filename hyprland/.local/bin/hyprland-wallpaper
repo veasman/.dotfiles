@@ -48,12 +48,26 @@ current_path() {
     fi
 }
 
+pywal_if_enabled() {
+    # When pywal mode is on, regenerate the bar+border palette from
+    # the wallpaper we just applied. This is what makes the preview
+    # cycle re-theme the whole desktop in lockstep with the wallpaper.
+    [ -f "$STATE_DIR/pywal-enabled" ] || return 0
+    command -v hyprland-pywal >/dev/null 2>&1 || return 0
+    hyprland-pywal apply "$1" >/dev/null 2>&1 || true
+}
+
 apply() {
     p="$1"
     [ -f "$p" ] || return 1
     hyprctl hyprpaper preload "$p" >/dev/null 2>&1 || true
     # Empty monitor name = apply to all outputs.
     hyprctl hyprpaper wallpaper ",$p" >/dev/null 2>&1 || true
+    # Keep a stable symlink for hyprlock — its config can't substitute
+    # commands or read variables, so it points at this fixed path and
+    # we re-target the symlink whenever the wallpaper changes.
+    ln -sfn "$p" "$STATE_DIR/wallpaper-lock"
+    pywal_if_enabled "$p"
 }
 
 cycle() {
@@ -79,6 +93,18 @@ cycle() {
 
     apply "$target"
     printf '%s' "$target" > "$PREVIEW_FILE"
+    refire_submap_if_needed
+}
+
+# When pywal mode is on, every cycle reloads waybar (SIGUSR2) to pick
+# up the new palette — and that wipes the hyprland/submap module's
+# display because Hyprland only fires the submap event on transitions.
+# Re-dispatching the submap after a short tick re-fires the event so
+# the bar's "wallpaper" indicator reappears while the user keeps cycling.
+# Backgrounded so the cycle command itself returns immediately.
+refire_submap_if_needed() {
+    [ -f "$STATE_DIR/pywal-enabled" ] || return 0
+    ( sleep 0.25 && hyprctl dispatch submap wallpaper >/dev/null 2>&1 ) &
 }
 
 action="${1:-apply}"
@@ -101,8 +127,20 @@ case "$action" in
         p=$(current_path) || exit 0
         [ -n "$p" ] && apply "$p"
         ;;
+    pywal-on|pywal-off|pywal-toggle)
+        # Thin wrappers around hyprland-pywal so the wallpaper submap
+        # can flip pywal mode without leaving the picker context.
+        case "$action" in
+            pywal-on)     hyprland-pywal enable ;;
+            pywal-off)    hyprland-pywal disable ;;
+            pywal-toggle) hyprland-pywal toggle ;;
+        esac
+        # The toggle implies a waybar reload, which blanks the picker
+        # indicator. Refire to keep the user oriented.
+        ( sleep 0.25 && hyprctl dispatch submap wallpaper >/dev/null 2>&1 ) &
+        ;;
     *)
-        echo "usage: hyprland-wallpaper {apply|next|prev|commit|revert}" >&2
+        echo "usage: hyprland-wallpaper {apply|next|prev|commit|revert|pywal-on|pywal-off|pywal-toggle}" >&2
         exit 1
         ;;
 esac

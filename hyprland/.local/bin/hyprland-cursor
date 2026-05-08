@@ -57,9 +57,19 @@ apply() {
     hyprctl setcursor "$theme" "$SIZE" >/dev/null || return 1
     # `setcursor` updates the theme but doesn't repaint the cursor
     # surface — a stationary pointer keeps showing the old image.
-    # `forcerendererreload` re-renders all outputs (and the cursor
-    # plane along with them) so the new theme appears immediately,
-    # without needing the user to wiggle the mouse.
+    # `forcerendererreload` re-renders all outputs so the compositor-
+    # rendered cursor (over wallpaper / empty regions) updates
+    # immediately. Over running clients the cursor only refreshes on
+    # real pointer motion: clients cache the pointer surface from the
+    # last wl_pointer.enter, and there's no Wayland-level way to
+    # force them to re-query without a real input event. The previous
+    # `dispatch movecursor` jiggle didn't help — Hyprland's movecursor
+    # is absolute (so `movecursor 1 0` teleported the pointer to the
+    # top-left corner) and the teleport doesn't synthesise a
+    # pointer-enter that clients would react to.
+    # Caller must ensure the renderer is up before invoking — at
+    # session start the exec-once delays by ~0.5s so the reload is
+    # fast (running it before the renderer is ready stalls ~3s).
     hyprctl dispatch forcerendererreload >/dev/null 2>&1 || true
 }
 

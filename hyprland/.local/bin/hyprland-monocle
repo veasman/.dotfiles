@@ -82,8 +82,25 @@ case "$action" in
             hyprctl dispatch focuswindow "address:$target" >/dev/null
         else
             # Atomic swap: clear maximize on current, focus target,
-            # set maximize on target. `--batch` runs them in one IPC.
+            # set maximize on target. The explicit fullscreenstate=0
+            # step is required — skipping it (relying on Hyprland to
+            # auto-clear) drops the workspace back to tiled mode mid-
+            # cycle.
+            #
+            # Animations off around the swap so the maximize-in of the
+            # new window is instant; the keyword change has to be its
+            # own IPC because inside `--batch` it doesn't apply before
+            # the dispatch animation gets queued.
+            #
+            # `forcerendererreload` after the swap is the fix for
+            # Floorp's flickering right edge: the rapid double-configure
+            # (tiled size → max size) without animation races Floorp's
+            # buffer commit and leaves stale fragments. Forcing a full
+            # re-render once the swap has settled paints a clean frame.
+            hyprctl keyword animations:enabled 0 >/dev/null
             hyprctl --batch "dispatch fullscreenstate 0 -1; dispatch focuswindow address:$target; dispatch fullscreenstate 1 -1" >/dev/null
+            hyprctl keyword animations:enabled 1 >/dev/null
+            hyprctl dispatch forcerendererreload >/dev/null 2>&1 || true
         fi
         ;;
     is-active)

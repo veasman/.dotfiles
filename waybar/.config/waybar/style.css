@@ -56,13 +56,26 @@ window#waybar {
 #clock,
 #cpu,
 #memory,
-#network,
+#custom-network,
 #battery,
 #pulseaudio {
     padding: 0 10px;
     color:   #f2f2f2;
 }
 
-#battery.warning  { color: #ebcb8b; }
-#battery.critical { color: #bf616a; }
-#network.disconnected { color: #bf616a; }
+#custom-network.wifi-good    { color: #a3be8c; }
+#custom-network.wifi-fair    { color: #ebcb8b; }
+#custom-network.wifi-poor    { color: #bf616a; }
+#custom-network.disconnected { color: #bf616a; }
+
+#cpu.warning,
+#memory.warning,
+#battery.warning {
+    color: #ebcb8b;
+}
+
+#cpu.critical,
+#memory.critical,
+#battery.critical {
+    color: #bf616a;
+}

@@ -7,7 +7,7 @@
 
 * {
     font-family: "FiraCode Nerd Font", monospace;
-    font-size: 13px;
+    font-size: 14px;
     color: #f2f2f2;
 }
 
@@ -50,7 +50,7 @@
 }
 
 .body {
-    color: #c5c5c5;
+    color: #e0e0e0;
 }
 
 .notification.critical {

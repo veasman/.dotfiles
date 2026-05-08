@@ -1,0 +1,71 @@
+#!/usr/bin/env sh
+# hyprland-ws-migrate — one-shot cleanup. Moves windows that still
+# live on legacy global workspaces 1-9 (created before the per-output
+# range rules in hyprland.conf) into the equivalent per-output
+# workspace on whichever monitor each legacy workspace is currently
+# showing on.
+#
+# Background: when we switched from native `bind = $mod, N, workspace, N`
+# to `hyprland-ws switch N` (which dispatches to N+10*monitor_index),
+# any windows already on ws 1..9 stayed there. With the workspace rule
+# `r[1-9], monitor:eDP-1` bound only to the laptop screen, those
+# orphaned workspaces float onto whichever monitor Hyprland picks when
+# eDP-1 is disabled — and waybar's format-icons map collapses both
+# the orphan id and its per-output equivalent to the same digit, so
+# the bar shows phantom duplicates.
+#
+# This walks each id-1..9 workspace, looks up its current monitor,
+# and silently rehomes every client to base+id (e.g. ws 2 on DVI-I-1
+# → ws 22). Idempotent — running it after a clean migration is a no-op.
+
+set -eu
+
+base_for() {
+    case "$1" in
+        eDP-1)   printf '0'  ;;
+        DVI-I-2) printf '10' ;;
+        DVI-I-1) printf '20' ;;
+        DP-2)    printf '30' ;;
+        *)       printf '-1' ;;
+    esac
+}
+
+ws_data=$(hyprctl workspaces -j)
+clients=$(hyprctl clients -j)
+
+# Pull "<id> <monitor>" for every legacy workspace that still has
+# windows. Bail early if there's nothing to do.
+legacy=$(printf '%s' "$ws_data" \
+    | jq -r '.[] | select(.id >= 1 and .id <= 9 and .windows > 0) | "\(.id) \(.monitor)"')
+
+if [ -z "$legacy" ]; then
+    echo "nothing to migrate."
+    exit 0
+fi
+
+printf '%s\n' "$legacy" | while read -r id monitor; do
+    base=$(base_for "$monitor")
+    if [ "$base" = "-1" ]; then
+        echo "skip ws $id: unknown monitor '$monitor'" >&2
+        continue
+    fi
+    if [ "$base" = "0" ]; then
+        # Already in eDP-1's native range; nothing to remap to.
+        continue
+    fi
+
+    target=$((base + id))
+
+    # Snapshot client addresses on this workspace, then move each.
+    # movetoworkspacesilent keeps focus where it is so the migration
+    # doesn't yank the user around.
+    printf '%s' "$clients" \
+        | jq -r --argjson ws "$id" '.[] | select(.workspace.id == $ws) | .address' \
+        | while read -r addr; do
+            hyprctl dispatch movetoworkspacesilent "$target,address:$addr" \
+                >/dev/null 2>&1 || true
+            echo "  $addr  ws $id → ws $target ($monitor)"
+        done
+done
+
+echo "done."

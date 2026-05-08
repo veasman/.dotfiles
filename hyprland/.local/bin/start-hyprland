@@ -19,4 +19,22 @@ fi
 mkdir -p "$HOME/.cache/hypr"
 LOG="$HOME/.cache/hypr/start-hyprland.log"
 
+# Cleanup stale state from a prior session. Symptom this fixes:
+# starting Hyprland a second time in the same boot — waybar took ~30s
+# to paint, hypridle was running twice, and /run/user/$UID/hypr/ kept
+# accumulating <sig>/ dirs from dead instances. Hyprland's exec-once
+# fires fresh per session, but processes spawned by it (waybar,
+# hypridle, hyprpaper, swaync, kara-toe --server) don't always die
+# with the compositor. The leftovers race the new session for sockets
+# / dbus names / config inotify slots and stall first paint.
+#
+# We're in a TTY (refused to nest above), so no live Wayland session
+# can be holding any of this — safe to nuke unconditionally.
+RUNTIME_HYPR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr"
+for proc in waybar hypridle hyprpaper hyprlock swaync; do
+    pkill -x "$proc" 2>/dev/null || true
+done
+pkill -f 'kara-toe --server' 2>/dev/null || true
+[ -d "$RUNTIME_HYPR" ] && find "$RUNTIME_HYPR" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
+
 exec /usr/bin/start-hyprland "$@" >> "$LOG" 2>&1

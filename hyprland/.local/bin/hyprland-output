@@ -1,0 +1,70 @@
+#!/usr/bin/env sh
+# hyprland-output — spatial cross-monitor focus / move with wraparound.
+#
+# Hyprland's native `focusmonitor l/r` and `movewindow mon:l/r` step
+# directionally based on monitor X coords but do NOT wrap — at the
+# leftmost monitor `l` is a no-op, which means you have to reach for
+# the opposite key to bounce back across three monitors. This helper
+# sorts monitors by X position, finds the focused one, walks one step
+# left or right with modular wrap, then dispatches by monitor name so
+# you can keep tapping the same key to cycle through every output.
+#
+# Usage:
+#   hyprland-output focus  (l|r)   focus next monitor in that direction
+#   hyprland-output move   (l|r)   move focused window to that monitor
+#                                  (focus follows so you can keep tiling)
+
+set -eu
+
+usage='usage: hyprland-output (focus|move) (l|r)'
+action="${1:?$usage}"
+dir="${2:?$usage}"
+
+data=$(hyprctl monitors -j)
+focused=$(printf '%s' "$data" | jq -r '.[] | select(.focused) | .name')
+# Sort by X so "next right" means physically right on the desk regardless
+# of the order Hyprland enumerated outputs in.
+list=$(printf '%s' "$data" | jq -r 'sort_by(.x) | .[].name')
+n=$(printf '%s\n' "$list" | wc -l)
+
+[ "$n" -le 1 ] && exit 0   # one monitor, nowhere to go
+
+idx=$(printf '%s\n' "$list" | grep -nFx "$focused" | cut -d: -f1)
+idx=$((idx - 1))
+
+case "$dir" in
+    l) idx=$(( (idx - 1 + n) % n )) ;;
+    r) idx=$(( (idx + 1) % n )) ;;
+    *) echo "$usage" >&2; exit 1 ;;
+esac
+
+target=$(printf '%s\n' "$list" | sed -n "$((idx + 1))p")
+
+# Warp the cursor to the center of the target monitor after focus
+# changes hands. Hyprland's `cursor:warp_on_change_workspace = true`
+# handles in-monitor workspace switches but `focusmonitor` itself
+# doesn't move the cursor — without this you end up with keyboard
+# focus on monitor B and the pointer still hovering monitor A, so
+# any incidental click hits the wrong screen.
+warp_cursor_to() {
+    coords=$(printf '%s' "$data" \
+        | jq -r --arg m "$1" '.[] | select(.name==$m)
+                              | "\((.x + (.width / .scale)/2) | floor) \((.y + (.height / .scale)/2) | floor)"')
+    [ -n "$coords" ] && hyprctl dispatch movecursor $coords >/dev/null
+}
+
+case "$action" in
+    focus)
+        hyprctl dispatch focusmonitor "$target" >/dev/null
+        warp_cursor_to "$target"
+        ;;
+    move)
+        # Move the window AND follow it so the next bind acts on the
+        # same window in its new home (matches sway's `move container`
+        # behavior with focus_follows_focus).
+        hyprctl dispatch movewindow mon:"$target" >/dev/null
+        hyprctl dispatch focusmonitor "$target"  >/dev/null
+        warp_cursor_to "$target"
+        ;;
+    *) echo "$usage" >&2; exit 1 ;;
+esac

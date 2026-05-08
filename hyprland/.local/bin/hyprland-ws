@@ -18,8 +18,9 @@
 
 set -eu
 
-cmd="${1:?usage: hyprland-ws {switch|move} <N>}"
-n="${2:?usage: hyprland-ws {switch|move} <N>}"
+usage='usage: hyprland-ws (switch|move) <N>'
+cmd="${1:?$usage}"
+n="${2:?$usage}"
 
 monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 case "$monitor" in
