@@ -77,8 +77,8 @@
     "custom/claude": {
         "format": "{}",
         "exec": "claude-usage",
-        "interval": 30,
-        "tooltip": false
+        "return-type": "json",
+        "interval": 180
     },
 
     "custom/network": {

@@ -1,24 +1,30 @@
 #!/usr/bin/env bash
-# claude-usage — Claude 5-hour usage for a status bar module.
+# claude-usage — Claude usage for a waybar module, across all teamclaude accounts.
 #
-# Output format: "{icon} {pct}% · {time_to_reset}"
-# Example: "󰫢 63% · 1h23m"
+# Emits waybar JSON: {"text", "tooltip", "class"}.
+#   text:    compact per-account session %, e.g. "󰫢 charlton 0% · sochtyt 2%"
+#   tooltip: pango table of session + weekly limits (and reset times) per account
+#   class:   "critical" / "warning" / "ok" based on the worst utilization seen
 #
-# Caches the most recent successful read at $XDG_CACHE_HOME/claude-usage/last
-# (two lines: percentage on line 1, ISO resets_at on line 2). On API
-# failure (rate limit, brief network outage, expired token between
-# refreshes), falls back to those cached values — the bar module
-# stays visible with the most recent percentage and a fresh
-# countdown derived from the cached reset timestamp.
+# Accounts come from teamclaude's config (~/.config/teamclaude.json). Each
+# account's stored OAuth access token is used to query the usage endpoint.
+# teamclaude keeps those tokens fresh as it proxies, so they are normally
+# valid; if a per-account read fails (expired token between refreshes, brief
+# network outage, rate limit), that account falls back to its last cached
+# values so the module never goes blank.
+#
+# Falls back to single-account mode (~/.claude/.credentials.json) when no
+# teamclaude config is present.
 #
 # Always exits 0 so waybar's poller never marks the slot as failed.
 
 set -u
 
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/claude-usage"
-CACHE_FILE="$CACHE_DIR/last"
+TC_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/teamclaude.json"
 CREDS="$HOME/.claude/.credentials.json"
 URL="https://api.anthropic.com/api/oauth/usage"
+PROFILE_URL="https://api.anthropic.com/api/oauth/profile"
 
 # nf-md-star-four-points (U+F0AE2) — Gemini-style four-point twinkle.
 # Bash's $'\U…' wants exactly 8 hex digits; pad U+F0AE2 to 000F0AE2.
@@ -26,8 +32,8 @@ ICON=$'\U000F0AE2'
 
 mkdir -p "$CACHE_DIR"
 
-# Format an ISO-8601 reset timestamp into a compact "1h23m" / "47m"
-# countdown. Outputs nothing if already past or unparseable.
+# Format an ISO-8601 timestamp into a compact "1h23m" / "47m" countdown.
+# Outputs nothing if already past or unparseable.
 human_until() {
     local iso="$1"
     [ -z "$iso" ] || [ "$iso" = "null" ] && return 0
@@ -40,55 +46,136 @@ human_until() {
 
     h=$((delta / 3600))
     m=$(((delta % 3600) / 60))
-    if [ "$h" -gt 0 ]; then
+    if [ "$h" -ge 24 ]; then
+        printf '%dd%dh' "$((h / 24))" "$((h % 24))"
+    elif [ "$h" -gt 0 ]; then
         printf '%dh%dm' "$h" "$m"
     else
         printf '%dm' "$m"
     fi
 }
 
-# Emit a formatted line and exit 0.
-emit() {
-    local pct="$1" iso="$2"
-    local until
-    until=$(human_until "$iso")
-    if [ -n "$until" ]; then
-        printf '%s %s · %s\n' "$ICON" "$pct" "$until"
+# Round a utilization number (0-100) to an integer percent string, "?" if blank.
+pct_fmt() {
+    local v="$1"
+    [ -z "$v" ] || [ "$v" = "null" ] && { printf '?'; return; }
+    printf '%.0f%%' "$v"
+}
+
+# Numeric (integer) utilization for class thresholds; -1 if unknown.
+pct_num() {
+    local v="$1"
+    [ -z "$v" ] || [ "$v" = "null" ] && { printf '%d' -1; return; }
+    printf '%.0f' "$v"
+}
+
+# --- Gather accounts ---------------------------------------------------------
+# Build parallel arrays: ACC_TOKEN[], ACC_UUID[] (cache key + email lookup).
+declare -a ACC_TOKEN ACC_UUID
+if [ -f "$TC_CONFIG" ]; then
+    while IFS=$'\t' read -r tok uuid; do
+        [ -n "$tok" ] || continue
+        ACC_TOKEN+=("$tok")
+        ACC_UUID+=("${uuid:-acct$((${#ACC_UUID[@]} + 1))}")
+    done < <(jq -r '.accounts[]? | [.accessToken, (.accountUuid // .name // "")] | @tsv' "$TC_CONFIG" 2>/dev/null)
+fi
+
+# Single-account fallback when teamclaude isn't configured.
+if [ "${#ACC_TOKEN[@]}" -eq 0 ] && [ -f "$CREDS" ]; then
+    tok=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS" 2>/dev/null)
+    [ -n "$tok" ] && { ACC_TOKEN+=("$tok"); ACC_UUID+=("default"); }
+fi
+
+# Nothing to report.
+if [ "${#ACC_TOKEN[@]}" -eq 0 ]; then
+    printf '{"text":"%s ?","tooltip":"no Claude accounts configured","class":"unknown"}\n' "$ICON"
+    exit 0
+fi
+
+# --- Per-account email label (cached by uuid) --------------------------------
+# Returns the local-part of the account email (cheap, stable). Fetches the
+# profile once per account and caches "<uuid>\t<email>" lines in emails file.
+EMAIL_CACHE="$CACHE_DIR/emails"
+account_label() {
+    local uuid="$1" token="$2" email=""
+    if [ -f "$EMAIL_CACHE" ]; then
+        email=$(awk -F'\t' -v u="$uuid" '$1==u{print $2; exit}' "$EMAIL_CACHE")
+    fi
+    if [ -z "$email" ]; then
+        email=$(curl -sf --max-time 5 \
+            -H "Authorization: Bearer $token" \
+            -H "anthropic-beta: oauth-2025-04-20" \
+            "$PROFILE_URL" 2>/dev/null | jq -r '.account.email // .email // empty' 2>/dev/null)
+        if [ -n "$email" ]; then
+            # Replace any existing line for this uuid, then append.
+            { [ -f "$EMAIL_CACHE" ] && grep -v "^${uuid}	" "$EMAIL_CACHE"; \
+              printf '%s\t%s\n' "$uuid" "$email"; } > "$EMAIL_CACHE.tmp" 2>/dev/null \
+              && mv "$EMAIL_CACHE.tmp" "$EMAIL_CACHE"
+        fi
+    fi
+    local local_part="${email%%@*}"
+    printf '%s' "${local_part%%.*}"
+}
+
+# --- Query each account ------------------------------------------------------
+text_parts=()
+tooltip_parts=()
+worst=-1
+
+for i in "${!ACC_TOKEN[@]}"; do
+    token="${ACC_TOKEN[$i]}"
+    uuid="${ACC_UUID[$i]}"
+    cache="$CACHE_DIR/$uuid"
+
+    label=$(account_label "$uuid" "$token")
+    [ -n "$label" ] || label="acct$((i + 1))"
+
+    resp=$(curl -sf --max-time 6 \
+        -H "Authorization: Bearer $token" \
+        -H "anthropic-beta: oauth-2025-04-20" \
+        "$URL" 2>/dev/null)
+
+    if [ -n "$resp" ]; then
+        s_util=$(jq -r '.five_hour.utilization // empty' <<<"$resp" 2>/dev/null)
+        s_reset=$(jq -r '.five_hour.resets_at // empty' <<<"$resp" 2>/dev/null)
+        w_util=$(jq -r '.seven_day.utilization // empty' <<<"$resp" 2>/dev/null)
+        w_reset=$(jq -r '.seven_day.resets_at // empty' <<<"$resp" 2>/dev/null)
+        printf '%s\n%s\n%s\n%s\n' "$s_util" "$s_reset" "$w_util" "$w_reset" >"$cache"
+    elif [ -s "$cache" ]; then
+        s_util=$(sed -n '1p' "$cache"); s_reset=$(sed -n '2p' "$cache")
+        w_util=$(sed -n '3p' "$cache"); w_reset=$(sed -n '4p' "$cache")
+        label="$label*"   # mark as stale/cached
     else
-        printf '%s %s\n' "$ICON" "$pct"
+        s_util=""; s_reset=""; w_util=""; w_reset=""
     fi
-    exit 0
-}
 
-emit_cached() {
-    if [ -s "$CACHE_FILE" ]; then
-        local pct iso
-        pct=$(sed -n '1p' "$CACHE_FILE")
-        iso=$(sed -n '2p' "$CACHE_FILE")
-        emit "${pct:-?}" "$iso"
-    fi
-    printf '%s ?\n' "$ICON"
-    exit 0
-}
+    # Track worst utilization (session or weekly) for the module class.
+    sn=$(pct_num "$s_util"); wn=$(pct_num "$w_util")
+    [ "$sn" -gt "$worst" ] && worst=$sn
+    [ "$wn" -gt "$worst" ] && worst=$wn
 
-[ -f "$CREDS" ] || emit_cached
+    # Compact bar entry: label + session %. Weekly lives in the tooltip.
+    text_parts+=("$label $(pct_fmt "$s_util")")
 
-TOKEN=$(jq -r '.claudeAiOauth.accessToken // .access_token // .token // empty' "$CREDS" 2>/dev/null)
-[ -n "$TOKEN" ] || emit_cached
+    # Tooltip block.
+    s_until=$(human_until "$s_reset"); w_until=$(human_until "$w_reset")
+    s_line="  session  $(pct_fmt "$s_util")"; [ -n "$s_until" ] && s_line+="  (resets $s_until)"
+    w_line="  weekly   $(pct_fmt "$w_util")"; [ -n "$w_until" ] && w_line+="  (resets $w_until)"
+    tooltip_parts+=("<b>${label}</b>"$'\n'"$s_line"$'\n'"$w_line")
+done
 
-RESPONSE=$(curl -sf --max-time 5 \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "anthropic-beta: oauth-2025-04-20" \
-    "$URL") || emit_cached
+# --- Assemble JSON -----------------------------------------------------------
+text="$ICON ${text_parts[0]}"
+for ((j=1; j<${#text_parts[@]}; j++)); do text+=" · ${text_parts[$j]}"; done
 
-PCT=$(echo "$RESPONSE" | jq -r '.five_hour.utilization // empty' 2>/dev/null)
-[ -n "$PCT" ] || emit_cached
+tooltip="${tooltip_parts[0]}"
+for ((j=1; j<${#tooltip_parts[@]}; j++)); do tooltip+=$'\n\n'"${tooltip_parts[$j]}"; done
 
-RESETS_AT=$(echo "$RESPONSE" | jq -r '.five_hour.resets_at // empty' 2>/dev/null)
+if   [ "$worst" -ge 90 ]; then class="critical"
+elif [ "$worst" -ge 75 ]; then class="warning"
+elif [ "$worst" -ge 0  ]; then class="ok"
+else class="unknown"; fi
 
-PCT_FMT=$(printf '%.0f%%' "$PCT")
-
-# Persist both lines (percentage, then ISO timestamp).
-printf '%s\n%s\n' "$PCT_FMT" "$RESETS_AT" > "$CACHE_FILE"
-
-emit "$PCT_FMT" "$RESETS_AT"
+jq -cn --arg text "$text" --arg tooltip "$tooltip" --arg class "$class" \
+    '{text: $text, tooltip: $tooltip, class: $class}'
+exit 0
