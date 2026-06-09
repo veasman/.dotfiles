@@ -4,9 +4,9 @@
 # Detects whether the dock's external monitors are present and picks
 # the right layout:
 #
-#   Docked (any of DVI-I-1 / DVI-I-2 / DP-2 connected):
-#     DVI-I-2  portrait-left   @ 0 0       (transform 1 = 90°)
-#     DVI-I-1  1440p center    @ 1080 0
+#   Docked (any of DVI-I-4 / DVI-I-3 / DP-2 connected):
+#     DVI-I-3  portrait-left   @ 0 0       (transform 1 = 90°)
+#     DVI-I-4  1440p center    @ 1080 0    (2560x1440@120)
 #     DP-2     portrait-right  @ 3640 0    (transform 3 = 270°)
 #     eDP-1    disabled
 #
@@ -26,7 +26,7 @@ LOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hyprland-output-profile.lock"
 exec 9>"$LOCK"
 flock -n 9 || exit 0
 
-EXTERNALS="DVI-I-1 DVI-I-2 DP-2"
+EXTERNALS="DVI-I-4 DVI-I-3 DP-2"
 
 apply_profile() {
     connected=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name' || true)
@@ -41,15 +41,15 @@ apply_profile() {
 
     if [ "$has_external" = "1" ]; then
         # Docked.
-        hyprctl keyword monitor "DVI-I-2,1920x1080,0x0,1,transform,1"   >/dev/null 2>&1 || true
-        hyprctl keyword monitor "DVI-I-1,2560x1440@144,1080x0,1"        >/dev/null 2>&1 || true
+        hyprctl keyword monitor "DVI-I-3,1920x1080,0x0,1,transform,1"   >/dev/null 2>&1 || true
+        hyprctl keyword monitor "DVI-I-4,2560x1440@120,1080x0,1"        >/dev/null 2>&1 || true
         hyprctl keyword monitor "DP-2,1920x1080,3640x0,1,transform,3"   >/dev/null 2>&1 || true
         hyprctl keyword monitor "eDP-1,disable"                         >/dev/null 2>&1 || true
         # Workspaces are persistent (declared in hyprland.conf) so
         # they self-create on each monitor at connect time. Just snap
         # focus to the center 1440p so the user lands on the main
         # work area.
-        hyprctl dispatch focusmonitor DVI-I-1                           >/dev/null 2>&1 || true
+        hyprctl dispatch focusmonitor DVI-I-4                           >/dev/null 2>&1 || true
     else
         # Undocked — laptop only.
         hyprctl keyword monitor "eDP-1,preferred,auto,1"                >/dev/null 2>&1 || true

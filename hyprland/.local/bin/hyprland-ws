@@ -3,9 +3,9 @@
 #
 # Per-output workspace ranges are defined in hyprland.conf:
 #     r[1-9]   → eDP-1
-#     r[11-19] → DVI-I-2
-#     r[21-29] → DVI-I-1
-#     r[31-39] → DP-2
+#     r[11-19] → DVI-I-3  (left AOC)
+#     r[21-29] → DVI-I-4  (center LG)
+#     r[31-39] → DP-2     (right AOC)
 #
 # This translates `mod+1..9` / `mod+Shift+1..9` into the right
 # absolute workspace ID based on which monitor is currently focused.
@@ -25,8 +25,8 @@ n="${2:?$usage}"
 monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 case "$monitor" in
     eDP-1)   base=0  ;;
-    DVI-I-2) base=10 ;;
-    DVI-I-1) base=20 ;;
+    DVI-I-3) base=10 ;;
+    DVI-I-4) base=20 ;;
     DP-2)    base=30 ;;
     *)       base=40 ;;
 esac
