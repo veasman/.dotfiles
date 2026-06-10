@@ -45,7 +45,7 @@ The bootstrap installer deploys these packages: floorp, fonts, fuzzel, git, gtk,
 Three monitors when docked, laptop alone when not:
 - `DVI-I-2` — left portrait (1920×1080, transform 1 = 90°, position 0,0). On evdi (DisplayLink).
 - `DVI-I-1` — center 1440p (2560×1440@144Hz, position 1080,0). The primary work area.
-- `DP-2` — right portrait (1920×1080, transform 3 = 270°, position 3640,0). Direct on amdgpu.
+- `DP-1` — right portrait (1920×1080, transform 3 = 270°, position 3640,0). Direct on amdgpu.
 - `eDP-1` — laptop panel; only enabled when externals are absent.
 
 ### Keybind quick-reference
@@ -57,10 +57,12 @@ Three monitors when docked, laptop alone when not:
 | `mod+e`                 | lf in kara-toe-client                            |
 | `mod+f`                 | hyprland-monocle toggle                          |
 | `mod+Shift+f`           | true fullscreen                                  |
-| `mod+j` / `mod+k`       | hyprland-monocle cycle (J=prev, K=next)          |
+| `mod+j` / `mod+k`       | hyprland-monocle cycle (J=next, K=prev)          |
 | `mod+h` / `mod+l`       | hyprland-output focus L/R (wraps)                |
 | `mod+Shift+h` / `+l`    | hyprland-output move + follow                    |
-| `mod+Shift+Return`      | layoutmsg swapwithmaster                         |
+| `mod+Shift+Return`      | layoutmsg swapsplit (swap active ↔ sibling)      |
+| `mod+[` / `mod+]`       | layoutmsg splitratio ∓0.05                       |
+| `mod+p`                 | pseudo (pseudotile toggle)                       |
 | `mod+t`                 | hyprland-float-toggle                            |
 | `mod+q`                 | killactive                                       |
 | `mod+1`–`mod+9`         | hyprland-ws switch (per-output)                  |
@@ -81,7 +83,7 @@ Three monitors when docked, laptop alone when not:
 The `hyprland/` stow package is the only session — there is no fallback compositor in this repo. Launched from the TTY via `start-hyprland`.
 
 Layout:
-- `hyprland/.config/hypr/hyprland.conf` — main config (master layout, per-output workspace ranges, special-workspace scratchpads with dim+blur, cursor warp on workspace change + monitor focus, snappy animations).
+- `hyprland/.config/hypr/hyprland.conf` — main config (dwindle/fibonacci layout, per-output workspace ranges, special-workspace scratchpads with dim+blur, cursor warp on workspace change + monitor focus, snappy animations).
 - `hyprland/.config/hypr/hyprpaper.conf` — wallpaper daemon config.
 - `hyprland/.config/hypr/hypridle.conf` — idle orchestration (lock at 10m, DPMS at 15m, suspend at 30m).
 - `hyprland/.config/hypr/hyprlock.conf` — lock screen (themed, blurred wallpaper backdrop).
@@ -90,12 +92,12 @@ Layout:
 - `hyprland/.config/fuzzel/fuzzel-hyprland.ini` — Hyprland-side fuzzel theme (rounded, translucent).
 - `hyprland/.config/waybar/hyprland.jsonc` + `hyprland-style.css` — separate waybar config (pillier theme, gruvbox hard).
 - `hyprland/.local/bin/start-hyprland` — TTY launcher.
-- `hyprland/.local/bin/hyprland-monocle` — kara-style monocle via `fullscreenstate 1` (maximize). Bar/gaps/borders stay; cycle-next/prev atomically swap maximize state to the next leaf in one IPC call. **Bind direction**: `mod+J` → `cycle-prev`, `mod+K` → `cycle-next` (the user's "j is down the stack, k is up the stack" — *do not* re-swap without re-testing).
+- `hyprland/.local/bin/hyprland-monocle` — kara-style monocle via `fullscreenstate 1` (maximize). Bar/gaps/borders stay; cycle-next/prev atomically swap maximize state to the next leaf in one IPC call. **Bind direction**: `mod+J` → `cycle-next`, `mod+K` → `cycle-prev` (the user's "j is down the stack, k is up the stack" — flipped 2026-06-10 alongside the master→dwindle switch, since dwindle's leaf order inverts the perceived direction; *do not* re-swap without re-testing).
 - `hyprland/.local/bin/hyprland-float-toggle` — mod+t replacement that sizes (~70x75%) and centers.
 - `hyprland/.local/bin/hyprland-wallpaper` — preview-cycle wallpaper picker driven by the `wallpaper` submap (mod+Shift+w). Pushes via `hyprctl hyprpaper`; persists selection to `~/.local/state/hypr/wallpaper-current`.
 - `hyprland/.local/bin/hyprland-cursor` — analogous cursor-theme picker driven by the `cursor` submap (mod+Shift+c). Pushes via `hyprctl setcursor`; persists to `~/.local/state/hypr/cursor-current`.
-- `hyprland/.local/bin/hyprland-output-profile` — docked vs. undocked monitor profile + hot-plug handler. Detects `DVI-I-1`/`DVI-I-2`/`DP-2` presence at startup and applies the dock layout (DVI-I-2 left portrait `transform 1`, DVI-I-1 1440p center, DP-2 right portrait `transform 3`, eDP-1 disabled); falls back to eDP-1-only when undocked. Snaps focus to DVI-I-1 in docked mode so autostarts (floorp) and any toggled scratchpad land on the main work area. Subscribes to Hyprland's `socket2` event stream for `monitoradded`/`monitorremoved` so plug/unplug re-applies automatically. Single-instance via `flock` on `${XDG_RUNTIME_DIR}/hyprland-output-profile.lock`.
-- `hyprland/.local/bin/hyprland-ws` — per-output workspace switcher. `mod+1..9` / `mod+Shift+1..9` translate to absolute IDs based on focused monitor (eDP-1=1-9, DVI-I-2=11-19, DVI-I-1=21-29, DP-2=31-39). Workspaces are created **on demand** (we tried `persistent:true` and rolled back — when a bound monitor was disabled, the persistent workspaces fell back onto whichever monitor was active and duplicated the per-output digits in the bar). Waybar's `format-icons` map collapses each range to its visible digit so every monitor reads as 1-9.
+- `hyprland/.local/bin/hyprland-output-profile` — docked vs. undocked monitor profile + hot-plug handler. Detects `DVI-I-1`/`DVI-I-2`/`DP-1` presence at startup and applies the dock layout (DVI-I-2 left portrait `transform 1`, DVI-I-1 1440p center, DP-1 right portrait `transform 3`, eDP-1 disabled); falls back to eDP-1-only when undocked. Snaps focus to DVI-I-1 in docked mode so autostarts (floorp) and any toggled scratchpad land on the main work area. Subscribes to Hyprland's `socket2` event stream for `monitoradded`/`monitorremoved` so plug/unplug re-applies automatically. Single-instance via `flock` on `${XDG_RUNTIME_DIR}/hyprland-output-profile.lock`.
+- `hyprland/.local/bin/hyprland-ws` — per-output workspace switcher. `mod+1..9` / `mod+Shift+1..9` translate to absolute IDs based on focused monitor (eDP-1=1-9, DVI-I-2=11-19, DVI-I-1=21-29, DP-1=31-39). Workspaces are created **on demand** (we tried `persistent:true` and rolled back — when a bound monitor was disabled, the persistent workspaces fell back onto whichever monitor was active and duplicated the per-output digits in the bar). Waybar's `format-icons` map collapses each range to its visible digit so every monitor reads as 1-9.
 - `hyprland/.local/bin/hyprland-output` — spatial cross-monitor focus / move with wraparound. `mod+H/L` and `mod+Shift+H/L` go through here instead of the bare `focusmonitor l/r`, which doesn't wrap on three monitors. Also issues a `movecursor` to the destination monitor's center so keyboard focus and pointer stay together (Hyprland's `cursor:warp_on_change_workspace` handles in-monitor switches but `focusmonitor` itself doesn't warp).
 - `hyprland/.local/bin/hyprland-ws-migrate` — one-shot cleanup. Walks every legacy global ws 1-9 that still has windows, looks up each one's current monitor, and silently rehomes its clients to the per-output equivalent (e.g. ws 2 on DVI-I-1 → ws 22). Idempotent. Useful after switching from Hyprland's native global workspaces to per-output ranges, or after any session where output-profile dispatched a workspace from the wrong focus context.
 
