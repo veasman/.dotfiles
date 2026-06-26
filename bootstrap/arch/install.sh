@@ -34,6 +34,7 @@ REPOS_DIR="${REPOS_DIR:-$HOME/repos}"
 
 SIGIL_REPO="${SIGIL_REPO:-git@github.com:veasman/sigil.git}"
 PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
+HERMES_REPO="${HERMES_REPO:-https://github.com/NousResearch/hermes-agent.git}"
 
 # TODO: loom-rs is not yet packaged — uncomment when ready
 # LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
@@ -42,6 +43,7 @@ PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 SIGIL_DIR="$REPOS_DIR/sigil"
 PMUX_DIR="$REPOS_DIR/pmux"
 PARU_DIR="$REPOS_DIR/paru"
+HERMES_DIR="$HOME/.hermes/hermes-agent"
 
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
 LOG_FILE="$LOG_DIR/install.log"
@@ -514,6 +516,30 @@ install_pmux() {
     run_shell "cd '$PMUX_DIR' && make install"
 }
 
+install_hermes() {
+    HERMES_BASE="$(dirname "$HERMES_DIR")"
+    run_cmd mkdir -p "$HERMES_BASE"
+
+    clone_or_update_repo "$HERMES_REPO" "$HERMES_DIR"
+
+    if [[ ! -d "$HERMES_DIR/venv" ]]; then
+        run_shell "cd '$HERMES_DIR' && python3 -m venv venv && source venv/bin/activate && pip install -e ."
+    fi
+
+    local cfg_dst="$HOME/.hermes/config.yaml"
+    local cfg_src="$DOTFILES_DIR/hermes/config.yaml.example"
+    if [[ ! -f "$cfg_dst" ]] && [[ -f "$cfg_src" ]]; then
+        run_cmd cp "$cfg_src" "$cfg_dst"
+    fi
+
+    local env_dst="$HOME/.hermes/.env"
+    local env_src="$DOTFILES_DIR/hermes/.env.template"
+    if [[ ! -f "$env_dst" ]] && [[ -f "$env_src" ]]; then
+        run_cmd cp "$env_src" "$env_dst"
+        run_cmd chmod 600 "$env_dst"
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Stow dotfiles
 # ---------------------------------------------------------------------------
@@ -559,6 +585,7 @@ stow_dotfiles() {
         fuzzel
         git
         gtk
+        hermes
         hyprland
         latex
         nvim
@@ -651,6 +678,27 @@ tampermonkey_reminder() {
 "Tampermonkey backup detected:\n$zip\n\nImport it manually inside Floorp:\n1) Open Floorp\n2) Open Tampermonkey dashboard\n3) Utilities -> Import\n4) Select the zip file" 18 100
 }
 
+hermes_post() {
+    local env_file="$HOME/.hermes/.env"
+    [[ -f "$env_file" ]] || return 0
+
+    if grep -q 'sk-or-v1-xxx' "$env_file" 2>/dev/null; then
+        warn "Hermes API keys not configured"
+        whiptail --title "Hermes API Keys" --msgbox \
+"Edit ~/.hermes/.env and add your API keys:
+
+  OPENROUTER_API_KEY   — required (all LLM routes through OpenRouter)
+  BRAVE_SEARCH_API_KEY  — required for web search
+  FREEFLLMAPI_API_KEY   — required for free-tier (Kimi K2.6)
+
+Get keys at:
+  https://openrouter.ai/keys
+  https://brave.com/search/api/
+
+After saving, verify with: hermes model --list" 20 80
+    fi
+}
+
 post_install_notes() {
     local warns="none"
     if [[ "${#WARNINGS[@]}" -gt 0 ]]; then
@@ -667,6 +715,9 @@ Next steps:
 - If Tailscale is not connected yet, run: sudo tailscale up
 - Run: docker run hello-world after re-login to confirm Docker group access
 - Open Floorp and manually import the Tampermonkey backup if you want it
+- Edit ~/.hermes/.env to add your API keys if prompted
+- Run: hermes model --list  (verify Hermes is working)
+- Run: hermes-setup --all   (optional: gateway cron for kanban dispatch)
 - Reboot if graphics/input acts stupid
 "
 
@@ -750,6 +801,9 @@ main() {
     # step 78 "Installing loom"
     # install_loom
 
+    step 76 "Installing Hermes agent"
+    install_hermes
+
     step 80 "Stowing dotfiles"
     stow_dotfiles
 
@@ -778,6 +832,7 @@ main() {
 
     tailscale_post
     tampermonkey_reminder
+    hermes_post
     post_install_notes
 
     log "=== artix bootstrap end ==="

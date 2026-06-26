@@ -1,0 +1,3 @@
+\.stow-local-ignore
+config\.yaml\.example$
+\.env\.template$

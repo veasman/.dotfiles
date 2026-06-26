@@ -1,0 +1,160 @@
+# ── Hermes Agent CLI Configuration ──────────────────────────────────────
+# Copy this file to ~/.hermes/config.yaml and customize as needed.
+# Environment variables in ~/.hermes/.env take precedence over this file.
+#
+#   cp config.yaml.example ~/.hermes/config.yaml
+#
+# This file contains NO secrets — only model/provider routing and agent settings.
+
+model:
+  # Default model (overridable with --model flag)
+  default: deepseek/deepseek-v4-flash
+
+  # Inference provider:
+  #   openrouter    — OpenRouter (requires: OPENROUTER_API_KEY)
+  #   nous          — Nous Portal OAuth (requires: hermes login)
+  #   anthropic     — Direct Anthropic API (requires: ANTHROPIC_API_KEY)
+  #   openai-codex  — OpenAI Codex (requires: hermes auth)
+  #   copilot       — GitHub Copilot (requires: GITHUB_TOKEN)
+  #   gemini        — Google AI Studio direct (requires: GOOGLE_API_KEY)
+  #   ollama        — Local Ollama (http://localhost:11434/v1)
+  #   freellmapi    — Local FreeLLMAPI proxy (http://localhost:3001/v1)
+  #   custom        — Any OpenAI-compatible endpoint
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+  api_mode: chat_completions
+  context_length: 200000
+  ollama_num_ctx: 65536
+
+providers:
+  # FreeLLMAPI — Docker proxy at localhost:3001, routes to Cloudflare Workers AI
+  freellmapi:
+    base_url: http://localhost:3001/v1
+    key_env: FREEFLLMAPI_API_KEY
+    transport: openai_chat
+
+  # Local Ollama — open-source models running locally
+  ollama:
+    base_url: http://localhost:11434/v1
+    transport: openai_chat
+    models:
+      qwen2.5:7b-64k:
+        context_length: 65536
+      qwen2.5-coder:14b-64k:
+        context_length: 65536
+      hf.co/Qwen/Qwen3-4B-GGUF:Q5_K_M:
+        context_length: 32768
+
+# Fallback provider when primary is unavailable (rate-limited, overloaded)
+fallback_providers:
+  - provider: freellmapi
+
+# ── Agent behavior ──────────────────────────────────────────────────────
+agent:
+  max_turns: 150
+  gateway_timeout: 1800
+  restart_drain_timeout: 180
+  api_max_retries: 3
+  service_tier: ""
+  tool_use_enforcement: auto
+  task_completion_guidance: true
+  parallel_tool_call_guidance: true
+  environment_probe: true
+  coding_context: auto
+  reasoning_effort: medium
+  image_input_mode: auto
+  disabled_toolsets: []
+  verbose: false
+
+# ── Toolsets ────────────────────────────────────────────────────────────
+toolsets:
+  - hermes-cli
+
+# ── Display ─────────────────────────────────────────────────────────────
+display:
+  compact: false
+  interface: cli
+  streaming: true
+  show_cost: true
+  show_reasoning: false
+  inline_diffs: true
+  file_mutation_verifier: true
+  tui_status_indicator: kaomoji
+  busy_input_mode: interrupt
+  final_response_markdown: strip
+
+# ── Web / Browser ───────────────────────────────────────────────────────
+web:
+  backend: brave-free
+  use_gateway: false
+
+browser:
+  inactivity_timeout: 120
+  command_timeout: 30
+  engine: auto
+
+# ── Delegation (sub-agents) ─────────────────────────────────────────────
+delegation:
+  model: hf.co/Qwen/Qwen3-4B-GGUF:Q5_K_M
+  provider: ollama
+  ollama_num_ctx: 8192
+  max_iterations: 50
+  max_concurrent_children: 3
+  orchestrator_enabled: true
+  subagent_auto_approve: false
+
+# ── Terminal / Sandbox ──────────────────────────────────────────────────
+terminal:
+  backend: local
+  modal_mode: auto
+  cwd: .
+  timeout: 180
+  docker_image: nikolaik/python-nodejs:python3.11-nodejs20
+  container_cpu: 1
+  container_memory: 5120
+  container_disk: 51200
+  container_persistent: true
+  persistent_shell: true
+  lifetime_seconds: 300
+
+# ── Skills ──────────────────────────────────────────────────────────────
+skills:
+  external_dirs: []
+  template_vars: true
+  write_approval: false
+
+# ── Memory ──────────────────────────────────────────────────────────────
+memory:
+  memory_enabled: true
+  user_profile_enabled: true
+  write_approval: false
+  memory_char_limit: 2200
+  nudge_interval: 10
+  flush_min_turns: 6
+
+# ── OpenRouter ──────────────────────────────────────────────────────────
+openrouter:
+  response_cache: true
+  response_cache_ttl: 300
+  min_coding_score: 0.65
+
+# ── Kanban / Gateway ────────────────────────────────────────────────────
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 60
+  failure_limit: 2
+  auto_decompose: true
+
+gateway:
+  message_timestamps:
+    enabled: false
+  max_inbound_media_bytes: 134217728
+  strict: false
+
+# ── Pricing tiers (reference) ──────────────────────────────────────────
+# h    = @cf/moonshotai/kimi-k2.6        — Free (FreeLLMAPI proxy)
+# hh   = deepseek/deepseek-v4-flash       — ~$0.15/M tokens
+# hc   = anthropic/claude-haiku-4.5       — ~$1/M tokens
+# hhh  = anthropic/claude-sonnet-4.6      — ~$3/M tokens
+# hhhh = anthropic/claude-opus-4.8        — ~$15/M tokens
+# hr   = google/gemini-2.5-flash-lite     — Free (OpenRouter research tier)

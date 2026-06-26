@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Hermes Desktop
+GenericName=AI Assistant
+Comment=Hermes Agent desktop app — chat, sessions, skills, and tools
+Exec=hermes desktop
+Terminal=false
+Categories=Utility;AI;Development;
+Icon=hermes-desktop
+StartupNotify=true

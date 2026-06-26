@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# hermes-setup — initialize Hermes daemon services
+# Usage: hermes-setup [--gateway|--cron|--all]
+
+set -euo pipefail
+
+HERMES="$HOME/.local/bin/hermes"
+
+install_gateway() {
+  echo "→ Installing Hermes gateway as system service..."
+  sudo "$HERMES" gateway install --system --run-as-user "$(whoami)"
+  echo "  Done. Start with: sudo rc-service hermes-gateway start"
+  echo "  (or: systemctl start hermes-gateway)"
+}
+
+setup_cron_tick() {
+  echo "→ Creating ~/.local/bin/hermes-cron-tick helper..."
+  cat > "$HOME/.local/bin/hermes-cron-tick" << 'TICK'
+#!/usr/bin/env bash
+exec hermes cron tick --accept-hooks
+TICK
+  chmod +x "$HOME/.local/bin/hermes-cron-tick"
+  echo "  Created. Run every 5 min via:"
+  echo "    * (crontab)  */5 * * * * $HOME/.local/bin/hermes-cron-tick"
+  echo "    * (openrc)  Add to /etc/init.d/ with sleep loop"
+}
+
+show_status() {
+  echo "=== Hermes Setup Status ==="
+  echo -n "Gateway: "
+  "$HERMES" gateway status 2>/dev/null && echo "running" || echo "stopped"
+  echo ""
+  echo "=== Cron Jobs ==="
+  "$HERMES" cron list 2>/dev/null | head -20
+  echo ""
+  echo "=== Kanban Boards ==="
+  "$HERMES" kanban boards list 2>/dev/null
+}
+
+case "${1:-status}" in
+  --gateway) install_gateway ;;
+  --cron)    setup_cron_tick ;;
+  --all)     install_gateway; setup_cron_tick ;;
+  status)    show_status ;;
+  *)
+    echo "Usage: $0 [--gateway|--cron|--all|status]"
+    exit 1
+    ;;
+esac

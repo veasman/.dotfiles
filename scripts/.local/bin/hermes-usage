@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# hermes-usage — OpenRouter credit + session cost for waybar.
+# Emits {"text", "tooltip", "class"}.
+
+set -u
+ENV="$HOME/.hermes/.env"
+STATE="$HOME/.local/state/hermes-usage"
+CACHE_TTL=30
+
+# pom-pair_programming (U+E008) — Nerd Font. Waybar doesn't render emoji.
+ICON=$'\uE008'
+
+mkdir -p "$(dirname "$STATE")"
+
+# Source API key
+eval "$(grep '^OPENROUTER_API_KEY=' "$ENV" 2>/dev/null)"
+
+# OpenRouter credit balance
+credits_json=$(curl -sf --max-time 5 \
+  -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  https://openrouter.ai/api/v1/credits 2>/dev/null)
+
+if [ -n "$credits_json" ]; then
+  printf '%s' "$credits_json" > "$STATE"
+else
+  credits_json=$(cat "$STATE" 2>/dev/null || echo "{}")
+fi
+
+total_credits=$(jq -r '.data.total_credits // 0' <<<"$credits_json")
+total_usage=$(jq -r '.data.total_usage // 0' <<<"$credits_json")
+
+remaining=$(python3 -c "print(max(0.0, $total_credits - $total_usage))" 2>/dev/null)
+
+if [ "$(python3 -c "print('true' if $remaining > 1 else 'false')")" = "true" ]; then
+  text="$ICON \$$(python3 -c "print(f'{$remaining:.2f}')")"
+  class="ok"
+elif [ "$(python3 -c "print('true' if $remaining > 0 else 'false')")" = "true" ]; then
+  text="$ICON \$$(python3 -c "print(f'{$remaining:.2f}')")"
+  class="warning"
+else
+  text="$ICON depleted"
+  class="critical"
+fi
+
+tooltip="OpenRouter balance: \$$(python3 -c "print(f'{$remaining:.2f}')")\nUsed: \$$(python3 -c "print(f'{$total_usage:.4f}')")\nTotal purchased: \$$(python3 -c "print(f'{$total_credits:.2f}')")"
+
+jq -cn --arg text "$text" --arg tooltip "$tooltip" --arg class "$class" \
+  '{text: $text, tooltip: $tooltip, class: $class}'

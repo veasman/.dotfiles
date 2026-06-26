@@ -1,0 +1,44 @@
+#!/sbin/openrc-run
+# Portable Hermes Gateway init script.
+# Override HERMES_USER in /etc/conf.d/hermes-gateway for a different user.
+
+description="Hermes Agent Gateway — kanban dispatch + cron scheduler"
+
+: "${HERMES_USER:=oracle}"
+HERMES="/home/${HERMES_USER}/.local/bin/hermes"
+PIDFILE="/run/hermes-gateway.pid"
+HERMES_USER_HOME=$(getent passwd "$HERMES_USER" | cut -d: -f6)
+
+depend() {
+    need net
+    after docker
+}
+
+start() {
+    ebegin "Starting Hermes Gateway"
+    start-stop-daemon --start \
+        --pidfile "$PIDFILE" \
+        --user "$HERMES_USER:$HERMES_USER" \
+        --make-pidfile \
+        --background \
+        --stdout "${HERMES_USER_HOME}/.local/state/hermes-gateway.log" \
+        --stderr "${HERMES_USER_HOME}/.local/state/hermes-gateway.log" \
+        --exec "$HERMES" -- gateway run
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Hermes Gateway"
+    start-stop-daemon --stop --pidfile "$PIDFILE" --retry 2
+    eend $?
+}
+
+status() {
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+        einfo "Hermes Gateway is running (PID $(cat "$PIDFILE"))"
+        return 0
+    else
+        eerror "Hermes Gateway is not running"
+        return 1
+    fi
+}
