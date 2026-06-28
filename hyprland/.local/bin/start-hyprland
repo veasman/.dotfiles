@@ -34,7 +34,7 @@ RUNTIME_HYPR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr"
 for proc in waybar hypridle hyprpaper hyprlock swaync; do
     pkill -x "$proc" 2>/dev/null || true
 done
-pkill -f 'kara-toe --server' 2>/dev/null || true
+pkill -f 'foot --server' 2>/dev/null || true
 [ -d "$RUNTIME_HYPR" ] && find "$RUNTIME_HYPR" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
 
 exec /usr/bin/start-hyprland "$@" >> "$LOG" 2>&1
