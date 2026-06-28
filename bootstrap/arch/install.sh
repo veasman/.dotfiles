@@ -510,8 +510,8 @@ install_base_packages() {
     pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
 
     step 8 "Installing shell and terminal tools"
-    pacman_install zsh tmux fzf tree ripgrep fd jq btop \
-                   lf imv chafa glances pulsemixer
+    pacman_install zsh tmux fzf tree ripgrep fd jq htop glances \
+                   lf imv chafa pulsemixer
 
     step 12 "Installing Hyprland desktop stack"
     pacman_install \
