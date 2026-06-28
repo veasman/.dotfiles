@@ -186,7 +186,10 @@ ensure_sudo() {
         echo "[setup] sudo is required — you may be prompted for your password." >&2
     fi
 
-    sudo -v >>"$LOG_FILE" 2>&1
+    log "[sudo] prompting for password..."
+    if ! sudo -v; then
+        die_ui "sudo authentication failed. The installer needs a valid sudo session."
+    fi
     ( while true; do sudo -n true; sleep 60; done ) 2>/dev/null &
     SUDO_KEEPALIVE_PID=$!
     trap 'kill "${SUDO_KEEPALIVE_PID:-0}" 2>/dev/null || true' EXIT
