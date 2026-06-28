@@ -38,7 +38,9 @@ monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 
 # Base offset by monitor position among EXTERNAL monitors only.
 # eDP-1 (laptop) always gets base 0 regardless of its position.
-if [ "$monitor" = "eDP-1" ]; then
+# If there's only one monitor (desktop, no laptop), also use base 0.
+total_monitors=$(hyprctl monitors -j | jq length)
+if [ "$monitor" = "eDP-1" ] || [ "$total_monitors" -le 1 ]; then
     base=0
 else
     # 1-based index among non-eDP-1 monitors sorted by X:
