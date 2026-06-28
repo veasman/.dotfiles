@@ -61,6 +61,8 @@ INSTALL_MULLVAD=0
 
 WARNINGS=()
 
+WHIPTAIL_OK=0
+
 # ---------------------------------------------------------------------------
 # Init system detection
 # ---------------------------------------------------------------------------
@@ -92,13 +94,47 @@ die_ui() {
         GAUGE_OPEN=""
     fi
 
-    whiptail --title "Error" --msgbox "$msg\n\nLog:\n$LOG_FILE" 18 100
+    # Fallback to stderr when running in SSH / non-graphical session (whiptail can't open terminal)
+    if ! whiptail_run --title "Error" --msgbox "$msg\\n\\nLog:\\n$LOG_FILE" 18 100; then
+        echo "[FATAL] $msg" >&2
+        echo "  Log: $LOG_FILE" >&2
+        exit 1
+    fi
 
-    if whiptail --title "View Log" --yesno "Open install log now?" 10 60; then
-        whiptail --title "Install Log" --textbox "$LOG_FILE" 28 120
+    if whiptail_run --title "View Log" --yesno "Open install log now?" 10 60; then
+        whiptail_run --title "Install Log" --textbox "$LOG_FILE" 28 120
     fi
 
     exit 1
+}
+
+# Safe whiptail wrapper: falls back to text prompts when running
+# in a non-graphical session (SSH/tty) where whiptail can't open a terminal.
+# Returns 0 on OK/Yes, non-zero on Cancel/No, matching whiptail's convention.
+whiptail_run() {
+    # args are forwarded verbatim to whiptail
+    if [[ "$WHIPTAIL_OK" -eq 1 ]]; then
+        whiptail "$@" 2>/dev/null </dev/tty
+        return $?
+    fi
+    return 1
+}
+
+detect_terminal_ui() {
+    # Test whether whiptail can render in this terminal.
+    # Must come after ensure_whiptail so libnewt is installed.
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        return 0
+    fi
+
+    # Probe: try an invisibly small dialog. If it works, whiptail is functional.
+    if whiptail --title "" --msgbox "" 3 10 2>/dev/null </dev/tty; then
+        WHIPTAIL_OK=1
+        log "[ui] whiptail detected (WHIPTAIL_OK=1)"
+    else
+        WHIPTAIL_OK=0
+        log "[ui] whiptail not available in this terminal (WHIPTAIL_OK=0)"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -119,8 +155,12 @@ check_prerequisites() {
         die_ui "No network connectivity. Check NetworkManager."
     fi
 
-    if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 | grep -qi "success\|authenticated"; then
-        die_ui "SSH to GitHub failed.\nMake sure your SSH key is added to GitHub and ssh-agent is running."
+    local _ssh_out
+    # ssh -T to github.com always exits 1 (shell access denied) — ignore exit,
+    # check the actual output to confirm authentication.
+    _ssh_out=$(ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1) || true
+    if ! echo "$_ssh_out" | grep -qi "success\\|authenticated"; then
+        die_ui "GitHub SSH authentication failed.\\nOutput: $_ssh_out"
     fi
 }
 
@@ -138,8 +178,10 @@ require_arch() {
 ensure_sudo() {
     command -v sudo >/dev/null 2>&1 || die_ui "sudo not found"
 
-    whiptail --title "Privileges" --msgbox \
-"sudo is required.\n\nYou may be prompted in the terminal." 10 70
+    if ! whiptail_run --title "Privileges" --msgbox \
+"sudo is required.\n\nYou may be prompted in the terminal." 10 70; then
+        echo "[setup] sudo is required — you may be prompted for your password." >&2
+    fi
 
     sudo -v >>"$LOG_FILE" 2>&1
     ( while true; do sudo -n true; sleep 60; done ) 2>/dev/null &
@@ -165,6 +207,9 @@ ensure_whiptail() {
 # ---------------------------------------------------------------------------
 
 start_gauge() {
+    if [[ "$WHIPTAIL_OK" -ne 1 ]]; then
+        return 0
+    fi
     exec 4> >(whiptail --title "Dotfiles bootstrap" \
         --backtitle "Installing...  Log: $LOG_FILE" \
         --gauge "Preparing..." 10 80 0)
@@ -279,15 +324,39 @@ run_shell() {
 
 optional_prompt() {
     local result=""
-    result="$(
-        whiptail --title "Optional installs" --checklist \
-        "Choose optional software:" 18 90 7 \
-        "sunshine" "Install Sunshine (AUR)" OFF \
-        "steam" "Install Steam" OFF \
-        "mullvad" "Install Mullvad VPN (AUR)" OFF \
-        "gaming" "Gaming tweaks + gamescope/mangohud/gamemode" OFF \
-        3>&1 1>&2 2>&3
-    )" || die_ui "Aborted"
+    local items=(sunshine steam mullvad gaming)
+
+    if [[ "$WHIPTAIL_OK" -eq 1 ]]; then
+        result="$(
+            whiptail --title "Optional installs" --checklist \
+            "Choose optional software:" 18 90 7 \
+            "sunshine" "Install Sunshine (AUR)" OFF \
+            "steam" "Install Steam" OFF \
+            "mullvad" "Install Mullvad VPN (AUR)" OFF \
+            "gaming" "Gaming tweaks + gamescope/mangohud/gamemode" OFF \
+            3>&1 1>&2 2>&3
+        )" || die_ui "Aborted"
+    else
+        echo "" >&2
+        echo "Optional software (enter y/n for each):" >&2
+        for item in "${items[@]}"; do
+            local desc=""
+            case "$item" in
+                sunshine) desc="Install Sunshine (AUR)" ;;
+                steam)    desc="Install Steam" ;;
+                mullvad)  desc="Install Mullvad VPN (AUR)" ;;
+                gaming)   desc="Gaming tweaks + gamescope/mangohud/gamemode" ;;
+            esac
+            while :; do
+                local yn=""
+                read -r -p "  $desc [y/N]: " yn </dev/tty
+                case "$yn" in
+                    [yY]*) result="$result \"$item\""; break ;;
+                    [nN]*|"") break ;;
+                esac
+            done
+        done
+    fi
 
     INSTALL_SUNSHINE=0
     INSTALL_STEAM=0
@@ -777,7 +846,7 @@ tailscale_post() {
 
     warn "Tailscale is installed but not authenticated yet"
 
-    if whiptail --title "Tailscale" --yesno \
+    if whiptail_run --title "Tailscale" --yesno \
 "Run 'sudo tailscale up' now?\n\nThis will begin login/auth." 12 72; then
         if [[ "$DRY_RUN" -eq 0 ]]; then
             sudo tailscale up || warn "tailscale up did not complete successfully"
@@ -791,7 +860,7 @@ tampermonkey_reminder() {
     local zip="$DOTFILES_DIR/assets/tampermonkey/tampermonkey-backup.zip"
     [[ -f "$zip" ]] || return 0
 
-    whiptail --title "Tampermonkey reminder" --msgbox \
+    whiptail_run --title "Tampermonkey reminder" --msgbox \
 "Tampermonkey backup detected:\n$zip\n\nImport it manually inside Floorp:\n1) Open Floorp\n2) Open Tampermonkey dashboard\n3) Utilities -> Import\n4) Select the zip file" 18 100
 }
 
@@ -859,7 +928,7 @@ hermes_post() {
 
     if grep -q 'YOUR_OPENROUTER_API_KEY_HERE\|sk-or-v1-xxx' "$env_file" 2>/dev/null; then
         warn "Hermes API keys not configured"
-        whiptail --title "Hermes API Keys" --msgbox \
+        whiptail_run --title "Hermes API Keys" --msgbox \
 "Edit ~/.hermes/.env and add your API keys:
 
   OPENROUTER_API_KEY   — required (all LLM routes through OpenRouter)
@@ -913,7 +982,7 @@ Mullvad:
 "
     fi
 
-    whiptail --title "Install complete" --msgbox "$notes\nLog:\n$LOG_FILE" 28 110
+    whiptail_run --title "Install complete" --msgbox "$notes\\nLog:\\n$LOG_FILE" 28 110
 }
 
 # ---------------------------------------------------------------------------
@@ -928,6 +997,7 @@ main() {
     check_prerequisites
     ensure_sudo
     ensure_whiptail
+    detect_terminal_ui
     ensure_dirs
     optional_prompt
 
