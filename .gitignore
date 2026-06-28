@@ -38,3 +38,5 @@ scripts/.local/bin/hyprland-output-profile
 scripts/.local/bin/hyprland-wallpaper
 scripts/.local/bin/hyprland-ws
 scripts/.local/bin/hyprland-ws-migrate
+scripts/.local/bin/httpx
+scripts/.local/bin/nuclei
