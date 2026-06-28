@@ -506,8 +506,7 @@ install_base_packages() {
     pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
 
     step 8 "Installing shell and terminal tools"
-    pacman_install zsh zsh-autosuggestions zsh-fast-syntax-highlighting \
-                   tmux fzf tree ripgrep fd jq btop \
+    pacman_install zsh tmux fzf tree ripgrep fd jq btop \
                    lf imv chafa glances pulsemixer
 
     step 12 "Installing Hyprland desktop stack"
@@ -1009,6 +1008,9 @@ main() {
 
     step 44 "Installing paru (AUR helper)"
     ensure_paru
+
+    step 45 "Installing AUR zsh plugins"
+    paru_install zsh-autosuggestions zsh-fast-syntax-highlighting
 
     step 46 "Installing Floorp"
     install_floorp

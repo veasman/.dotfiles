@@ -36,7 +36,7 @@ error `#bf616a`, warn `#ebcb8b`, success `#a3be8c`
 
 - NVM is lazy-loaded via shim functions. Don't revert to eager sourcing.
 - `compinit` uses `-C` unless zcompdump is >24h old.
-- `fast-syntax-highlighting` + `zsh-autosuggestions` are AUR packages (not yet in bootstrap installer).
+- `zsh-autosuggestions` + `zsh-fast-syntax-highlighting` are installed via paru at step 45, after paru is built.
 
 ## Default to Hyprland over Sway
 
