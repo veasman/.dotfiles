@@ -18,17 +18,20 @@
 
     "modules-left":   ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["hyprland/window"],
-    "modules-right":  ["custom/claude", "pulseaudio", "memory", "custom/network", "battery", "clock"],
+    "modules-right":  ["custom/claude", "custom/audio", "memory", "custom/network", "battery", "clock"],
 
     "hyprland/workspaces": {
         "disable-scroll": true,
         "all-outputs": false,
         // Numeric labels — position alone (dots) wasn't enough to tell
-        // workspaces apart at a glance. The per-output ranges (eDP-1
-        // 1-9, DVI-I-2 11-19, DVI-I-1 21-29, DP-2 31-39) all collapse
-        // to the single visible digit 1-9 via this map. Active/urgent
-        // styling is handled in CSS via .active / .urgent so the glyph
-        // stays the digit and the pill carries the state.
+        // workspaces apart at a glance. The per-output ranges (laptop
+        // 1-9, left 11-19, center 21-29, right 31-39) all collapse to
+        // the visible digit 1-9 via this map. Connector names are NOT
+        // referenced here because DisplayLink/evdi renames them across
+        // kernel loads — the ranges are absolute and stable regardless
+        // of what the outputs happen to be called.
+        // Active/urgent styling is handled in CSS via .active / .urgent
+        // so the glyph stays the digit and the pill carries the state.
         "format": "{icon}",
         "format-icons": {
             "1": "1", "11": "1", "21": "1", "31": "1",
@@ -76,9 +79,9 @@
 
     "custom/claude": {
         "format": "{}",
-        "exec": "claude-usage",
+        "exec": "hermes-usage",
         "return-type": "json",
-        "interval": 180
+        "interval": 30
     },
 
     "custom/network": {
@@ -98,16 +101,14 @@
         "tooltip-format":  "{timeTo} ({power} W)"
     },
 
-    "pulseaudio": {
-        "format":           "{icon}  {volume}%",
-        "format-muted":     "  muted",
-        "format-bluetooth": "  {volume}%",
-        "format-icons": {
-            // low / mid / high speaker glyphs
-            "default": ["", "", ""]
-        },
+    "custom/audio": {
+        "exec": "hermes-audio",
+        "format": "{}",
+        "return-type": "json",
+        "interval": 2,
         "on-click":         "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-click-right":   "hyprctl dispatch togglespecialworkspace media",
-        "scroll-step": 5
+        "on-scroll-up":     "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down":   "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
     }
 }

@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+set -eu
+
+SINK=$(pactl get-default-sink 2>/dev/null)
+VOL=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | awk '{print int($2 * 100)}')
+MUTED=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | grep -c MUTED || true)
+
+case "$SINK" in
+    bluez_*)
+        [ "$MUTED" -gt 0 ] && ICON=" 󰝟" || ICON=""
+        ;;
+    *)
+        [ "$MUTED" -gt 0 ] && ICON="󰝟" || {
+            [ "$VOL" -lt 30 ] && ICON="󰸈" || [ "$VOL" -lt 60 ] && ICON="󰕿" || ICON="󰕾"
+        }
+        ;;
+esac
+
+if [ "$MUTED" -gt 0 ]; then
+    printf '{"text":"%s","alt":"muted"}\n' "$ICON"
+else
+    printf '{"text":"%s  %s%%","alt":"unmuted"}\n' "$ICON" "$VOL"
+fi

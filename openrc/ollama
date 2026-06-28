@@ -1,0 +1,32 @@
+#!/sbin/openrc-run
+# Portable Ollama init script.
+# Override OLLAMA_USER in /etc/conf.d/ollama for a different user.
+
+description="Ollama — Local LLM server"
+
+: "${OLLAMA_USER:=oracle}"
+pidfile="/run/ollama.pid"
+command="/usr/bin/ollama"
+command_args="serve"
+command_user="$OLLAMA_USER"
+
+depend() {
+    need net
+}
+
+start() {
+    ebegin "Starting Ollama"
+    start-stop-daemon --start --background \
+        --pidfile "$pidfile" \
+        --make-pidfile \
+        --user "$command_user" \
+        --exec "$command" \
+        -- $command_args
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping Ollama"
+    start-stop-daemon --stop --pidfile "$pidfile"
+    eend $?
+}

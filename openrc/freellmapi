@@ -1,0 +1,35 @@
+#!/sbin/openrc-run
+# Portable FreeLLMAPI init script.
+# Override FREEMAPI_USER in /etc/conf.d/freellmapi for a different user.
+
+description="FreeLLMAPI — Unified free LLM router"
+
+: "${FREEMAPI_USER:=oracle}"
+FREEMAPI_USER_HOME=$(getent passwd "$FREEMAPI_USER" | cut -d: -f6)
+FREEMAPI_DIR="${FREEMAPI_DIR:-${FREEMAPI_USER_HOME}/repos/freellmapi}"
+
+depend() {
+    need docker net
+}
+
+start() {
+    ebegin "Starting FreeLLMAPI"
+    cd "$FREEMAPI_DIR" && docker compose up -d
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping FreeLLMAPI"
+    cd "$FREEMAPI_DIR" && docker compose down
+    eend $?
+}
+
+status() {
+    if docker ps --format '{{.Names}}' | grep -q freellmapi; then
+        einfo "FreeLLMAPI is running"
+        return 0
+    else
+        eerror "FreeLLMAPI is not running"
+        return 1
+    fi
+}

@@ -540,6 +540,22 @@ install_hermes() {
     fi
 }
 
+install_freellmapi() {
+    FREEMAPI_REPO="${FREEMAPI_REPO:-https://github.com/nicepkg/freellmapi.git}"
+    FREEMAPI_DIR="$HOME/repos/freellmapi"
+
+    clone_or_update_repo "$FREEMAPI_REPO" "$FREEMAPI_DIR"
+
+    local env_src="$FREEMAPI_DIR/.env.example"
+    local env_dst="$FREEMAPI_DIR/.env"
+
+    if [[ ! -f "$env_dst" ]]; then
+        run_cmd cp "$env_src" "$env_dst"
+        run_shell "openssl rand -hex 32 | xargs -I{} sed -i 's/^ENCRYPTION_KEY=.*/ENCRYPTION_KEY={}/' '$env_dst'"
+        run_cmd chmod 600 "$env_dst"
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Stow dotfiles
 # ---------------------------------------------------------------------------
@@ -589,6 +605,7 @@ stow_dotfiles() {
         hyprland
         latex
         nvim
+        opencode
         pmux
         scripts
         shell
@@ -615,6 +632,19 @@ stow_dotfiles() {
     fi
 
     run_cmd fc-cache -f
+
+    # Install OpenRC init scripts to /etc/init.d/ (stow targets $HOME,
+    # but these must live under /etc). The pre-install phase ensures sudo
+    # is available and the user is in the wheel group.
+    if [[ -d "$DOTFILES_DIR/openrc" ]]; then
+        for init in "$DOTFILES_DIR"/openrc/*; do
+            [[ -f "$init" ]] || continue
+            local name
+            name="$(basename "$init")"
+            run_cmd sudo cp "$init" "/etc/init.d/$name"
+            run_cmd sudo chmod 755 "/etc/init.d/$name"
+        done
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -678,6 +708,58 @@ tampermonkey_reminder() {
 "Tampermonkey backup detected:\n$zip\n\nImport it manually inside Floorp:\n1) Open Floorp\n2) Open Tampermonkey dashboard\n3) Utilities -> Import\n4) Select the zip file" 18 100
 }
 
+freellmapi_post() {
+    local freemapi_dir="$HOME/repos/freellmapi"
+
+    if [[ -d "$freemapi_dir" ]]; then
+        run_shell "cd '$freemapi_dir' && docker compose up -d"
+
+        # Wait for container to come up and DB to be created
+        local container=""
+        for i in 1 2 3 4 5 6 7 8; do
+            sleep 3
+            container=$(docker ps --format '{{.Names}}' | grep freellmapi || true)
+            [[ -n "$container" ]] && break
+        done
+
+        local key=""
+        if [[ -n "$container" ]]; then
+            for i in 1 2 3 4 5; do
+                sleep 2
+                key=$(docker exec "$container" sh -c '
+                    node -e "
+                        const Database = require('"'"'better-sqlite3'"'"');
+                        const db = new Database('"'"'/app/server/data/freeapi.db'"'"');
+                        try {
+                            const row = db.prepare(\"SELECT value FROM settings WHERE key='"'"'unified_api_key'"'"'\").get();
+                            if (row) console.log(row.value);
+                        } catch(e) {}
+                    "' 2>/dev/null || true)
+                [[ -n "$key" ]] && break
+            done
+        fi
+
+        if [[ -n "$key" ]]; then
+            local opencode_config="$HOME/.config/opencode/opencode.json"
+            if [[ -f "$opencode_config" ]]; then
+                run_shell "sed -i 's/__FREEFLLMAPI_API_KEY__/$key/' '$opencode_config'"
+                log "FreeLLMAPI API key synced to opencode config"
+            fi
+            local hermes_env="$HOME/.hermes/.env"
+            if [[ -f "$hermes_env" ]]; then
+                run_shell "sed -i 's/^FREEFLLMAPI_API_KEY=.*/FREEFLLMAPI_API_KEY=$key/' '$hermes_env'"
+                log "FreeLLMAPI API key synced to Hermes .env"
+            fi
+        else
+            warn "Could not retrieve FreeLLMAPI API key — sync it manually after install"
+        fi
+    fi
+
+    if [[ -f /etc/init.d/freellmapi ]]; then
+        openrc_enable_start freellmapi 2>/dev/null || true
+    fi
+}
+
 hermes_post() {
     local env_file="$HOME/.hermes/.env"
     [[ -f "$env_file" ]] || return 0
@@ -718,6 +800,7 @@ Next steps:
 - Edit ~/.hermes/.env to add your API keys if prompted
 - Run: hermes model --list  (verify Hermes is working)
 - Run: hermes-setup --all   (optional: gateway cron for kanban dispatch)
+- FreeLLMAPI is running at localhost:3001 (API key synced to opencode/hermes configs)
 - Reboot if graphics/input acts stupid
 "
 
@@ -806,6 +889,12 @@ main() {
 
     step 80 "Stowing dotfiles"
     stow_dotfiles
+
+    step 77 "Installing FreeLLMAPI (free LLM proxy)"
+    install_freellmapi
+
+    step 78 "Starting FreeLLMAPI"
+    freellmapi_post
 
     step 90 "Setting default shell to zsh"
     ensure_zsh_default_shell
