@@ -762,6 +762,7 @@ stow_dotfiles() {
     local packages=(
         floorp
         fonts
+        foot
         fuzzel
         git
         gtk
