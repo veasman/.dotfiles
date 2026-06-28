@@ -94,7 +94,7 @@ die_ui() {
         GAUGE_OPEN=""
     fi
 
-    # Fallback to stderr when running in SSH / non-graphical session (whiptail can't open terminal)
+    # Always print to stderr as the final fallback
     if ! whiptail_run --title "Error" --msgbox "$msg\\n\\nLog:\\n$LOG_FILE" 18 100; then
         echo "[FATAL] $msg" >&2
         echo "  Log: $LOG_FILE" >&2
@@ -180,19 +180,10 @@ require_arch() {
 
 ensure_sudo() {
     command -v sudo >/dev/null 2>&1 || die_ui "sudo not found"
-
-    if ! whiptail_run --title "Privileges" --msgbox \
-"sudo is required.\n\nYou may be prompted in the terminal." 10 70; then
-        echo "[setup] sudo is required — you may be prompted for your password." >&2
+    # Credentials are cached and keepalive is running from check_sudo_early()
+    if ! sudo -n true 2>/dev/null; then
+        die_ui "sudo credentials expired despite keepalive. Try running: sudo -v"
     fi
-
-    log "[sudo] prompting for password..."
-    if ! sudo -v; then
-        die_ui "sudo authentication failed. The installer needs a valid sudo session."
-    fi
-    ( while true; do sudo -n true; sleep 60; done ) 2>/dev/null &
-    SUDO_KEEPALIVE_PID=$!
-    trap 'kill "${SUDO_KEEPALIVE_PID:-0}" 2>/dev/null || true' EXIT
 }
 
 ensure_whiptail() {
@@ -1103,5 +1094,35 @@ main() {
 
     log "=== artix bootstrap end ==="
 }
+
+# ---------------------------------------------------------------------------
+# Ensure sudo is available and credentials are cached before main()
+# ---------------------------------------------------------------------------
+check_sudo_early() {
+    command -v sudo >/dev/null 2>&1 || { echo "[FATAL] sudo not found" >&2; exit 1; }
+
+    # Check if credentials are already cached
+    if sudo -n true 2>/dev/null; then
+        echo "[setup] sudo credentials already cached." >&2
+        return 0
+    fi
+
+    echo "[setup] This installer requires sudo privileges." >&2
+    echo "[sudo] Enter your password when prompted (this prompt appears directly on your terminal)." >&2
+
+    if ! sudo -v; then
+        echo "[FATAL] sudo authentication failed. Cannot continue." >&2
+        echo "  Run 'sudo -v' manually to verify, then re-run 'make install'." >&2
+        exit 1
+    fi
+
+    echo "[setup] sudo authenticated." >&2
+}
+
+check_sudo_early
+# Start the keepalive loop now so all future sudo -n calls succeed
+( while true; do sudo -n true; sleep 60; done ) 2>/dev/null &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill "${SUDO_KEEPALIVE_PID:-0}" 2>/dev/null || true' EXIT
 
 main "$@"
