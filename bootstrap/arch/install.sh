@@ -857,7 +857,7 @@ hermes_post() {
     local env_file="$HOME/.hermes/.env"
     [[ -f "$env_file" ]] || return 0
 
-    if grep -q 'sk-or-v1-xxx' "$env_file" 2>/dev/null; then
+    if grep -q 'YOUR_OPENROUTER_API_KEY_HERE\|sk-or-v1-xxx' "$env_file" 2>/dev/null; then
         warn "Hermes API keys not configured"
         whiptail --title "Hermes API Keys" --msgbox \
 "Edit ~/.hermes/.env and add your API keys:
