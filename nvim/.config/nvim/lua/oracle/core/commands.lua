@@ -1,4 +1,4 @@
--- Legacy loom theme dispatcher was removed when the stack migrated
+-- Theme dispatched by the color plugin (oracle/plugins/colors.lua)
 -- to kara-beautify. Theme loading + the :KaraReloadTheme user
 -- command now live inside the kara.nvim plugin (spec in
 -- oracle/plugins/colors.lua) — no dotfile-level glue needed.

@@ -4,7 +4,24 @@ configuration {
     drun-display-format: "{name}";
 }
 
-@theme "~/.local/state/loom/generated/rofi-theme.rasi"
+* {
+    bg: #1b1b1b;
+    bg-alt: #111111;
+    fg: #f2f2f2;
+    fg-muted: #5c5c5c;
+    accent: #6bacac;
+    accent-fg: #111111;
+    border: #353535;
+    selection-bg: #458588;
+    selection-fg: #f2f2f2;
+    font: "FiraCode Nerd Font 11";
+    win-width: 40%;
+    pad: 10px;
+    radius: 0px;
+    lines: 8;
+    icon-size: 24px;
+    elem-spacing: 6px;
+}
 
 window {
     background-color: @bg;

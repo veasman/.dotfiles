@@ -40,3 +40,4 @@ scripts/.local/bin/hyprland-ws
 scripts/.local/bin/hyprland-ws-migrate
 scripts/.local/bin/httpx
 scripts/.local/bin/nuclei
+scripts/.local/bin/loom-ui

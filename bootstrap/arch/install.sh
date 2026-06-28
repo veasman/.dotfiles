@@ -36,10 +36,6 @@ REPOS_DIR="${REPOS_DIR:-$HOME/repos}"
 PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 HERMES_REPO="${HERMES_REPO:-https://github.com/NousResearch/hermes-agent.git}"
 
-# TODO: loom-rs is not yet packaged — uncomment when ready
-# LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
-# LOOM_DIR="$REPOS_DIR/loom"
-
 PMUX_DIR="$REPOS_DIR/pmux"
 PARU_DIR="$REPOS_DIR/paru"
 HERMES_DIR="$HOME/.hermes/hermes-agent"
@@ -839,15 +835,6 @@ ensure_zsh_default_shell() {
     fi
 }
 
-apply_default_theme() {
-    if ! command -v loom >/dev/null 2>&1; then
-        warn "loom not found in PATH; skipping default theme apply"
-        return 0
-    fi
-
-    run_shell 'loom apply gruvbox'
-}
-
 enable_bluetooth() {
     svc_enable_start bluetooth
 }
@@ -1054,10 +1041,6 @@ main() {
     step 73 "Installing pmux"
     install_pmux
 
-    # TODO: uncomment when loom-rs is packaged
-    # step 78 "Installing loom"
-    # install_loom
-
     step 76 "Installing Hermes agent"
     install_hermes
 
@@ -1072,9 +1055,6 @@ main() {
 
     step 90 "Setting default shell to zsh"
     ensure_zsh_default_shell
-
-    step 92 "Applying default theme"
-    apply_default_theme
 
     if [[ "$INSTALL_SUNSHINE" -eq 1 ]]; then
         step 94 "Installing Sunshine"
