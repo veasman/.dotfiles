@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+export GIT_TERMINAL_PROMPT=0
 
 export NEWT_COLORS='
 root=,black
@@ -32,7 +33,6 @@ fi
 DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
 REPOS_DIR="${REPOS_DIR:-$HOME/repos}"
 
-SIGIL_REPO="${SIGIL_REPO:-git@github.com:veasman/sigil.git}"
 PMUX_REPO="${PMUX_REPO:-git@github.com:veasman/pmux.git}"
 HERMES_REPO="${HERMES_REPO:-https://github.com/NousResearch/hermes-agent.git}"
 
@@ -40,7 +40,6 @@ HERMES_REPO="${HERMES_REPO:-https://github.com/NousResearch/hermes-agent.git}"
 # LOOM_REPO="${LOOM_REPO:-git@github.com:veasman/loom.git}"
 # LOOM_DIR="$REPOS_DIR/loom"
 
-SIGIL_DIR="$REPOS_DIR/sigil"
 PMUX_DIR="$REPOS_DIR/pmux"
 PARU_DIR="$REPOS_DIR/paru"
 HERMES_DIR="$HOME/.hermes/hermes-agent"
@@ -185,6 +184,12 @@ ensure_sudo() {
     if ! sudo -n true 2>/dev/null; then
         die_ui "sudo credentials expired despite keepalive. Try running: sudo -v"
     fi
+}
+
+setup_git_config() {
+    git config --global user.name "veasman"
+    git config --global user.email "charlton.moren@gmail.com"
+    log "[git] configured user.name=veasman, user.email=charlton.moren@gmail.com"
 }
 
 ensure_whiptail() {
@@ -537,9 +542,6 @@ install_base_packages() {
         pacman_install bluez bluez-utils
     fi
 
-    step 28 "Installing sigil build dependencies"
-    pacman_install libxrandr libpng
-
     step 30 "Installing system utilities"
     pacman_install \
         linux-firmware pciutils usbutils lm_sensors \
@@ -673,11 +675,6 @@ clone_or_update_repo() {
     run_shell "git clone '$repo_url' '$target_dir'"
 }
 
-install_sigil() {
-    clone_or_update_repo "$SIGIL_REPO" "$SIGIL_DIR"
-    run_shell "cd '$SIGIL_DIR' && make && sudo make install"
-}
-
 install_pmux() {
     clone_or_update_repo "$PMUX_REPO" "$PMUX_DIR"
     run_shell "cd '$PMUX_DIR' && make install"
@@ -708,7 +705,7 @@ install_hermes() {
 }
 
 install_freellmapi() {
-    FREEMAPI_REPO="${FREEMAPI_REPO:-https://github.com/nicepkg/freellmapi.git}"
+    FREEMAPI_REPO="${FREEMAPI_REPO:-https://github.com/tashfeenahmed/freellmapi.git}"
     FREEMAPI_DIR="$HOME/repos/freellmapi"
 
     clone_or_update_repo "$FREEMAPI_REPO" "$FREEMAPI_DIR"
@@ -997,6 +994,7 @@ main() {
     require_arch
     check_prerequisites
     ensure_sudo
+    setup_git_config
     ensure_whiptail
     detect_terminal_ui
     ensure_dirs
@@ -1037,9 +1035,6 @@ main() {
 
     step 60 "Enabling Bluetooth"
     enable_bluetooth
-
-    step 68 "Building and installing sigil"
-    install_sigil
 
     step 73 "Installing pmux"
     install_pmux
