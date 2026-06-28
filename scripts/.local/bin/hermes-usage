@@ -8,7 +8,7 @@ STATE="$HOME/.local/state/hermes-usage"
 CACHE_TTL=30
 
 # pom-pair_programming (U+E008) — Nerd Font. Waybar doesn't render emoji.
-ICON=$'\uf05e3'
+ICON=$'\uf23b'
 
 mkdir -p "$(dirname "$STATE")"
 
