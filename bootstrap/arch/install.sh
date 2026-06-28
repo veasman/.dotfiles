@@ -45,7 +45,7 @@ PMUX_DIR="$REPOS_DIR/pmux"
 PARU_DIR="$REPOS_DIR/paru"
 HERMES_DIR="$HOME/.hermes/hermes-agent"
 
-LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-installer"
+LOG_DIR="/tmp/dotfiles-install"
 LOG_FILE="$LOG_DIR/install.log"
 mkdir -p "$LOG_DIR"
 
@@ -89,15 +89,16 @@ warn() {
 die_ui() {
     local msg="$1"
 
+    # Always print to stderr FIRST, before any whiptail attempt
+    echo "[FATAL] $msg" >&2
+    echo "  Log: $LOG_FILE" >&2
+
     if [[ -n "${GAUGE_OPEN:-}" ]]; then
         exec 4>&- || true
         GAUGE_OPEN=""
     fi
 
-    # Always print to stderr as the final fallback
     if ! whiptail_run --title "Error" --msgbox "$msg\\n\\nLog:\\n$LOG_FILE" 18 100; then
-        echo "[FATAL] $msg" >&2
-        echo "  Log: $LOG_FILE" >&2
         exit 1
     fi
 
