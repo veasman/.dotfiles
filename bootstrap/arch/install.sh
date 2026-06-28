@@ -953,7 +953,7 @@ Warnings:
 $warns
 
 Next steps:
-- Run: startx
+- Run: start-hyprland
 - If Tailscale is not connected yet, run: sudo tailscale up
 - Run: docker run hello-world after re-login to confirm Docker group access
 - Open Floorp and manually import the Tampermonkey backup if you want it
