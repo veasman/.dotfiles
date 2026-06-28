@@ -411,7 +411,8 @@ enable_multilib_if_needed() {
 
     run_shell '
         sudo cp /etc/pacman.conf /etc/pacman.conf.bak-dotfiles
-        sudo sed -i "/^\#\[multilib\]/,/^\#Include = \/etc\/pacman.d\/mirrorlist/ s/^#//" /etc/pacman.conf
+        sudo sed -i "/^#\[multilib\]/s/^#//" /etc/pacman.conf
+        sudo sed -i "/^#Include = \/etc\/pacman.d\/mirrorlist/s/^#//" /etc/pacman.conf
     '
     run_cmd sudo pacman -Sy
 }
@@ -591,7 +592,7 @@ clone_or_update_repo() {
     local target_dir="$2"
 
     if [[ -d "$target_dir/.git" ]]; then
-        run_shell "cd '$target_dir' && git checkout master && git fetch && git pull origin master"
+        run_shell "cd '$target_dir' && git fetch && git checkout -B local-sync origin/HEAD && git merge --ff-only"
         return 0
     fi
 
@@ -802,16 +803,15 @@ freellmapi_post() {
 
         # Wait for container to come up and DB to be created
         local container=""
-        for i in 1 2 3 4 5 6 7 8; do
-            sleep 3
+        for i in 1 2 3 4 5 6 7 8 9 10; do
             container=$(docker ps --format '{{.Names}}' | grep freellmapi || true)
             [[ -n "$container" ]] && break
+            sleep $((3 + i / 3))
         done
 
         local key=""
         if [[ -n "$container" ]]; then
-            for i in 1 2 3 4 5; do
-                sleep 2
+            for i in 1 2 3 4 5 6 7 8; do
                 key=$(docker exec "$container" sh -c '
                     node -e "
                         const Database = require('"'"'better-sqlite3'"'"');
@@ -822,18 +822,23 @@ freellmapi_post() {
                         } catch(e) {}
                     "' 2>/dev/null || true)
                 [[ -n "$key" ]] && break
+                sleep $((2 + i))
             done
         fi
 
         if [[ -n "$key" ]]; then
+            # Escape sed-special chars in key (&, /, \, newline)
+            local key_escaped
+            key_escaped=$(printf '%s\n' "$key" | sed -e 's/[\/&]/\\&/g')
+
             local opencode_config="$HOME/.config/opencode/opencode.json"
             if [[ -f "$opencode_config" ]]; then
-                run_shell "sed -i 's/__FREEFLLMAPI_API_KEY__/$key/' '$opencode_config'"
+                run_shell "sed -i \"s/__FREEFLLMAPI_API_KEY__/$key_escaped/\" '$opencode_config'"
                 log "FreeLLMAPI API key synced to opencode config"
             fi
             local hermes_env="$HOME/.hermes/.env"
             if [[ -f "$hermes_env" ]]; then
-                run_shell "sed -i 's/^FREEFLLMAPI_API_KEY=.*/FREEFLLMAPI_API_KEY=$key/' '$hermes_env'"
+                run_shell "sed -i \"s/^FREEFLLMAPI_API_KEY=.*/FREEFLLMAPI_API_KEY=$key_escaped/\" '$hermes_env'"
                 log "FreeLLMAPI API key synced to Hermes .env"
             fi
         else
