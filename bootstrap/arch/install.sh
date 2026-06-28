@@ -398,6 +398,7 @@ ensure_paru() {
     fi
 
     clone_or_update_repo "https://aur.archlinux.org/paru.git" "$PARU_DIR"
+    run_shell "rustup default stable"
     run_shell "cd '$PARU_DIR' && makepkg -si --noconfirm"
 }
 
