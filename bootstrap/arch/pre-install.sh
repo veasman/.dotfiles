@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Artix OpenRC pre-install — run inside artix-chroot as root.
+# Pre-install — run inside arch-chroot / artix-chroot as root.
+#
+# On Arch you can use `archinstall` instead and skip this script
+# (just make sure base-devel + git + openssh + curl are in the
+# additional packages list and the user has sudo via wheel group).
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/veasman/.dotfiles/master/bootstrap/arch/pre-install.sh | bash
@@ -10,8 +14,8 @@
 #   3. Generates an SSH key and waits for you to add it to GitHub
 #   4. Clones the dotfiles repo as that user
 #
-# After this script finishes, complete the rest of the base Artix setup
-# (bootloader, locale, timezone, etc.), reboot, log in, then run:
+# After this script finishes, complete base setup (bootloader, locale,
+# timezone, etc.), reboot, log in, then run:
 #   ~/.dotfiles/bootstrap/arch/install.sh
 
 set -Eeuo pipefail
@@ -25,7 +29,7 @@ step()  { printf '\n\033[1;36m=> %s\033[0m\n' "$*"; }
 
 die() { red "ERROR: $*"; exit 1; }
 
-[[ "$(id -u)" -eq 0 ]] || die "This script must be run as root (inside artix-chroot)."
+[[ "$(id -u)" -eq 0 ]] || die "This script must be run as root (inside chroot)."
 
 # -------------------------------------------------------------------
 # 1. Install minimal packages
@@ -120,7 +124,7 @@ green "  Pre-install complete!"
 green "================================================"
 echo ""
 bold "Next steps:"
-echo "  1. Finish base Artix setup (bootloader, locale, timezone, etc.)"
+echo "  1. Finish base setup (bootloader, locale, timezone, etc.)"
 echo "  2. Reboot into the installed system"
 echo "  3. Log in as '$USERNAME'"
 echo "  4. Run: ~/.dotfiles/bootstrap/arch/install.sh"

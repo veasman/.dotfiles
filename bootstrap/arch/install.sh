@@ -62,6 +62,16 @@ INSTALL_MULLVAD=0
 WARNINGS=()
 
 # ---------------------------------------------------------------------------
+# Init system detection
+# ---------------------------------------------------------------------------
+INIT_SYSTEM="unknown"
+if command -v systemctl &>/dev/null; then
+    INIT_SYSTEM="systemd"
+elif command -v rc-update &>/dev/null; then
+    INIT_SYSTEM="openrc"
+fi
+
+# ---------------------------------------------------------------------------
 # Logging / UI helpers
 # ---------------------------------------------------------------------------
 
@@ -155,7 +165,7 @@ ensure_whiptail() {
 # ---------------------------------------------------------------------------
 
 start_gauge() {
-    exec 4> >(whiptail --title "Artix dotfiles bootstrap" \
+    exec 4> >(whiptail --title "Dotfiles bootstrap" \
         --backtitle "Installing...  Log: $LOG_FILE" \
         --gauge "Preparing..." 10 80 0)
     GAUGE_OPEN=1
@@ -325,13 +335,49 @@ paru_install() {
 }
 
 # ---------------------------------------------------------------------------
-# OpenRC service helpers
+# Service helpers (init-agnostic)
 # ---------------------------------------------------------------------------
 
-openrc_enable_start() {
+svc_enable_start() {
     local svc="$1"
-    run_cmd sudo rc-update add "$svc" default
-    run_cmd sudo rc-service "$svc" start
+    case "$INIT_SYSTEM" in
+        systemd)
+            run_cmd sudo systemctl enable "$svc"
+            run_cmd sudo systemctl start "$svc"
+            ;;
+        openrc)
+            run_cmd sudo rc-update add "$svc" default
+            run_cmd sudo rc-service "$svc" start
+            ;;
+    esac
+}
+
+svc_install_init_scripts() {
+    # Copy OpenRC or systemd service files into place.
+    # Called after stow_dotfiles so source files are guaranteed present.
+    case "$INIT_SYSTEM" in
+        openrc)
+            local src="$DOTFILES_DIR/openrc"
+            if [[ -d "$src" ]]; then
+                for init in "$src"/*; do
+                    [[ -f "$init" ]] || continue
+                    local name; name="$(basename "$init")"
+                    run_cmd sudo cp "$init" "/etc/init.d/$name"
+                    run_cmd sudo chmod 755 "/etc/init.d/$name"
+                done
+            fi
+            ;;
+        systemd)
+            local src="$DOTFILES_DIR/systemd"
+            if [[ -d "$src" ]]; then
+                for unit in "$src"/*.service "$src"/*.timer; do
+                    [[ -f "$unit" ]] || continue
+                    run_cmd sudo cp "$unit" "/etc/systemd/system/"
+                done
+                run_cmd sudo systemctl daemon-reload
+            fi
+            ;;
+    esac
 }
 
 # ---------------------------------------------------------------------------
@@ -392,12 +438,18 @@ install_base_packages() {
         pipewire pipewire-alsa pipewire-jack pipewire-pulse \
         wireplumber pavucontrol
 
-    step 19 "Installing OpenRC service scripts"
-    pacman_install \
-        pipewire-openrc pipewire-pulse-openrc wireplumber-openrc
+    step 19 "Installing init service scripts"
+    if [[ "$INIT_SYSTEM" == "openrc" ]]; then
+        pacman_install \
+            pipewire-openrc pipewire-pulse-openrc wireplumber-openrc
+    fi
 
     step 22 "Installing bluetooth"
-    pacman_install bluez bluez-utils bluez-openrc
+    if [[ "$INIT_SYSTEM" == "openrc" ]]; then
+        pacman_install bluez bluez-utils bluez-openrc
+    else
+        pacman_install bluez bluez-utils
+    fi
 
     step 28 "Installing sigil build dependencies"
     pacman_install libxrandr libpng
@@ -436,13 +488,21 @@ install_thunderbird() {
 }
 
 install_tailscale() {
-    pacman_install tailscale tailscale-openrc
-    openrc_enable_start tailscaled
+    if [[ "$INIT_SYSTEM" == "openrc" ]]; then
+        pacman_install tailscale tailscale-openrc
+    else
+        pacman_install tailscale
+    fi
+    svc_enable_start tailscaled
 }
 
 install_docker() {
-    pacman_install docker docker-compose docker-openrc
-    openrc_enable_start docker
+    if [[ "$INIT_SYSTEM" == "openrc" ]]; then
+        pacman_install docker docker-compose docker-openrc
+    else
+        pacman_install docker docker-compose
+    fi
+    svc_enable_start docker
     run_cmd sudo usermod -aG docker "$USER"
 }
 
@@ -633,18 +693,9 @@ stow_dotfiles() {
 
     run_cmd fc-cache -f
 
-    # Install OpenRC init scripts to /etc/init.d/ (stow targets $HOME,
-    # but these must live under /etc). The pre-install phase ensures sudo
-    # is available and the user is in the wheel group.
-    if [[ -d "$DOTFILES_DIR/openrc" ]]; then
-        for init in "$DOTFILES_DIR"/openrc/*; do
-            [[ -f "$init" ]] || continue
-            local name
-            name="$(basename "$init")"
-            run_cmd sudo cp "$init" "/etc/init.d/$name"
-            run_cmd sudo chmod 755 "/etc/init.d/$name"
-        done
-    fi
+    # Install init scripts (OpenRC → /etc/init.d/, systemd → /etc/systemd/system/).
+    # stow targets $HOME but these must live under /etc.
+    svc_install_init_scripts
 }
 
 # ---------------------------------------------------------------------------
@@ -680,7 +731,7 @@ apply_default_theme() {
 }
 
 enable_bluetooth() {
-    openrc_enable_start bluetoothd
+    svc_enable_start bluetoothd
 }
 
 tailscale_post() {
@@ -755,8 +806,10 @@ freellmapi_post() {
         fi
     fi
 
-    if [[ -f /etc/init.d/freellmapi ]]; then
-        openrc_enable_start freellmapi 2>/dev/null || true
+    if [[ "$INIT_SYSTEM" == "systemd" ]] && [[ -f /etc/systemd/system/freellmapi@.service ]]; then
+        svc_enable_start "freellmapi@$USER" 2>/dev/null || true
+    elif [[ -f /etc/init.d/freellmapi ]]; then
+        svc_enable_start freellmapi 2>/dev/null || true
     fi
 }
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=Hermes Agent Gateway — kanban dispatch + cron scheduler (%I)
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+User=%i
+ExecStart=%h/.local/bin/hermes gateway run
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
