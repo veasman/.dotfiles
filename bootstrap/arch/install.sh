@@ -791,7 +791,7 @@ stow_dotfiles() {
         run_cmd mkdir -p "$HOME/.local/bin"
         for helper in "$DOTFILES_DIR"/hyprland/.local/bin/*; do
             [[ -f "$helper" ]] || continue
-            run_cmd ln -sf "$helper" "$HOME/.local/bin/$(basename "$helper")"
+            run_cmd ln -sfr "$helper" "$HOME/.local/bin/$(basename "$helper")"
         done
     fi
 
