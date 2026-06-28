@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+# hyprland-terminal — detect available terminal emulator
+# Tries kara-toe-client (Artix) first; falls back to footclient (Arch/server mode).
+# If neither exists, install the missing one or fix your PATH.
+set -eu
+
+if command -v kara-toe-client >/dev/null 2>&1; then
+    exec kara-toe-client "$@"
+fi
+
+if command -v footclient >/dev/null 2>&1; then
+    exec footclient "$@"
+fi
+
+# Last resort: bare foot (no server mode)
+if command -v foot >/dev/null 2>&1; then
+    exec foot "$@"
+fi
+
+echo "hyprland-terminal: no terminal emulator found (tried kara-toe-client, footclient, foot)" >&2
+exit 1
