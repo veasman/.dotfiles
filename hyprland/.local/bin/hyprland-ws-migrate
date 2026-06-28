@@ -5,6 +5,9 @@
 # workspace on whichever monitor each legacy workspace is currently
 # showing on.
 #
+# The base offset is computed dynamically from monitor positions so
+# connector-name flapping (evdi/DisplayLink) doesn't break the mapping.
+#
 # Background: when we switched from native `bind = $mod, N, workspace, N`
 # to `hyprland-ws switch N` (which dispatches to N+10*monitor_index),
 # any windows already on ws 1..9 stayed there. With the workspace rule
@@ -15,23 +18,30 @@
 # the bar shows phantom duplicates.
 #
 # This walks each id-1..9 workspace, looks up its current monitor,
-# and silently rehomes every client to base+id (e.g. ws 2 on DVI-I-1
-# → ws 22). Idempotent — running it after a clean migration is a no-op.
+# and silently rehomes every client to base+id (e.g. ws 2 on the
+# center monitor → ws 22). Idempotent — running it after a clean
+# migration is a no-op.
 
 set -eu
 
+# Map monitor name → workspace base offset by position among all
+# non-eDP-1 monitors sorted by X.
 base_for() {
-    case "$1" in
-        eDP-1)   printf '0'  ;;
-        DVI-I-2) printf '10' ;;
-        DVI-I-1) printf '20' ;;
-        DP-2)    printf '30' ;;
-        *)       printf '-1' ;;
-    esac
+    local m="$1"
+    [ "$m" = "eDP-1" ] && { printf '0'; return; }
+    local sorted
+    sorted=$(hyprctl monitors -j 2>/dev/null | jq -r 'sort_by(.x) | .[] | .name')
+    local idx
+    idx=$(printf '%s\n' "$sorted" | grep -v '^eDP-1$' | grep -nFx "$m" | cut -d: -f1)
+    if [ -z "$idx" ]; then
+        printf -- '-1'
+    else
+        printf '%s' "$((idx * 10))"
+    fi
 }
 
-ws_data=$(hyprctl workspaces -j)
-clients=$(hyprctl clients -j)
+ws_data=$(hyprctl workspaces -j 2>/dev/null)
+clients=$(hyprctl clients -j 2>/dev/null)
 
 # Pull "<id> <monitor>" for every legacy workspace that still has
 # windows. Bail early if there's nothing to do.

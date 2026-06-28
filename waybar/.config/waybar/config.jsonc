@@ -58,13 +58,11 @@
     },
 
     "custom/claude": {
-        // Claude 5-hour session utilization, via ~/.local/bin/claude-usage.
-        // The script already prefixes its own nerd-font robot glyph and
-        // "{pct}%" text, so format is just {}.
+        // Hermes/OpenRouter credit balance, via ~/.local/bin/hermes-usage.
         "format": "{}",
-        "exec": "claude-usage",
-        "interval": 30,
-        "tooltip": false
+        "exec": "hermes-usage",
+        "return-type": "json",
+        "interval": 5
     },
 
     "custom/network": {

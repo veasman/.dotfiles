@@ -2,7 +2,7 @@
 source ~/.config/quantvps/creds
 
 xfreerdp3 \
-    /v:64.44.101.87 \
+    /v:"$IP_ADDR" \
     /u:Administrator \
     /d:"" \
     /p:"$PASSWORD" \

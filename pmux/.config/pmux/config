@@ -5,6 +5,10 @@ PMUX_EDITOR_CMD='exec nvim .'
 PMUX_SHELL_CMD='exec "$SHELL" -l'
 PMUX_CHOOSER_CMD='fzf --prompt="Project > "'
 
+# Hermes agent window — spawned when a project has CLAUDE.md
+PMUX_CLAUDE_WINDOW='hermes'
+PMUX_CLAUDE_CMD='exec hermes chat'
+
 PMUX_FIXED_PROJECTS=(
     "$HOME/.dotfiles"
 )

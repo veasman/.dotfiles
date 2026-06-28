@@ -35,12 +35,26 @@ mount_phone() {
     fi
 
     echo "Mounting phone..."
-    if jmtpfs "$MOUNT_POINT" 2>/dev/null; then
+    local output
+    output=$(jmtpfs "$MOUNT_POINT" 2>&1)
+    local rc=$?
+
+    # Recover from a stale FUSE mount left by a previous crashed session.
+    # Symptom: "failed to access mountpoint ...: Input/output error".
+    if [ $rc -ne 0 ] && echo "$output" | grep -q "failed to access mountpoint.*Input/output error"; then
+        echo -e "${YELLOW}Stale FUSE mount detected, clearing and retrying...${NC}"
+        fusermount -uz "$MOUNT_POINT" 2>/dev/null
+        output=$(jmtpfs "$MOUNT_POINT" 2>&1)
+        rc=$?
+    fi
+
+    if [ $rc -eq 0 ]; then
         echo -e "${GREEN}✓ Phone mounted at $MOUNT_POINT${NC}"
         echo "  Browse with: cd $MOUNT_POINT"
         echo "  Unmount with: graphene-files unmount"
     else
         echo -e "${RED}✗ Mount failed${NC}"
+        echo "$output" | sed 's/^/  /'
         echo "  Check that:"
         echo "  - Phone is plugged in"
         echo "  - USB mode is set to 'File Transfer' on the phone"

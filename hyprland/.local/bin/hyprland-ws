@@ -1,35 +1,53 @@
 #!/usr/bin/env sh
-# hyprland-ws — per-output workspace switcher (port of sway-ws).
+# hyprland-ws — per-output workspace switcher.
 #
-# Per-output workspace ranges are defined in hyprland.conf:
-#     r[1-9]   → eDP-1
-#     r[11-19] → DVI-I-3  (left AOC)
-#     r[21-29] → DVI-I-4  (center LG)
-#     r[31-39] → DP-2     (right AOC)
-#
-# This translates `mod+1..9` / `mod+Shift+1..9` into the right
-# absolute workspace ID based on which monitor is currently focused.
-# Waybar's hyprland.jsonc has a format-icons map that displays the
-# tens-stripped digit so the bar shows 1-9 regardless of monitor.
+# Computes the base offset (0, 10, 20, 30) dynamically from monitor
+# positions, so connector-name flapping (DisplayLink/evdi) doesn't
+# break the mapping.  Waybar's format-icons map in hyprland.jsonc
+# already collapses the tens-digit so the bar shows 1-9 on every
+# monitor regardless of the absolute workspace ID.
 #
 # Usage:
 #   hyprland-ws switch <1..9>   focus workspace N on focused output
 #   hyprland-ws move   <1..9>   send focused window to N on focused output
+#   hyprland-ws center           print name of the center (1440p) monitor
 
 set -eu
 
-usage='usage: hyprland-ws (switch|move) <N>'
+usage='usage: hyprland-ws (switch|move) <N> | center'
 cmd="${1:?$usage}"
-n="${2:?$usage}"
+
+# All monitors sorted by X position (left → right).
+sorted=$(hyprctl monitors -j | jq -r 'sort_by(.x) | .[] | .name')
+
+if [ "$cmd" = "center" ]; then
+    # Find the 1440p monitor (LG center).  Fall back to the first
+    # external (skip eDP-1) or just eDP-1.
+    center=$(hyprctl monitors -j | jq -r '.[] | select(.width == 2560) | .name' 2>/dev/null | head -1)
+    if [ -n "$center" ]; then
+        printf '%s' "$center"
+    else
+        printf '%s' "$sorted" | sed -n '1p'
+    fi
+    exit 0
+fi
+
+n="${2:?usage}"
 
 monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
-case "$monitor" in
-    eDP-1)   base=0  ;;
-    DVI-I-3) base=10 ;;
-    DVI-I-4) base=20 ;;
-    DP-2)    base=30 ;;
-    *)       base=40 ;;
-esac
+
+# Base offset by monitor position among EXTERNAL monitors only.
+# eDP-1 (laptop) always gets base 0 regardless of its position.
+if [ "$monitor" = "eDP-1" ]; then
+    base=0
+else
+    # 1-based index among non-eDP-1 monitors sorted by X:
+    #   first  external → base 10
+    #   second external → base 20
+    #   third  external → base 30
+    index=$(printf '%s\n' "$sorted" | grep -v '^eDP-1$' | grep -nFx "$monitor" | cut -d: -f1)
+    base=$((index * 10))
+fi
 
 ws=$((base + n))
 

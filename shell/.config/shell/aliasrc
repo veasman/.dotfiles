@@ -13,3 +13,23 @@ setsid emacs
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
+
+# Research alias — Gemini 2.5 Flash (OpenRouter free tier, generous rate limit)
+# Free tier: 20 RPM, 200K context — great for web research, analysis, synthesis.
+hr()  { hermes chat -m "google/gemini-2.5-flash-lite" "$@"; }
+
+# Hermes tiered models — cost-per-quality ladder
+# Cognitive mode → model:
+#   scan    → h    Kimi K2.6 (CF free) — broad searches
+#   code    → hh   Flash ($0.15/M) — fast writer
+#   review  → hc   Haiku ($1/M) — beats Sonnet at review, 3× cheaper
+#   analyze → hhh  Sonnet ($3/M) — deep judgment / edge research
+#   audit   → hhhh Opus ($15/M) — blind spots, capital decisions
+#   decide  → hhh/hhhh — strategic, one call
+h()   { hermes chat -m "@cf/moonshotai/kimi-k2.6" --provider freellmapi "$@"; }   # free tier (Kimi K2.6 via Cloudflare Workers AI — local FreeLLMAPI proxy)
+hh()  { hermes chat -m "deepseek/deepseek-v4-flash" "$@"; }     # ~$0.15/M
+hc()  { hermes chat -m "anthropic/claude-haiku-4.5" "$@"; }     # ~$1/M — review specialist
+hhh() { hermes chat -m "anthropic/claude-sonnet-4.6" "$@"; }     # ~$3/M — daily driver
+hhhh(){ hermes chat -m "anthropic/claude-opus-4.8" "$@"; }      # ~$15/M
+
+
