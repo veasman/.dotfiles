@@ -366,6 +366,18 @@ svc_install_init_scripts() {
                     run_cmd sudo chmod 755 "/etc/init.d/$name"
                 done
             fi
+            # Write /etc/conf.d/ overrides so init scripts use the current
+            # user instead of the hardcoded "oracle" default.
+            run_cmd sudo mkdir -p /etc/conf.d
+            if [[ ! -f /etc/conf.d/freellmapi ]]; then
+                run_cmd sudo sh -c "echo 'FREEMAPI_USER=$USER' > /etc/conf.d/freellmapi"
+            fi
+            if [[ ! -f /etc/conf.d/hermes-gateway ]]; then
+                run_cmd sudo sh -c "echo 'HERMES_USER=$USER' > /etc/conf.d/hermes-gateway"
+            fi
+            if [[ ! -f /etc/conf.d/ollama ]]; then
+                run_cmd sudo sh -c "echo 'OLLAMA_USER=$USER' > /etc/conf.d/ollama"
+            fi
             ;;
         systemd)
             local src="$DOTFILES_DIR/systemd"
