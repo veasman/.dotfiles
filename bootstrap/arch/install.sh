@@ -549,7 +549,7 @@ install_base_packages() {
         mpv pcmanfm
 
     step 33 "Installing development tools"
-    pacman_install python python-pip python-pillow go rustup nvm
+    pacman_install python python-pip python-pillow go rustup nvm uv
 
 
     step 39 "Installing Node LTS via nvm"
@@ -692,7 +692,7 @@ install_hermes() {
     clone_or_update_repo "$HERMES_REPO" "$HERMES_DIR"
 
     if [[ ! -d "$HERMES_DIR/venv" ]]; then
-        run_shell "cd '$HERMES_DIR' && python3 -m venv venv && source venv/bin/activate && pip install -e ."
+        run_shell "cd '$HERMES_DIR' && uv venv --python 3.13 venv && uv pip install -e ."
     fi
 
     local cfg_dst="$HOME/.hermes/config.yaml"
