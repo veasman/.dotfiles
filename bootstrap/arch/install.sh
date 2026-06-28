@@ -67,7 +67,7 @@ WHIPTAIL_OK=0
 # Init system detection
 # ---------------------------------------------------------------------------
 INIT_SYSTEM="unknown"
-if command -v systemctl &>/dev/null; then
+if [[ "$(readlink /sbin/init 2>/dev/null || true)" == *"systemd"* ]] || grep -q systemd /proc/1/comm 2>/dev/null; then
     INIT_SYSTEM="systemd"
 elif command -v rc-update &>/dev/null; then
     INIT_SYSTEM="openrc"
@@ -399,7 +399,10 @@ ensure_paru() {
 
     clone_or_update_repo "https://aur.archlinux.org/paru.git" "$PARU_DIR"
     run_shell "rustup default stable"
-    run_shell "cd '$PARU_DIR' && makepkg -si --noconfirm"
+    run_shell "cd '$PARU_DIR' && makepkg -s --noconfirm"
+    # Install with explicit sudo (via keepalive) to avoid password prompt
+    # from makepkg -i's internal sudo call.
+    run_cmd sudo pacman -U --noconfirm "$PARU_DIR"/*.pkg.tar.zst
 }
 
 paru_install() {
@@ -836,7 +839,7 @@ apply_default_theme() {
 }
 
 enable_bluetooth() {
-    svc_enable_start bluetoothd
+    svc_enable_start bluetooth
 }
 
 tailscale_post() {
