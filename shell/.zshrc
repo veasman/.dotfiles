@@ -145,7 +145,7 @@ export PATH="$HOME/.local/bin:/usr/local/go/bin:$PATH"
 export NVM_DIR
 
 _nvm_load() {
-    unset -f nvm node npm npx _nvm_load
+    unset -f nvm node npm npx opencode _nvm_load
     if [[ -s "/usr/share/nvm/init-nvm.sh" ]]; then
         source /usr/share/nvm/init-nvm.sh
     elif [[ -s "$NVM_DIR/nvm.sh" ]]; then
@@ -157,6 +157,7 @@ nvm()  { _nvm_load; nvm  "$@"; }
 node() { _nvm_load; node "$@"; }
 npm()  { _nvm_load; npm  "$@"; }
 npx()  { _nvm_load; npx  "$@"; }
+opencode() { _nvm_load; opencode "$@"; }  # nvm-global binary; needs nvm bin on PATH
 
 # Auto-use local node version when entering a project (lazy — only if .nvmrc present)
 autoload -U add-zsh-hook
@@ -238,8 +239,13 @@ pfetch
 #fastfetch
 
 # bun completions
-[ -s "/home/oracle/.bun/_bun" ] && source "/home/oracle/.bun/_bun"
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
 
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+alias claudeA='CLAUDE_CONFIG_DIR=~/.claudeA claude'
+alias claudeB='CLAUDE_CONFIG_DIR=~/.claudeB claude'
+
+alias tclaude='export ANTHROPIC_BASE_URL=http://localhost:3456 && nvm use node && teamclaude run'

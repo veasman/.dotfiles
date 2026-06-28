@@ -1,0 +1,9 @@
+# Gaming input latency tweaks
+# Grant realtime priority to input devices (keyboard, mouse, gamepad)
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idrivers}=="hid-generic|usbhid", TAG+="uaccess", ENV{ID_INPUT}=="?*", ENV{ID_INPUT_KEY}=="1", ENV{ID_INPUT_KEYBOARD}=="1", RUN+="/bin/sh -c 'echo -1 > /sys\$devpath/queue/iosched/rev_thinktime 2>/dev/null; chrt -f -p 50 \$(cat /sys\$devpath/device/driver/0000:*/irq 2>/dev/null) 2>/dev/null || true'"
+
+# Grant high-priority to gamepads
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="*Controller*|*Gamepad*|*Joystick*", TAG+="uaccess"
+
+# Increase USB polling rate for gaming mice (kernel handles this via usbcore)
+ACTION=="add", SUBSYSTEM=="usb", DRIVER=="usb", ATTR{idVendor}=="?", ATTR{bInterval}=="1", RUN+="/bin/sh -c 'echo 0 > /sys\$devpath/bAlternateSetting 2>/dev/null || true'"

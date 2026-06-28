@@ -4,7 +4,13 @@
 
 description="Ollama — Local LLM server"
 
-: "${OLLAMA_USER:=oracle}"
+# Auto-detect: use the first non-system user with a home directory
+if [ -z "${OLLAMA_USER:-}" ]; then
+    for _u in $(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1}'); do
+        if [ -d "/home/$_u" ]; then OLLAMA_USER="$_u"; break; fi
+    done
+fi
+: "${OLLAMA_USER:=root}"
 pidfile="/run/ollama.pid"
 command="/usr/bin/ollama"
 command_args="serve"

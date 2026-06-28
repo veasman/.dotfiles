@@ -4,7 +4,13 @@
 
 description="FreeLLMAPI — Unified free LLM router"
 
-: "${FREEMAPI_USER:=oracle}"
+# Auto-detect: use the first non-system user with a home directory
+if [ -z "${FREEMAPI_USER:-}" ]; then
+    for _u in $(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1}'); do
+        if [ -d "/home/$_u" ]; then FREEMAPI_USER="$_u"; break; fi
+    done
+fi
+: "${FREEMAPI_USER:=root}"
 FREEMAPI_USER_HOME=$(getent passwd "$FREEMAPI_USER" | cut -d: -f6)
 FREEMAPI_DIR="${FREEMAPI_DIR:-${FREEMAPI_USER_HOME}/repos/freellmapi}"
 

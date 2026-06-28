@@ -281,22 +281,25 @@ optional_prompt() {
     local result=""
     result="$(
         whiptail --title "Optional installs" --checklist \
-        "Choose optional software:" 16 90 6 \
+        "Choose optional software:" 18 90 7 \
         "sunshine" "Install Sunshine (AUR)" OFF \
         "steam" "Install Steam" OFF \
         "mullvad" "Install Mullvad VPN (AUR)" OFF \
+        "gaming" "Gaming tweaks + gamescope/mangohud/gamemode" OFF \
         3>&1 1>&2 2>&3
     )" || die_ui "Aborted"
 
     INSTALL_SUNSHINE=0
     INSTALL_STEAM=0
     INSTALL_MULLVAD=0
+    INSTALL_GAMING=0
 
     [[ "$result" == *'"sunshine"'* ]] && INSTALL_SUNSHINE=1
     [[ "$result" == *'"steam"'* ]] && INSTALL_STEAM=1
     [[ "$result" == *'"mullvad"'* ]] && INSTALL_MULLVAD=1
+    [[ "$result" == *'"gaming"'* ]] && INSTALL_GAMING=1
 
-    log "[optional] sunshine=$INSTALL_SUNSHINE steam=$INSTALL_STEAM mullvad=$INSTALL_MULLVAD"
+    log "[optional] sunshine=$INSTALL_SUNSHINE steam=$INSTALL_STEAM mullvad=$INSTALL_MULLVAD gaming=$INSTALL_GAMING"
 }
 
 # ---------------------------------------------------------------------------
@@ -529,6 +532,33 @@ install_mullvad() {
 install_steam() {
     enable_multilib_if_needed
     pacman_install steam
+}
+
+install_gaming_tweaks() {
+    enable_multilib_if_needed
+    pacman_install gamescope mangohud gamemode lib32-gamemode
+    paru_install proton-ge-custom-bin 2>/dev/null || true
+
+    # Deploy sysctl tweaks
+    local sysctl_src="$DOTFILES_DIR/gaming/etc/sysctl.d/99-gaming.conf"
+    if [[ -f "$sysctl_src" ]]; then
+        run_cmd sudo cp "$sysctl_src" /etc/sysctl.d/99-gaming.conf
+        run_cmd sudo sysctl --system
+    fi
+
+    # Deploy udev rules
+    local udev_src="$DOTFILES_DIR/gaming/etc/udev/rules.d/99-gaming-input.rules"
+    if [[ -f "$udev_src" ]]; then
+        run_cmd sudo cp "$udev_src" /etc/udev/rules.d/99-gaming-input.rules
+        run_cmd sudo udevadm control --reload-rules
+        run_cmd sudo udevadm trigger
+    fi
+
+    # Deploy modprobe config
+    local mod_src="$DOTFILES_DIR/gaming/etc/modprobe.d/99-gaming.conf"
+    if [[ -f "$mod_src" ]]; then
+        run_cmd sudo cp "$mod_src" /etc/modprobe.d/99-gaming.conf
+    fi
 }
 
 install_sunshine() {
@@ -980,6 +1010,11 @@ main() {
     if [[ "$INSTALL_MULLVAD" -eq 1 ]]; then
         step 98 "Installing Mullvad"
         install_mullvad
+    fi
+
+    if [[ "$INSTALL_GAMING" -eq 1 ]]; then
+        step 99 "Installing gaming tweaks"
+        install_gaming_tweaks
     fi
 
     finish_gauge

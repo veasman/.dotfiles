@@ -1,9 +1,7 @@
 #!/usr/bin/env sh
 # Restart WiFi drivers and NetworkManager — init-agnostic.
-# Use doas if available, fall back to sudo.
 
-SUDO=""
-command -v doas &>/dev/null && SUDO="doas" || SUDO="sudo"
+SUDO="sudo"
 
 if command -v systemctl &>/dev/null; then
     $SUDO systemctl stop iwd 2>/dev/null || true

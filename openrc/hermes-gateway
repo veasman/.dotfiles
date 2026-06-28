@@ -4,10 +4,16 @@
 
 description="Hermes Agent Gateway — kanban dispatch + cron scheduler"
 
-: "${HERMES_USER:=oracle}"
-HERMES="/home/${HERMES_USER}/.local/bin/hermes"
-PIDFILE="/run/hermes-gateway.pid"
+# Auto-detect: use the first non-system user with a home directory
+if [ -z "${HERMES_USER:-}" ]; then
+    for _u in $(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 {print $1}'); do
+        if [ -d "/home/$_u" ]; then HERMES_USER="$_u"; break; fi
+    done
+fi
+: "${HERMES_USER:=root}"
 HERMES_USER_HOME=$(getent passwd "$HERMES_USER" | cut -d: -f6)
+HERMES="${HERMES_USER_HOME}/.local/bin/hermes"
+PIDFILE="/run/hermes-gateway.pid"
 
 depend() {
     need net

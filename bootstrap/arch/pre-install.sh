@@ -53,8 +53,11 @@ bold "wheel group has sudo access"
 # 3. Create user
 # -------------------------------------------------------------------
 step "User setup"
-read -rp "Username [oracle]: " USERNAME
-USERNAME="${USERNAME:-oracle}"
+while true; do
+    read -rp "Username: " USERNAME
+    [[ -n "$USERNAME" ]] && break
+    echo "Username cannot be empty."
+done
 
 if id "$USERNAME" &>/dev/null; then
     bold "User '$USERNAME' already exists — skipping creation"
