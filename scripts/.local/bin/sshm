@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SSHM_VERSION="0.1.0"
+SSHM_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/sshm"
+SSHM_CONNECTIONS_FILE="${SSHM_CONFIG_DIR}/connections"
+
+ensure_store() {
+    mkdir -p "$SSHM_CONFIG_DIR"
+    if [[ ! -f "$SSHM_CONNECTIONS_FILE" ]]; then
+        cat >"$SSHM_CONNECTIONS_FILE" <<'EOF'
+# sshm connections
+# One entry per line, tab-separated:
+#   name<TAB>user@host[:port]<TAB>[extra ssh args]
+# Example:
+#   prod	deploy@app.example.com:2222	-i ~/.ssh/prod_key
+EOF
+        chmod 600 "$SSHM_CONNECTIONS_FILE"
+    fi
+}
+
+usage() {
+cat <<EOF
+sshm - save and reuse ssh connections
+
+Usage:
+  sshm                            interactive picker (fzf)
+  sshm <name>                     connect to a saved connection
+  sshm add <name> <target> [args] save a connection
+                                  target = user@host[:port]
+                                  args   = any extra ssh options
+  sshm ls | list                  list saved connections
+  sshm rm <name>                  remove a connection
+  sshm edit                       open the connections file in \$EDITOR
+  sshm path                       print the connections file path
+  sshm -h | --help                show this help
+  sshm -V | --version             show version
+
+Storage: $SSHM_CONNECTIONS_FILE
+EOF
+}
+
+list_entries() {
+    [[ -f "$SSHM_CONNECTIONS_FILE" ]] || return 0
+    awk -F'\t' '!/^[[:space:]]*(#|$)/ { print }' "$SSHM_CONNECTIONS_FILE"
+}
+
+find_entry() {
+    list_entries | awk -F'\t' -v n="$1" '$1 == n { print; exit }'
+}
+
+SSHM_USER=""; SSHM_HOST=""; SSHM_PORT=""
+parse_target() {
+    local target="$1"
+    SSHM_USER=""; SSHM_HOST=""; SSHM_PORT=""
+    if [[ "$target" == *@* ]]; then
+        SSHM_USER="${target%%@*}"
+        target="${target#*@}"
+    fi
+    if [[ "$target" == *:* ]]; then
+        SSHM_HOST="${target%:*}"
+        SSHM_PORT="${target##*:}"
+    else
+        SSHM_HOST="$target"
+    fi
+    if [[ -z "$SSHM_HOST" ]]; then
+        echo "sshm: empty host in target '$1'" >&2
+        return 1
+    fi
+}
+
+cmd_list() {
+    local entries
+    entries="$(list_entries)"
+    if [[ -z "$entries" ]]; then
+        echo "no connections saved. add one with: sshm add <name> <user@host[:port]>"
+        return 0
+    fi
+    awk -F'\t' '{ printf "%-20s %s%s\n", $1, $2, ($3 ? "  " $3 : "") }' <<<"$entries"
+}
+
+cmd_add() {
+    local name="${1:-}"
+    local target="${2:-}"
+    if [[ -z "$name" || -z "$target" ]]; then
+        echo "usage: sshm add <name> <target> [extra ssh args...]" >&2
+        echo "       target = user@host[:port]" >&2
+        return 2
+    fi
+    shift 2
+    local extra="$*"
+
+    if [[ "$name" == *$'\t'* || "$target" == *$'\t'* ]]; then
+        echo "sshm: name/target cannot contain tab characters" >&2
+        return 2
+    fi
+    if [[ -n "$(find_entry "$name")" ]]; then
+        echo "sshm: '$name' already exists (remove it first: sshm rm $name)" >&2
+        return 1
+    fi
+    if ! parse_target "$target"; then
+        return 2
+    fi
+
+    printf '%s\t%s\t%s\n' "$name" "$target" "$extra" >>"$SSHM_CONNECTIONS_FILE"
+    echo "added: $name -> $target${extra:+ ($extra)}"
+}
+
+cmd_rm() {
+    local name="${1:-}"
+    if [[ -z "$name" ]]; then
+        echo "usage: sshm rm <name>" >&2
+        return 2
+    fi
+    if [[ -z "$(find_entry "$name")" ]]; then
+        echo "sshm: no entry named '$name'" >&2
+        return 1
+    fi
+    local tmp
+    tmp="$(mktemp)"
+    awk -F'\t' -v n="$name" '
+        /^[[:space:]]*(#|$)/ { print; next }
+        $1 != n              { print }
+    ' "$SSHM_CONNECTIONS_FILE" >"$tmp"
+    mv "$tmp" "$SSHM_CONNECTIONS_FILE"
+    chmod 600 "$SSHM_CONNECTIONS_FILE"
+    echo "removed: $name"
+}
+
+cmd_edit() {
+    "${EDITOR:-nvim}" "$SSHM_CONNECTIONS_FILE"
+}
+
+cmd_connect() {
+    local name="${1:-}"
+    if [[ -z "$name" ]]; then
+        echo "usage: sshm <name>" >&2
+        return 2
+    fi
+    local entry
+    entry="$(find_entry "$name")"
+    if [[ -z "$entry" ]]; then
+        echo "sshm: no entry named '$name'" >&2
+        echo "available:" >&2
+        cmd_list >&2
+        return 1
+    fi
+
+    local target extra
+    target="$(awk -F'\t' '{ print $2 }' <<<"$entry")"
+    extra="$(awk -F'\t' '{ print $3 }' <<<"$entry")"
+    parse_target "$target"
+
+    local args=()
+    [[ -n "$SSHM_PORT" ]] && args+=(-p "$SSHM_PORT")
+    if [[ -n "$extra" ]]; then
+        # word-split extra on whitespace; intentional so users can store flags
+        # shellcheck disable=SC2206
+        local extra_args=($extra)
+        args+=("${extra_args[@]}")
+    fi
+    local dest
+    if [[ -n "$SSHM_USER" ]]; then
+        dest="$SSHM_USER@$SSHM_HOST"
+    else
+        dest="$SSHM_HOST"
+    fi
+
+    echo "sshm: ssh ${args[*]:+${args[*]} }$dest" >&2
+    exec ssh "${args[@]}" "$dest"
+}
+
+cmd_pick() {
+    local entries
+    entries="$(list_entries)"
+    if [[ -z "$entries" ]]; then
+        echo "no connections saved. add one with: sshm add <name> <user@host[:port]>"
+        return 0
+    fi
+    if ! command -v fzf >/dev/null 2>&1; then
+        echo "sshm: fzf not installed; pass a name explicitly" >&2
+        cmd_list
+        return 1
+    fi
+    local choice
+    choice="$(awk -F'\t' '{ printf "%-20s %s%s\n", $1, $2, ($3 ? "  " $3 : "") }' <<<"$entries" \
+        | fzf --prompt="ssh > " --height=40% --reverse \
+        | awk '{ print $1 }')"
+    [[ -z "$choice" ]] && return 0
+    cmd_connect "$choice"
+}
+
+ensure_store
+
+case "${1:-}" in
+    ""|pick)              cmd_pick ;;
+    -h|--help|help)       usage ;;
+    -V|--version|version) echo "sshm $SSHM_VERSION" ;;
+    ls|list)              cmd_list ;;
+    add)                  shift; cmd_add "$@" ;;
+    rm|remove|delete)     shift; cmd_rm "$@" ;;
+    edit)                 cmd_edit ;;
+    path)                 echo "$SSHM_CONNECTIONS_FILE" ;;
+    connect)              shift; cmd_connect "$@" ;;
+    *)                    cmd_connect "$1" ;;
+esac

@@ -1,0 +1,117 @@
+#!/bin/bash
+# Quick mount/unmount script for a regular Android phone (e.g. Nothing Phone) via MTP
+# Usage:
+#   android-files            - mount (default)
+#   android-files mount      - mount
+#   android-files unmount    - unmount
+#   android-files umount     - unmount
+#   android-files status     - show mount status
+
+MOUNT_POINT="$HOME/android-files"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+ensure_mount_point() {
+    if [ ! -d "$MOUNT_POINT" ]; then
+        mkdir -p "$MOUNT_POINT"
+        echo -e "${YELLOW}Created mount point at $MOUNT_POINT${NC}"
+    fi
+}
+
+is_mounted() {
+    mountpoint -q "$MOUNT_POINT"
+}
+
+mount_phone() {
+    ensure_mount_point
+
+    if is_mounted; then
+        echo -e "${YELLOW}Phone is already mounted at $MOUNT_POINT${NC}"
+        return 0
+    fi
+
+    echo "Mounting phone..."
+    local output
+    output=$(jmtpfs "$MOUNT_POINT" 2>&1)
+    local rc=$?
+
+    # Recover from a stale FUSE mount left by a previous crashed session.
+    # Symptom: "failed to access mountpoint ...: Input/output error".
+    if [ $rc -ne 0 ] && echo "$output" | grep -q "failed to access mountpoint.*Input/output error"; then
+        echo -e "${YELLOW}Stale FUSE mount detected, clearing and retrying...${NC}"
+        fusermount -uz "$MOUNT_POINT" 2>/dev/null
+        output=$(jmtpfs "$MOUNT_POINT" 2>&1)
+        rc=$?
+    fi
+
+    if [ $rc -eq 0 ]; then
+        echo -e "${GREEN}✓ Phone mounted at $MOUNT_POINT${NC}"
+        echo "  Browse with: cd $MOUNT_POINT"
+        echo "  Unmount with: android-files unmount"
+    else
+        echo -e "${RED}✗ Mount failed${NC}"
+        echo "$output" | sed 's/^/  /'
+        echo "  Check that:"
+        echo "  - Phone is plugged in"
+        echo "  - USB mode is set to 'File Transfer' (MTP) on the phone"
+        echo "  - Phone screen is unlocked"
+        echo "  - You tapped 'Allow' on any access prompt the phone shows"
+        return 1
+    fi
+}
+
+unmount_phone() {
+    if ! is_mounted; then
+        echo -e "${YELLOW}Phone is not currently mounted${NC}"
+        return 0
+    fi
+
+    # Warn if shell is currently inside the mount point
+    if [[ "$PWD" == "$MOUNT_POINT"* ]]; then
+        echo -e "${YELLOW}Note: your shell is inside the mount point. cd out before unmounting.${NC}"
+    fi
+
+    echo "Unmounting phone..."
+    if fusermount -u "$MOUNT_POINT" 2>/dev/null; then
+        echo -e "${GREEN}✓ Phone unmounted${NC}"
+    else
+        echo -e "${RED}✗ Unmount failed${NC}"
+        echo "  Something may still be using the mount."
+        echo "  Try: lsof +D $MOUNT_POINT"
+        echo "  Or force unmount: fusermount -uz $MOUNT_POINT"
+        return 1
+    fi
+}
+
+show_status() {
+    if is_mounted; then
+        echo -e "${GREEN}● Phone is mounted at $MOUNT_POINT${NC}"
+        df -h "$MOUNT_POINT" 2>/dev/null | tail -n 1
+    else
+        echo -e "${YELLOW}○ Phone is not mounted${NC}"
+    fi
+}
+
+case "${1:-mount}" in
+    mount|m|"")
+        mount_phone
+        ;;
+    unmount|umount|u)
+        unmount_phone
+        ;;
+    status|s)
+        show_status
+        ;;
+    *)
+        echo "Usage: android-files [mount|unmount|status]"
+        echo ""
+        echo "  mount    - mount phone to $MOUNT_POINT (default)"
+        echo "  unmount  - unmount phone"
+        echo "  status   - show whether phone is mounted"
+        exit 1
+        ;;
+esac

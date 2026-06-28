@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# stow-link-bins — manage ~/.local/bin symlinks for stow packages
+# that use .stow-local-ignore to skip .local (hyprland, etc.)
+#
+# Usage:
+#   stow-link-bins          # deploy all symlinks
+#   stow-link-bins --check  # verify all links exist
+#   stow-link-bins --clean  # remove orphaned links (pointing to removed stow files)
+
+DOTFILES="$HOME/.dotfiles"
+BINDIR="$HOME/.local/bin"
+
+err() { printf '\e[31m%s\e[0m\n' "$*" >&2; }
+ok()  { printf '\e[32m%s\e[0m\n' "$*"; }
+
+deploy() {
+  local pkg="$1" failures=0
+  while IFS= read -r -d '' src; do
+    local name
+    name=$(basename "$src")
+    local target="$BINDIR/$name"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+      continue
+    fi
+    if [ -e "$target" ] || [ -L "$target" ]; then
+      err "EXISTS: $target (not a link to stow, skipping)"
+      continue
+    fi
+    ln -s "$src" "$target" 2>/dev/null && ok "LINK: $src → $target" || { err "FAIL: $src"; ((failures++)); }
+  done < <(find "$DOTFILES/$pkg/.local/bin" -type f -print0)
+  return "$failures"
+}
+
+check() {
+  local pkg="$1" ok=1
+  while IFS= read -r -d '' src; do
+    local name
+    name=$(basename "$src")
+    local target="$BINDIR/$name"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$src" ]; then
+      continue
+    fi
+    err "MISSING: $target → $src"
+    ok=0
+  done < <(find "$DOTFILES/$pkg/.local/bin" -type f -print0)
+  return $((1-ok))
+}
+
+clean() {
+  local orphans=0
+  find "$BINDIR" -type l -maxdepth 1 -print0 | while IFS= read -r -d '' link; do
+    local target
+    target=$(readlink "$link")
+    if [[ "$target" == "$DOTFILES"/* ]] && [ ! -e "$target" ]; then
+      rm "$link" && ok "REMOVED: $link (broken → $target)"
+      ((orphans++))
+    fi
+  done
+  [ "$orphans" -eq 0 ] && ok "No orphaned links found"
+}
+
+# Find all packages with .local/bin that have .stow-local-ignore
+packages=()
+while IFS= read -r -d '' pkg; do
+  pkg_name=$(basename "$(dirname "$pkg")")
+  packages+=("$pkg_name")
+done < <(find "$DOTFILES" -maxdepth 3 -name ".stow-local-ignore" -print0)
+
+[ ${#packages[@]} -eq 0 ] && { ok "No packages with .stow-local-ignore found"; exit 0; }
+
+case "${1:-deploy}" in
+  --check)
+    ok=0
+    for pkg in "${packages[@]}"; do
+      check "$pkg" || ok=1
+    done
+    exit "$ok"
+    ;;
+  --clean)
+    clean
+    ;;
+  deploy|*)
+    mkdir -p "$BINDIR"
+    failures=0
+    for pkg in "${packages[@]}"; do
+      deploy "$pkg" || ((failures+=$?))
+    done
+    exit "$failures"
+    ;;
+esac

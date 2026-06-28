@@ -1,0 +1,1 @@
+/home/oracle/.local/share/pipx/venvs/routersploit/bin/rsf.py

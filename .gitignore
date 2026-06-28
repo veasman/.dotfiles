@@ -21,6 +21,9 @@ scripts/.local/bin/uv
 scripts/.local/bin/uvx
 scripts/.local/bin/spotdl
 
+# Generated at runtime by hyprland-hyprpaper wrapper — conflicts with stow
+hyprland/.config/hypr/hyprpaper-generated.conf
+
 # Hyprland helper symlinks. Bootstrap symlinks each hyprland/.local/bin/*
 # into ~/.local/bin/, which is itself a symlink to scripts/.local/bin/,
 # so they land here at install time. Canonical sources live in

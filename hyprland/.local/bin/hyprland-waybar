@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# hyprland-waybar — auto-restarting waybar wrapper
+# Survives WirePlumber / PipeWire restarts.
+set -eu
+
+# Hyprland manages instance sockets under $XDG_RUNTIME_DIR/hypr/.
+# The env var may be stale from a prior session; always use the
+# live instance so waybar finds the IPC socket.
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+SIG=$(ls "$RUNTIME_DIR/hypr/" 2>/dev/null | head -1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+CONFIG="$HOME/.config/waybar/hyprland.jsonc"
+STYLE="$HOME/.config/waybar/hyprland-style.css"
+
+while true; do
+    waybar -c "$CONFIG" -s "$STYLE"
+    sleep 2
+done
