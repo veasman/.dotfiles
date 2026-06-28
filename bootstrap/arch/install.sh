@@ -127,13 +127,16 @@ detect_terminal_ui() {
         return 0
     fi
 
-    # Probe: try an invisibly small dialog. If it works, whiptail is functional.
-    if whiptail --title "" --msgbox "" 3 10 2>/dev/null </dev/tty; then
+    # Non-visual check: is stdout a real terminal with enough size?
+    local rows cols
+    rows=$(tput lines 2>/dev/null || echo 0)
+    cols=$(tput cols 2>/dev/null || echo 0)
+    if [[ -t 1 ]] && (( rows >= 10 && cols >= 40 )); then
         WHIPTAIL_OK=1
-        log "[ui] whiptail detected (WHIPTAIL_OK=1)"
+        log "[ui] whiptail available (terminal ${rows}x${cols})"
     else
         WHIPTAIL_OK=0
-        log "[ui] whiptail not available in this terminal (WHIPTAIL_OK=0)"
+        log "[ui] whiptail unavailable (${rows}x${cols})"
     fi
 }
 
