@@ -450,7 +450,7 @@ install_base_packages() {
 
     step 16 "Installing audio stack"
     pacman_install \
-        pipewire pipewire-alsa pipewire-jack pipewire-pulse \
+        pipewire pipewire-pulse \
         wireplumber pavucontrol
 
     step 19 "Installing init service scripts"
@@ -478,8 +478,6 @@ install_base_packages() {
     step 33 "Installing development tools"
     pacman_install python python-pip python-pillow go rustup nvm
 
-    step 36 "Installing LaTeX tooling"
-    pacman_install texlive-basic texlive-latexextra latexmk zathura zathura-pdf-poppler
 
     step 39 "Installing Node LTS via nvm"
     run_shell "source /usr/share/nvm/init-nvm.sh && nvm install --lts"
@@ -496,10 +494,6 @@ install_base_packages() {
 
 install_floorp() {
     paru_install floorp-bin
-}
-
-install_thunderbird() {
-    paru_install thunderbird-esr-bin
 }
 
 install_tailscale() {
@@ -705,7 +699,6 @@ stow_dotfiles() {
         gtk
         hermes
         hyprland
-        latex
         nvim
         opencode
         pmux
@@ -944,9 +937,6 @@ main() {
 
     step 46 "Installing Floorp"
     install_floorp
-
-    step 48 "Installing Thunderbird"
-    install_thunderbird
 
     step 50 "Installing Tailscale"
     install_tailscale
