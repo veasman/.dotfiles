@@ -685,20 +685,19 @@ install_hermes() {
 
     clone_or_update_repo "$HERMES_REPO" "$HERMES_DIR"
 
-    if [[ ! -d "$HERMES_DIR/venv" ]]; then
+    if [[ ! -f "$HERMES_DIR/venv/bin/hermes" ]]; then
+        run_cmd rm -rf "$HERMES_DIR/venv"
         run_shell "cd '$HERMES_DIR' && uv venv --python 3.13 venv && uv pip install -e ."
     fi
 
     run_cmd mkdir -p "$HOME/.local/bin"
-    if [[ ! -f "$HOME/.local/bin/hermes" ]]; then
-        run_shell 'cat > "$HOME/.local/bin/hermes" << "EOF"
+    run_shell 'cat > "$HOME/.local/bin/hermes" << "EOF"
 #!/usr/bin/env bash
 unset PYTHONPATH
 unset PYTHONHOME
 exec "$HOME/.hermes/hermes-agent/venv/bin/hermes" "$@"
 EOF'
-        run_cmd chmod +x "$HOME/.local/bin/hermes"
-    fi
+    run_cmd chmod +x "$HOME/.local/bin/hermes"
 
     local cfg_dst="$HOME/.hermes/config.yaml"
     local cfg_src="$DOTFILES_DIR/hermes/config.yaml.example"
