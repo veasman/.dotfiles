@@ -551,6 +551,9 @@ install_base_packages() {
     step 39 "Installing Node LTS via nvm"
     run_shell "source /usr/share/nvm/init-nvm.sh && nvm install --lts"
 
+    step 40 "Installing opencode CLI via npm"
+    run_shell "source /usr/share/nvm/init-nvm.sh && nvm use --lts && npm install -g @opencode-ai/cli"
+
     step 41 "Installing tree-sitter-cli"
     pacman_install tree-sitter-cli
 
@@ -684,6 +687,17 @@ install_hermes() {
 
     if [[ ! -d "$HERMES_DIR/venv" ]]; then
         run_shell "cd '$HERMES_DIR' && uv venv --python 3.13 venv && uv pip install -e ."
+    fi
+
+    run_cmd mkdir -p "$HOME/.local/bin"
+    if [[ ! -f "$HOME/.local/bin/hermes" ]]; then
+        run_shell 'cat > "$HOME/.local/bin/hermes" << "EOF"
+#!/usr/bin/env bash
+unset PYTHONPATH
+unset PYTHONHOME
+exec "$HOME/.hermes/hermes-agent/venv/bin/hermes" "$@"
+EOF'
+        run_cmd chmod +x "$HOME/.local/bin/hermes"
     fi
 
     local cfg_dst="$HOME/.hermes/config.yaml"
