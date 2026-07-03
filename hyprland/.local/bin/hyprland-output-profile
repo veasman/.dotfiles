@@ -1,23 +1,12 @@
 #!/usr/bin/env sh
 # hyprland-output-profile — dynamic docked/undocked monitor layout.
 #
-# Identifies monitors by resolution, then uses a cached connector→side
-# mapping (keyed by serial number) so that DisplayLink/evdi connector
-# renames don't break the layout.
+# Dispatches to hostname-specific profiles:
+#   universe  — 3-monitor laptop dock (portrait sides + 1440p center + eDP-1)
+#   computer  — simple desktop with optional 1440p@120 external
 #
-# Layout:
-#   Docked (1440p present):
-#     left   1920x1080 → portrait-left   @ 0       (transform 1)
-#     center 2560x1440 → center           @ 1080   (landscape)
-#     right  1920x1080 → portrait-right  @ 3640   (transform 3)
-#     eDP-1            → enabled @ far right (always on)
-#                       (1920x1200, auto-positioned right of externals)
-#
-#   Undocked (no 1440p):
-#     eDP-1 → enabled at preferred / auto
-#
-# Also binds workspace ranges (r[11-19] left, r[21-29] center,
-# r[31-39] right) so per-output IDs stay correct.
+# Each sub-profile detects docked (1440p present) vs undocked and
+# applies the right layout.
 #
 # Usage:
 #   hyprland-output-profile           # apply layout (daemon mode)
@@ -25,6 +14,8 @@
 #   hyprland-output-profile --redetect  # clear cache and re-detect
 
 set -eu
+
+HOSTNAME=$(uname -n)
 
 # --- state file (persists connector→side mapping across renames) -----
 STATE_DIR="$HOME/.local/state/hypr"
@@ -71,16 +62,15 @@ migrate_external_to() {
 }
 
 # --- core -------------------------------------------------------------
-apply_profile() {
+apply_profile_universe() {
     all=$(hyprctl monitors -j 2>/dev/null | jq -c '.[]' || true)
     names_connected=$(printf '%s\n' "$all" | jq -r '.name' | tr '\n' ' ')
-    log "apply: connected = $names_connected"
+    log "universe: connected = $names_connected"
 
     laptop="eDP-1"
     center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
 
     if [ -n "$center" ]; then
-        # ------ docked ------
         read_state
         names_list=$(printf '%s\n' "$all" | jq -r '.name')
         stale=false
@@ -90,20 +80,15 @@ apply_profile() {
         done
         center_name=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
         if $stale; then
-            log "state stale — re-detecting"
-            # Exclude eDP-* from side detection so the laptop display is never
-            # mistaken for an external portrait monitor.
+            log "universe: state stale — re-detecting"
             sides=$(printf '%s\n' "$all" \
                 | jq -r 'select(.name | startswith("eDP") | not) | select(((.availableModes | any(startswith("2560x1440"))) | not) and (.availableModes | any(startswith("1920x1080")))) | "\(.x) \(.name)"')
             side_count=$(printf '%s\n' "$sides" | grep -c . || true)
             if [ "$side_count" -ge 2 ]; then
                 left=$(printf '%s\n' "$sides" | sort -n -k1 | awk '{print $2}' | sed -n '1p')
                 right=$(printf '%s\n' "$sides" | sort -n -k1 | awk '{print $2}' | sed -n '2p')
-                log "  detection: center=$center left=$left right=$right"
+                log "universe: detection: center=$center left=$left right=$right"
             fi
-            # Per-connector transform lookup — each AOC keeps its rotation
-            # regardless of which side it lands on.  Falls back to positional
-            # defaults (left=3, right=1) for unknown connectors.
             transform_for() {
                 case "$1" in
                     DVI-I-2) echo 1 ;;
@@ -119,9 +104,8 @@ apply_profile() {
             write_state
         fi
 
-        log "apply: docked  left=$left  center=$center  right=$right"
+        log "universe: docked  left=$left  center=$center  right=$right"
 
-        # Migrate laptop windows to workspace 1 (eDP-1 stays on)
         migrate_from_monitor "$laptop" 1
 
         [ -n "$left"  ] && hyprctl keyword monitor "$left,1920x1080,0x0,1,transform,${left_t:-3}"    >/dev/null 2>&1 || true
@@ -135,20 +119,50 @@ apply_profile() {
 
         hyprctl dispatch focusmonitor "$center"                           >/dev/null 2>&1 || true
     else
-        # ------ undocked ------
-        log "apply: undocked -> enabling $laptop"
-        # Migrate any orphaned external windows to eDP workspace 1
+        log "universe: undocked -> enabling $laptop"
         migrate_external_to 1
         hyprctl keyword monitor "$laptop,preferred,auto,1"                >/dev/null 2>&1 || true
-        # Collect remaining windows to eDP workspace 1
         sleep 0.3
         migrate_from_monitor "$laptop" 1
         hyprctl dispatch focusmonitor "$laptop"                           >/dev/null 2>&1 || true
     fi
 }
 
-# --- side-swap helper -------------------------------------------------
+apply_profile_computer() {
+    all=$(hyprctl monitors -j 2>/dev/null | jq -c '.[]' || true)
+    names_connected=$(printf '%s\n' "$all" | jq -r '.name' | tr '\n' ' ')
+    log "computer: connected = $names_connected"
+
+    center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
+
+    if [ -n "$center" ]; then
+        log "computer: docked -> $center @ 2560x1440@120"
+        for name in $names_connected; do
+            [ "$name" = "$center" ] && continue
+            hyprctl keyword monitor "$name,disable" >/dev/null 2>&1 || true
+        done
+        hyprctl keyword monitor "$center,2560x1440@120,auto,1" >/dev/null 2>&1 || true
+        hyprctl dispatch focusmonitor "$center" >/dev/null 2>&1 || true
+    else
+        log "computer: undocked -> auto"
+        hyprctl keyword monitor ",preferred,auto,1" >/dev/null 2>&1 || true
+    fi
+}
+
+# --- hostname dispatch -------------------------------------------------
+apply_profile() {
+    case "$HOSTNAME" in
+        universe) apply_profile_universe ;;
+        computer) apply_profile_computer ;;
+        *)
+            log "skip: unknown host $HOSTNAME"
+            ;;
+    esac
+}
+
+# --- side-swap helper (universe only) ----------------------------------
 swap_sides() {
+    [ "$HOSTNAME" = universe ] || { echo "swap is only valid on universe" >&2; exit 1; }
     read_state
     if [ -z "${left:-}" ] || [ -z "${right:-}" ]; then
         echo "no cached layout to swap — run the daemon first" >&2
