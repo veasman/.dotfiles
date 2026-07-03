@@ -799,7 +799,7 @@ stow_dotfiles() {
     if [[ ! -f "$HOME/.config/waybar/hyprland-colors.css" ]]; then
         run_cmd mkdir -p "$HOME/.config/waybar"
         run_cmd sh -c 'cat > "$HOME/.config/waybar/hyprland-colors.css" << "CSSEOF"
-/* Default accent palette — matches kara. Overwritten by hyprland-pywal. */
+/* Default accent palette — matches the fixed kara palette. Overwritten by hyprland-pywal. */
 @define-color accent     #8fd3d3;
 @define-color accent_dim #6bacac;
 @define-color warn       #ebcb8b;
@@ -810,6 +810,53 @@ CSSEOF'
     # Install init scripts (OpenRC → /etc/init.d/, systemd → /etc/systemd/system/).
     # stow targets $HOME but these must live under /etc.
     svc_install_init_scripts
+}
+
+# Apply GTK dark mode system-wide. The settings.ini files (stowed via the
+# gtk package) handle GTK3/GTK4 apps directly; gsettings covers libadwaita
+# (GTK4) and the portal/xdg spec that browsers query for prefers-color-scheme.
+configure_gtk_dark_mode() {
+    # gsettings requires the schemas to be installed — skip silently if
+    # glib2 isn't present yet (the user can re-run after a reboot).
+    if ! command -v gsettings >/dev/null 2>&1; then
+        warn "gsettings not found — skipping gsettings dark-mode (GTK settings.ini still applies)"
+        return 0
+    fi
+
+    # Use a subshell so dconf/gsettings can find the user's DB even when
+    # the installer runs with elevated sudo (DBUS_SESSION_BUS_ADDRESS).
+    local gsettings_cmd="gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'"
+    if eval "$gsettings_cmd" 2>/dev/null; then
+        log "[gtk] color-scheme set to prefer-dark"
+    else
+        warn "gsettings color-scheme failed — GTK settings.ini still applies for most apps"
+    fi
+
+    # Also set the GTK theme name explicitly (covers non-libadwaita apps).
+    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+}
+
+# Seed the wallpaper-current state file so hyprland-wallpaper apply has
+# something to apply on first boot. The dotfiles ship a default.png; if
+# the user already has a committed wallpaper (re-install), leave it alone.
+seed_default_wallpaper() {
+    local state_dir="$HOME/.local/state/hypr"
+    local current_file="$state_dir/wallpaper-current"
+    local shipped="$HOME/.dotfiles/assets/wallpapers/default.png"
+
+    mkdir -p "$state_dir"
+
+    if [[ -s "$current_file" ]]; then
+        log "[wallpaper] wallpaper-current already set — skipping"
+        return 0
+    fi
+
+    if [[ -f "$shipped" ]]; then
+        printf '%s\n' "$shipped" > "$current_file"
+        log "[wallpaper] seeded default: $shipped"
+    else
+        warn "[wallpaper] no shipped default.png found at $shipped"
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -1046,6 +1093,12 @@ main() {
 
     step 80 "Stowing dotfiles"
     stow_dotfiles
+
+    step 81 "Configuring GTK dark mode"
+    configure_gtk_dark_mode
+
+    step 82 "Seeding default wallpaper"
+    seed_default_wallpaper
 
     step 77 "Installing FreeLLMAPI (free LLM proxy)"
     install_freellmapi

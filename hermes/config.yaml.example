@@ -157,4 +157,5 @@ gateway:
 # hc   = anthropic/claude-haiku-4.5       — ~$1/M tokens
 # hhh  = anthropic/claude-sonnet-4.6      — ~$3/M tokens
 # hhhh = anthropic/claude-opus-4.8        — ~$15/M tokens
+# hhhhh = anthropic/claude-fable-5        — ~$10/$50/M tokens, 1M ctx
 # hr   = google/gemini-2.5-flash-lite     — Free (OpenRouter research tier)

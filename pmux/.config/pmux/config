@@ -1,6 +1,5 @@
 # nvim socket is registered by oracle.core.kara_theme.setup() at
-# startup; kara-beautify apply discovers it via /tmp/nvim-kara-<pid>.sock.
-# No external --listen override needed here — plain `nvim` works.
+# startup. No external --listen override needed here — plain `nvim` works.
 PMUX_EDITOR_CMD='exec nvim .'
 PMUX_SHELL_CMD='exec "$SHELL" -l'
 PMUX_CHOOSER_CMD='fzf --prompt="Project > "'

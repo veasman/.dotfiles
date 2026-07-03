@@ -174,60 +174,25 @@ load-nvmrc() {
 }
 add-zsh-hook chpwd load-nvmrc
 
-# kara-beautify — fzf + session env vars
-#
-# The base we capture here must NOT contain any previously-injected
-# --color= args — otherwise re-applies accumulate (shell A captures
-# kara-injected colors as "base," child shell B then appends NEW
-# kara colors on top of that "base," and fzf ends up with two
-# --color= arg sets fighting each other). Strip every --color=...
-# token out of the inherited FZF_DEFAULT_OPTS before storing, so
-# BASE is strictly the user's non-color fzf options.
-_kara_fzf_strip_colors() {
-    local s="$1"
-    local -a words=(${(z)s})
-    local out="" w
-    for w in $words; do
+# fzf — gruvbox colors (inlined from kara's generated fzf-theme.sh).
+# bg:-1 / bg+:-1 keep fzf transparent on top of foot's #282828.
+# Strip any inherited --color= tokens first to avoid accumulation
+# when nested shells source this file.
+_fzf_strip_colors() {
+    local s="$1" out="" w
+    for w in ${(z)s}; do
         [[ "$w" == --color=* ]] && continue
         out="${out:+$out }$w"
     done
     print -r -- "$out"
 }
+export FZF_DEFAULT_OPTS="$(_fzf_strip_colors "${FZF_DEFAULT_OPTS:-}") --color=bg:-1,bg+:-1,fg:#ebdbb2,fg+:#fbf1c7,hl:#d79921,hl+:#fabd2f,info:#a89984,prompt:#d79921,pointer:#fabd2f,marker:#b8bb26,spinner:#d3869b,header:#83a598"
+unfunction _fzf_strip_colors
 
-# Re-capture BASE on every shell init (unconditional, not `:-`), so a
-# contaminated inherited FZF_DEFAULT_OPTS_BASE from a parent shell
-# gets reset to the stripped baseline of whatever FZF_DEFAULT_OPTS
-# currently holds.
-export FZF_DEFAULT_OPTS_BASE="$(_kara_fzf_strip_colors "${FZF_DEFAULT_OPTS:-}")"
-unfunction _kara_fzf_strip_colors
-
-# Re-source kara's fzf + session env scripts when the file has been
-# touched (or on first prompt after shell start). Lets existing
-# shells pick up new colors from `kara-beautify apply` without a
-# restart.
-_kara_fzf_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/fzf-theme.sh"
-_kara_session_theme_path="${XDG_STATE_HOME:-$HOME/.local/state}/kara/generated/session-theme.sh"
-_kara_fzf_mtime=0
-
-_kara_reload_fzf() {
-    [ -f "$_kara_fzf_theme_path" ] || return 0
-    local mtime
-    mtime=$(stat -c %Y "$_kara_fzf_theme_path" 2>/dev/null) || return 0
-    if [ "$_kara_fzf_mtime" != "$mtime" ]; then
-        source "$_kara_fzf_theme_path"
-        [ -f "$_kara_session_theme_path" ] && source "$_kara_session_theme_path"
-        export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS_BASE:+$FZF_DEFAULT_OPTS_BASE }${KARA_FZF_COLOR_OPTS:-}"
-        _kara_fzf_mtime="$mtime"
-    fi
-}
-
-# Initial load at shell startup so the first fzf invocation has colors.
-_kara_reload_fzf
-
-# Hook into zsh's precmd so subsequent prompts re-check mtime and
-# re-source if kara-beautify touched the file since last prompt.
-autoload -Uz add-zsh-hook
-add-zsh-hook precmd _kara_reload_fzf
+# Session env — was sourced from kara's generated session-theme.sh.
+export GTK_THEME=Adwaita-dark
+export XCURSOR_THEME=Banana
+export XCURSOR_SIZE=34
 
 # Plugins (load order matters: fast-syntax-highlighting BEFORE zsh-autosuggestions)
 [[ -f /usr/share/zsh/plugins/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh ]] && \

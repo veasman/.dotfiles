@@ -27,6 +27,10 @@
 set -eu
 
 WALLPAPER_DIR="${HYPR_WALLPAPER_DIR:-$HOME/.local/state/sway/wallpapers}"
+# Fall back to the dotfiles-shipped wallpapers if the sway dir is empty/missing.
+if [ ! -d "$WALLPAPER_DIR" ] || [ -z "$(find "$WALLPAPER_DIR" -maxdepth 1 -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.bmp' \) 2>/dev/null | head -1)" ]; then
+    WALLPAPER_DIR="$HOME/.dotfiles/assets/wallpapers"
+fi
 STATE_DIR="$HOME/.local/state/hypr"
 CURRENT_FILE="$STATE_DIR/wallpaper-current"
 PREVIEW_FILE="$STATE_DIR/wallpaper-preview"

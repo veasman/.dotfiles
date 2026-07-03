@@ -10,7 +10,8 @@
 #     left   1920x1080 → portrait-left   @ 0       (transform 1)
 #     center 2560x1440 → center           @ 1080   (landscape)
 #     right  1920x1080 → portrait-right  @ 3640   (transform 3)
-#     eDP-1            → disabled
+#     eDP-1            → enabled @ far right (always on)
+#                       (1920x1200, auto-positioned right of externals)
 #
 #   Undocked (no 1440p):
 #     eDP-1 → enabled at preferred / auto
@@ -32,8 +33,8 @@ mkdir -p "$STATE_DIR" 2>/dev/null || true
 
 read_state()  { [ -f "$STATE" ] && . "$STATE" || true; }
 write_state() {
-    printf 'left=%s\ncenter=%s\nright=%s\n' \
-        "$left" "$center" "$right" > "$STATE"
+    printf 'left=%s\nleft_t=%s\ncenter=%s\nright=%s\nright_t=%s\n' \
+        "$left" "${left_t:-3}" "$center" "$right" "${right_t:-1}" > "$STATE"
 }
 
 # --- logging ---------------------------------------------------------
@@ -46,6 +47,29 @@ log() {
         >>"$LOGFILE" 2>/dev/null || true
 }
 
+# --- window migration ---------------------------------------------------
+# Move all windows on a given monitor to a target workspace number.
+migrate_from_monitor() {
+    src="$1"
+    target_ws="$2"
+    hyprctl clients -j 2>/dev/null | jq -r --arg m "$src" '
+        .[] | select(.monitor == $m) | .address
+    ' | while IFS= read -r addr; do
+        [ -n "$addr" ] && hyprctl dispatch movetoworkspacesilent "$target_ws,address:$addr" >/dev/null 2>&1 || true
+    done
+    log "migrated $src => workspace $target_ws"
+}
+
+# Move all non-laptop windows to a target workspace.
+migrate_external_to() {
+    target_ws="$1"
+    all=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | .name')
+    for mon in $all; do
+        [ "$mon" = "$laptop" ] && continue
+        migrate_from_monitor "$mon" "$target_ws"
+    done
+}
+
 # --- core -------------------------------------------------------------
 apply_profile() {
     all=$(hyprctl monitors -j 2>/dev/null | jq -c '.[]' || true)
@@ -53,7 +77,7 @@ apply_profile() {
     log "apply: connected = $names_connected"
 
     laptop="eDP-1"
-    center=$(printf '%s\n' "$all" | jq -r 'select(.width == 2560) | .name' | head -1)
+    center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
 
     if [ -n "$center" ]; then
         # ------ docked ------
@@ -64,42 +88,61 @@ apply_profile() {
             [ -n "$v" ] || { stale=true; break; }
             printf '%s\n' "$names_list" | grep -Fxq "$v" || { stale=true; break; }
         done
-        center_name=$(printf '%s\n' "$all" | jq -r 'select(.width == 2560) | .name' | head -1)
+        center_name=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
         if $stale; then
             log "state stale — re-detecting"
-            pairs=$(printf '%s\n' "$all" \
-                | jq -r 'select(.width == 1920 and .height == 1080) | "\(.x) \(.name)"')
-            distinct_x=$(printf '%s\n' "$pairs" | awk '{print $1}' | sort -u | wc -l)
-            if [ "$distinct_x" -ge 2 ]; then
-                left=$(printf '%s\n' "$pairs" | sort -n -k1 | awk '{print $2}' | sed -n '1p')
-                right=$(printf '%s\n' "$pairs" | sort -n -k1 | awk '{print $2}' | sed -n '2p')
-            else
-                names=$(printf '%s\n' "$all" \
-                    | jq -r 'select(.width == 1920 and .height == 1080) | .name' | sort)
-                left=$(printf '%s\n' "$names" | sed -n '1p')
-                right=$(printf '%s\n' "$names" | sed -n '2p')
-                log "  fallback heuristic: left=$left right=$right"
+            # Exclude eDP-* from side detection so the laptop display is never
+            # mistaken for an external portrait monitor.
+            sides=$(printf '%s\n' "$all" \
+                | jq -r 'select(.name | startswith("eDP") | not) | select(((.availableModes | any(startswith("2560x1440"))) | not) and (.availableModes | any(startswith("1920x1080")))) | "\(.x) \(.name)"')
+            side_count=$(printf '%s\n' "$sides" | grep -c . || true)
+            if [ "$side_count" -ge 2 ]; then
+                left=$(printf '%s\n' "$sides" | sort -n -k1 | awk '{print $2}' | sed -n '1p')
+                right=$(printf '%s\n' "$sides" | sort -n -k1 | awk '{print $2}' | sed -n '2p')
+                log "  detection: center=$center left=$left right=$right"
             fi
+            # Per-connector transform lookup — each AOC keeps its rotation
+            # regardless of which side it lands on.  Falls back to positional
+            # defaults (left=3, right=1) for unknown connectors.
+            transform_for() {
+                case "$1" in
+                    DVI-I-2) echo 1 ;;
+                    DP-2)    echo 3 ;;
+                    *)       echo "${2:-1}" ;;
+                esac
+            }
+            if [ -n "${left:-}" ];  then left_t=$(transform_for "$left" 3);  fi
+            if [ -n "${right:-}" ]; then right_t=$(transform_for "$right" 1); fi
+            [ -z "${left:-}" ] && left="$center"
+            [ -z "${right:-}" ] && right="$center"
             center="$center_name"
             write_state
         fi
 
         log "apply: docked  left=$left  center=$center  right=$right"
 
-        [ -n "$left"  ] && hyprctl keyword monitor "$left,1920x1080,0x0,1,transform,1"    >/dev/null 2>&1 || true
+        # Migrate laptop windows to workspace 1 (eDP-1 stays on)
+        migrate_from_monitor "$laptop" 1
+
+        [ -n "$left"  ] && hyprctl keyword monitor "$left,1920x1080,0x0,1,transform,${left_t:-3}"    >/dev/null 2>&1 || true
                                hyprctl keyword monitor "$center,2560x1440@120,1080x0,1"    >/dev/null 2>&1 || true
-        [ -n "$right" ] && hyprctl keyword monitor "$right,1920x1080,3640x0,1,transform,3" >/dev/null 2>&1 || true
-                               hyprctl keyword monitor "$laptop,disable"                   >/dev/null 2>&1 || true
+        [ -n "$right" ] && hyprctl keyword monitor "$right,1920x1080,3640x0,1,transform,${right_t:-1}" >/dev/null 2>&1 || true
+                               hyprctl keyword monitor "$laptop,preferred,auto,1"          >/dev/null 2>&1 || true
 
         [ -n "$left"  ] && hyprctl keyword workspace "r[11-19],monitor:$left,default:true"   >/dev/null 2>&1 || true
                                hyprctl keyword workspace "r[21-29],monitor:$center,default:true" >/dev/null 2>&1 || true
         [ -n "$right" ] && hyprctl keyword workspace "r[31-39],monitor:$right,default:true"  >/dev/null 2>&1 || true
 
-        hyprctl dispatch focusmonitor "$center"                           >/dev/null 2>&1 || true"
+        hyprctl dispatch focusmonitor "$center"                           >/dev/null 2>&1 || true
     else
         # ------ undocked ------
         log "apply: undocked -> enabling $laptop"
+        # Migrate any orphaned external windows to eDP workspace 1
+        migrate_external_to 1
         hyprctl keyword monitor "$laptop,preferred,auto,1"                >/dev/null 2>&1 || true
+        # Collect remaining windows to eDP workspace 1
+        sleep 0.3
+        migrate_from_monitor "$laptop" 1
         hyprctl dispatch focusmonitor "$laptop"                           >/dev/null 2>&1 || true
     fi
 }
@@ -112,6 +155,7 @@ swap_sides() {
         exit 1
     fi
     tmp="$left"; left="$right"; right="$tmp"
+    tmp_t="${left_t:-3}"; left_t="${right_t:-1}"; right_t="$tmp_t"
     write_state
     echo "swapped: left=$left right=$right"
     apply_profile
