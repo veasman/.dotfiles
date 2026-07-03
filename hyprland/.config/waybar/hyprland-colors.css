@@ -1,0 +1,6 @@
+/* Default accent palette — matches the fixed kara palette.
+ * Overwritten by hyprland-pywal when pywal mode is on. */
+@define-color accent     #8fd3d3;
+@define-color accent_dim #6bacac;
+@define-color warn       #ebcb8b;
+@define-color err        #bf616a;

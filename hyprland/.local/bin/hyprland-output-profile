@@ -141,7 +141,7 @@ apply_profile_computer() {
             [ "$name" = "$center" ] && continue
             hyprctl keyword monitor "$name,disable" >/dev/null 2>&1 || true
         done
-        hyprctl keyword monitor "$center,2560x1440@120,auto,1" >/dev/null 2>&1 || true
+        hyprctl keyword monitor "$center,preferred,auto,1" >/dev/null 2>&1 || true
         hyprctl dispatch focusmonitor "$center" >/dev/null 2>&1 || true
     else
         log "computer: undocked -> auto"
