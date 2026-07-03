@@ -1,0 +1,24 @@
+#!/bin/bash
+# hypridle-action — run idle action unless inhibited by fullscreen or gamemode
+# Usage: hypridle-action <lock|dpms-off>
+
+inhibited() {
+    # Check fullscreen clients (games, fullscreen video)
+    if hyprctl clients -j 2>/dev/null | jq -e '.[] | select(.fullscreen == true)' >/dev/null 2>&1; then
+        return 0
+    fi
+    # Check gamemode active
+    if command -v gamemoded &>/dev/null && gamemoded -r 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+if inhibited; then
+    exit 0
+fi
+
+case "${1:-}" in
+    lock)    loginctl lock-session ;;
+    dpms-off) hyprctl dispatch dpms off ;;
+esac
