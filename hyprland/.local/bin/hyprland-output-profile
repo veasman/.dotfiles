@@ -133,33 +133,15 @@ apply_profile_computer() {
     names_connected=$(printf '%s\n' "$all" | jq -r '.name' | sort | tr '\n' ' ')
     log "computer: connected = $names_connected"
 
-    has1440=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
-    has1080=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440")) | not) | .name' | head -1)
+    # Use preferred mode for every monitor — no aggressive refresh hunt.
+    # DP-to-HDMI adapters often advertise 1440p in EDID but can't drive
+    # it at a usable mode; "preferred" lets the driver negotiate safely.
+    echo "$all" | jq -r '.name' | while read -r name; do
+        [ -z "$name" ] && continue
+        hyprctl keyword monitor "$name,preferred,auto,1" >/dev/null 2>&1 || true
+    done
 
-    mode1440="preferred"
-    # DP-to-HDMI adapters often report 4K@30 as preferred; explicitly use 1440p@60
-    if printf '%s\n' "$all" | jq -r --arg n "${has1440:-}" 'select(.name == $n) | .availableModes[]' 2>/dev/null | grep -q "^2560x1440@"; then
-        mode1440=$(printf '%s\n' "$all" | jq -r --arg n "${has1440:-}" 'select(.name == $n) | .availableModes[]' 2>/dev/null | grep "^2560x1440@" | head -1)
-    fi
-
-    if [ -n "$has1080" ] && [ -n "$has1440" ]; then
-        log "computer: dual — 1080p main, 1440p secondary ($mode1440)"
-        hyprctl keyword monitor "$has1080,preferred,0x0,1" >/dev/null 2>&1 || true
-        w1080=$(printf '%s\n' "$all" | jq -r --arg n "$has1080" 'select(.name == $n) | .width' 2>/dev/null || echo 1920)
-        hyprctl keyword monitor "$has1440,$mode1440,${w1080}x0,1" >/dev/null 2>&1 || true
-        hyprctl dispatch focusmonitor "$has1080" >/dev/null 2>&1 || true
-    elif [ -n "$has1440" ]; then
-        log "computer: single 1440p ($mode1440)"
-        hyprctl keyword monitor "$has1440,$mode1440,0x0,1" >/dev/null 2>&1 || true
-        hyprctl dispatch focusmonitor "$has1440" >/dev/null 2>&1 || true
-    elif [ -n "$has1080" ]; then
-        log "computer: single 1080p"
-        hyprctl keyword monitor "$has1080,preferred,0x0,1" >/dev/null 2>&1 || true
-        hyprctl dispatch focusmonitor "$has1080" >/dev/null 2>&1 || true
-    else
-        log "computer: auto"
-        hyprctl keyword monitor ",preferred,auto,1" >/dev/null 2>&1 || true
-    fi
+    hyprctl dispatch focusmonitor "$(echo "$all" | jq -r '.name' | head -1)" >/dev/null 2>&1 || true
 }
 
 # --- hostname dispatch -------------------------------------------------
@@ -199,13 +181,21 @@ case "${1:-}" in
         apply_profile
         exit 0
         ;;
+    --once)
+        pid=$(cat "$RUNTIME/hyprland-output-profile.pid" 2>/dev/null || true)
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null && sleep 0.3 || true
+        apply_profile
+        exit 0
+        ;;
 esac
 
 # --- daemon lock ------------------------------------------------------
 RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+PIDFILE="$RUNTIME/hyprland-output-profile.pid"
 LOCK="$RUNTIME/hyprland-output-profile.lock"
 exec 9>"$LOCK"
 flock -n 9 || exit 0
+printf '%s\n' "$$" > "$PIDFILE"
 
 # --- debounced apply (collapses connector-flap storms) -----------------
 pending_pid=""

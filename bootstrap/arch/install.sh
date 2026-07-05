@@ -542,6 +542,7 @@ install_base_packages() {
     pacman_install \
         linux-firmware pciutils usbutils lm_sensors \
         mesa vulkan-tools vulkan-icd-loader \
+        syncthing \
         mpv pcmanfm
 
     step 33 "Installing development tools"
