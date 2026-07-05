@@ -136,15 +136,21 @@ apply_profile_computer() {
     has1440=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
     has1080=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440")) | not) | .name' | head -1)
 
+    mode1440="preferred"
+    # DP-to-HDMI adapters often report 4K@30 as preferred; explicitly use 1440p@60
+    if printf '%s\n' "$all" | jq -r --arg n "${has1440:-}" 'select(.name == $n) | .availableModes[]' 2>/dev/null | grep -q "^2560x1440@"; then
+        mode1440=$(printf '%s\n' "$all" | jq -r --arg n "${has1440:-}" 'select(.name == $n) | .availableModes[]' 2>/dev/null | grep "^2560x1440@" | head -1)
+    fi
+
     if [ -n "$has1080" ] && [ -n "$has1440" ]; then
-        log "computer: dual — 1080p main, 1440p secondary"
+        log "computer: dual — 1080p main, 1440p secondary ($mode1440)"
         hyprctl keyword monitor "$has1080,preferred,0x0,1" >/dev/null 2>&1 || true
         w1080=$(printf '%s\n' "$all" | jq -r --arg n "$has1080" 'select(.name == $n) | .width' 2>/dev/null || echo 1920)
-        hyprctl keyword monitor "$has1440,preferred,${w1080}x0,1" >/dev/null 2>&1 || true
+        hyprctl keyword monitor "$has1440,$mode1440,${w1080}x0,1" >/dev/null 2>&1 || true
         hyprctl dispatch focusmonitor "$has1080" >/dev/null 2>&1 || true
     elif [ -n "$has1440" ]; then
-        log "computer: single 1440p"
-        hyprctl keyword monitor "$has1440,preferred,0x0,1" >/dev/null 2>&1 || true
+        log "computer: single 1440p ($mode1440)"
+        hyprctl keyword monitor "$has1440,$mode1440,0x0,1" >/dev/null 2>&1 || true
         hyprctl dispatch focusmonitor "$has1440" >/dev/null 2>&1 || true
     elif [ -n "$has1080" ]; then
         log "computer: single 1080p"
