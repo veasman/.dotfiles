@@ -130,21 +130,26 @@ apply_profile_universe() {
 
 apply_profile_computer() {
     all=$(hyprctl monitors -j 2>/dev/null | jq -c '.[]' || true)
-    names_connected=$(printf '%s\n' "$all" | jq -r '.name' | tr '\n' ' ')
+    names_connected=$(printf '%s\n' "$all" | jq -r '.name' | sort | tr '\n' ' ')
     log "computer: connected = $names_connected"
 
     center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
+    secondary=$(printf '%s\n' "$all" | jq -r --arg c "$center" 'select(.name != $c) | .name' | head -1)
 
     if [ -n "$center" ]; then
-        log "computer: docked -> $center @ 2560x1440@120"
-        for name in $names_connected; do
-            [ "$name" = "$center" ] && continue
-            hyprctl keyword monitor "$name,disable" >/dev/null 2>&1 || true
-        done
-        hyprctl keyword monitor "$center,preferred,auto,1" >/dev/null 2>&1 || true
+        log "computer: primary $center @ preferred"
+        hyprctl keyword monitor "$center,preferred,0x0,1" >/dev/null 2>&1 || true
+        if [ -n "$secondary" ]; then
+            cw=$(printf '%s\n' "$all" | jq -r --arg n "$center" 'select(.name == $n) | .width' 2>/dev/null || echo 2560)
+            hyprctl keyword monitor "$secondary,preferred,${cw}x0,1" >/dev/null 2>&1 || true
+            log "computer: secondary $secondary at ${cw}x0"
+        fi
         hyprctl dispatch focusmonitor "$center" >/dev/null 2>&1 || true
+    elif [ -n "$secondary" ]; then
+        log "computer: single $secondary"
+        hyprctl keyword monitor "$secondary,preferred,0x0,1" >/dev/null 2>&1 || true
     else
-        log "computer: undocked -> auto"
+        log "computer: auto"
         hyprctl keyword monitor ",preferred,auto,1" >/dev/null 2>&1 || true
     fi
 }
