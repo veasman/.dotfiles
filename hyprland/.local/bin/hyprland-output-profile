@@ -133,21 +133,23 @@ apply_profile_computer() {
     names_connected=$(printf '%s\n' "$all" | jq -r '.name' | sort | tr '\n' ' ')
     log "computer: connected = $names_connected"
 
-    center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
-    secondary=$(printf '%s\n' "$all" | jq -r --arg c "$center" 'select(.name != $c) | .name' | head -1)
+    has1440=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
+    has1080=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440")) | not) | .name' | head -1)
 
-    if [ -n "$center" ]; then
-        log "computer: primary $center @ preferred"
-        hyprctl keyword monitor "$center,preferred,0x0,1" >/dev/null 2>&1 || true
-        if [ -n "$secondary" ]; then
-            cw=$(printf '%s\n' "$all" | jq -r --arg n "$center" 'select(.name == $n) | .width' 2>/dev/null || echo 2560)
-            hyprctl keyword monitor "$secondary,preferred,${cw}x0,1" >/dev/null 2>&1 || true
-            log "computer: secondary $secondary at ${cw}x0"
-        fi
-        hyprctl dispatch focusmonitor "$center" >/dev/null 2>&1 || true
-    elif [ -n "$secondary" ]; then
-        log "computer: single $secondary"
-        hyprctl keyword monitor "$secondary,preferred,0x0,1" >/dev/null 2>&1 || true
+    if [ -n "$has1080" ] && [ -n "$has1440" ]; then
+        log "computer: dual — 1080p main, 1440p secondary"
+        hyprctl keyword monitor "$has1080,preferred,0x0,1" >/dev/null 2>&1 || true
+        w1080=$(printf '%s\n' "$all" | jq -r --arg n "$has1080" 'select(.name == $n) | .width' 2>/dev/null || echo 1920)
+        hyprctl keyword monitor "$has1440,preferred,${w1080}x0,1" >/dev/null 2>&1 || true
+        hyprctl dispatch focusmonitor "$has1080" >/dev/null 2>&1 || true
+    elif [ -n "$has1440" ]; then
+        log "computer: single 1440p"
+        hyprctl keyword monitor "$has1440,preferred,0x0,1" >/dev/null 2>&1 || true
+        hyprctl dispatch focusmonitor "$has1440" >/dev/null 2>&1 || true
+    elif [ -n "$has1080" ]; then
+        log "computer: single 1080p"
+        hyprctl keyword monitor "$has1080,preferred,0x0,1" >/dev/null 2>&1 || true
+        hyprctl dispatch focusmonitor "$has1080" >/dev/null 2>&1 || true
     else
         log "computer: auto"
         hyprctl keyword monitor ",preferred,auto,1" >/dev/null 2>&1 || true
