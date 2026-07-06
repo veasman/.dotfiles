@@ -15,6 +15,8 @@
 #
 # Adding a new scratchpad: add a `name)` block here, an autostart
 # `exec-once` in hyprland.conf, the matching windowrule, and a bind.
+#
+# Uses footclient (foot --server must be running).
 
 set -eu
 
@@ -22,15 +24,12 @@ name="${1:?usage: hyprland-scratch-show <name>}"
 
 case "$name" in
     todo)
-        windows="scratch-todo|kara-toe-client --app-id=scratch-todo nvim $HOME/.dotfiles/personal/TODO.md
-scratch-glances|kara-toe-client --app-id=scratch-glances glances --time 5"
+        windows="scratch-todo|footclient --app-id=scratch-todo nvim $HOME/.dotfiles/personal/TODO.md
+scratch-glances|footclient --app-id=scratch-glances glances --time 5"
         ;;
     media)
-        windows='spotatui|kara-toe-client --app-id=spotatui tmux new-session -A -s spotify spotatui
-pulsemixer|kara-toe-client --app-id=pulsemixer pulsemixer'
-        ;;
-    mail)
-        windows='floorp-mail|floorp --class=floorp-mail --new-window https://outlook.cloud.microsoft/mail/'
+        windows='spotatui|footclient --app-id=spotatui tmux new-session -A -s spotify spotatui
+pulsemixer|footclient --app-id=pulsemixer pulsemixer'
         ;;
     *)
         echo "hyprland-scratch-show: unknown scratchpad '$name'" >&2

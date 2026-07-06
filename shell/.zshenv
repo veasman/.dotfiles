@@ -1,6 +1,6 @@
 export EDITOR="nvim"
 export VISUAL="nvim"
-export TERMINAL="kara-toe-client"
+export TERMINAL="foot"
 export BROWSER="floorp"
 
 # ─── XDG base dirs ────────────────────────────────────────────────────

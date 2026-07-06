@@ -36,7 +36,7 @@ LOG="$HOME/.cache/hypr/start-hyprland.log"
 # to paint, hypridle was running twice, and /run/user/$UID/hypr/ kept
 # accumulating <sig>/ dirs from dead instances. Hyprland's exec-once
 # fires fresh per session, but processes spawned by it (waybar,
-# hypridle, hyprpaper, swaync, kara-toe --server) don't always die
+# hypridle, hyprpaper, swaync) don't always die
 # with the compositor. The leftovers race the new session for sockets
 # / dbus names / config inotify slots and stall first paint.
 #

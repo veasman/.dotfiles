@@ -640,7 +640,7 @@ install_swayosd() {
 
 install_termfilechooser() {
     # Routes GTK file dialogs (Floorp uploads, etc.) to lf in
-    # kara-toe-client via xdg-desktop-portal-termfilechooser. Config
+    # footclient via xdg-desktop-portal-termfilechooser. Config
     # lives in ~/.config/xdg-desktop-portal-termfilechooser/config and
     # ~/.config/xdg-desktop-portal/portals.conf (both stowed via the
     # gtk package).

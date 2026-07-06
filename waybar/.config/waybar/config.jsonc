@@ -91,7 +91,7 @@
             "default": ["", "", ""]
         },
         "on-click":         "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-click-right":   "kara-toe-client --app-id=pulsemixer -e pulsemixer",
+        "on-click-right":   "footclient --app-id=pulsemixer pulsemixer",
         "scroll-step": 5
     }
 }

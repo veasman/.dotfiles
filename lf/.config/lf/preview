@@ -29,9 +29,8 @@ case "$mime" in
     image/*)
         if command -v chafa >/dev/null 2>&1; then
             # chafa auto-detects sixel / kitty graphics; falls back
-            # to ANSI blocks. Foot (kara-toe-client's base) supports
-            # sixel, so on the user's terminal images render
-            # full-color.
+            # to ANSI blocks. Foot supports sixel, so on the user's
+            # terminal images render full-color.
             chafa -s "${w}x${h}" --animate=off "$file" 2>/dev/null && exit 0
         fi
         printf '[image] %s\n\n' "$file"
