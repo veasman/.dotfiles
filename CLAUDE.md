@@ -5,17 +5,17 @@ Personal dotfiles managed with **GNU Stow**. Each top-level directory is a stow 
 - Full install: `make install`
 - Dry run: `make dry-run`
 
-## Color palette (kara, fixed — no auto-theming)
+## Color palette (gruvbox, warm — no auto-theming)
 
-bg `#111111`, surface `#1b1b1b`, text `#f2f2f2`, muted `#5c5c5c`
-accent `#6bacac`, accent_soft `#458588`, border `#353535`
-error `#bf616a`, warn `#ebcb8b`, success `#a3be8c`
+bg `#1d2021`, surface `#282828`, text `#ebdbb2`, muted `#665c54`
+accent `#fe8019`, accent_soft `#d79921`, border `#3c3836`
+error `#fb4934`, warn `#fabd2f`, success `#b8bb26`
 
 ## Visual rules
 
 - Blur only on waybar layer (`layerrule = blur on, match:namespace waybar`). All other windows explicitly no_blur.
 - Active window border: animated 4-stop gradient rotating on 5s loop. Slower is calmer.
-- Notification body format: `Label <span muted>·</span> <span #a8a8a8>value</span>` (dim-dot pattern).
+- Notification body format: `Label <span muted>·</span> <span #bdae93>value</span>` (dim-dot pattern).
 - Screenshot notifications: pre-rendered 200×125 letterboxed thumbnail (magick), click opens imv.
 - Bar: height 30, font 10.5pt, pill padding 1×11, translucent bar bg 0.22 alpha, pills 0.92 alpha.
 
@@ -42,7 +42,7 @@ error `#bf616a`, warn `#ebcb8b`, success `#a3be8c`
 
 - Hyprland is the active WM. Sway config exists but isn't the primary.
 - Don't reintroduce kitty / yazi / sxiv (removed).
-- No wallpaper-reactive theming (matugen, wallust, pywal). Palette is manual.
+- Pywal is optional — `hyprland-pywal` can derive palette from wallpaper. Default is the fixed gruvbox palette.
 
 ## Hermes stack (active LLM setup)
 

@@ -27,8 +27,8 @@ SINK="@DEFAULT_AUDIO_SINK@"
 STEP=5
 
 # Pango markup colors — dim grey for separator + value.
-DIM='#5c5c5c'
-VAL='#a8a8a8'
+DIM='#665c54'
+VAL='#bdae93'
 
 case "${1:-}" in
     up)   wpctl set-volume -l 1.5 "$SINK" "${STEP}%+" ;;

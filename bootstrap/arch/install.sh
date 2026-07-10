@@ -813,11 +813,11 @@ stow_dotfiles() {
     if [[ ! -f "$HOME/.config/waybar/hyprland-colors.css" ]]; then
         run_cmd mkdir -p "$HOME/.config/waybar"
         run_cmd sh -c 'cat > "$HOME/.config/waybar/hyprland-colors.css" << "CSSEOF"
-/* Default accent palette — matches the fixed kara palette. Overwritten by hyprland-pywal. */
-@define-color accent     #8fd3d3;
-@define-color accent_dim #6bacac;
-@define-color warn       #ebcb8b;
-@define-color err        #bf616a;
+/* Default accent palette — matches the fixed gruvbox palette. Overwritten by hyprland-pywal. */
+@define-color accent     #fe8019;
+@define-color accent_dim #d79921;
+@define-color warn       #fabd2f;
+@define-color err        #fb4934;
 CSSEOF'
     fi
 

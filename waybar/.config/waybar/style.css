@@ -1,10 +1,10 @@
 /* waybar — ~/.config/waybar/style.css
  *
- * Colors match kara-gate.conf theme block:
- *   bg=#111111  surface=#1b1b1b  text=#f2f2f2  accent=#6bacac
- *   accent_soft=#458588  border=#353535
+ * Colors follow the gruvbox warm palette:
+ *   bg=#1d2021  surface=#282828  text=#ebdbb2  accent=#fe8019
+ *   accent_soft=#d79921  border=#3c3836
  *
- * Kara's bar uses pill modules off by default (pill=false) — matching
+ * Bar uses pill modules off by default (pill=false) — matching
  * that here: flat row with border only on the bar itself.
  */
 
@@ -22,30 +22,30 @@
 }
 
 window#waybar {
-    background: rgba(17, 17, 17, 0.86);   /* #111111 @ alpha 220/255 */
-    color:      #f2f2f2;
+    background: rgba(29, 32, 33, 0.86);   /* #1d2021 @ alpha 220/255 */
+    color:      #ebdbb2;
 }
 
 #workspaces button {
     padding:    0 8px;
     background: transparent;
-    color:      #5c5c5c;
+    color:      #665c54;
     border-bottom: 2px solid transparent;
 }
 
 #workspaces button.focused {
-    color:         #f2f2f2;
-    border-bottom: 2px solid #6bacac;
+    color:         #ebdbb2;
+    border-bottom: 2px solid #fe8019;
 }
 
 #workspaces button.urgent {
-    color:         #bf616a;
-    border-bottom: 2px solid #bf616a;
+    color:         #fb4934;
+    border-bottom: 2px solid #fb4934;
 }
 
 #mode {
-    background: #458588;
-    color:      #111111;
+    background: #d79921;
+    color:      #1d2021;
     padding:    0 8px;
 }
 
@@ -60,22 +60,22 @@ window#waybar {
 #battery,
 #pulseaudio {
     padding: 0 10px;
-    color:   #f2f2f2;
+    color: #ebdbb2;
 }
 
-#custom-network.wifi-good    { color: #a3be8c; }
-#custom-network.wifi-fair    { color: #ebcb8b; }
-#custom-network.wifi-poor    { color: #bf616a; }
-#custom-network.disconnected { color: #bf616a; }
+#custom-network.wifi-good    { color: #b8bb26; }
+#custom-network.wifi-fair    { color: #fabd2f; }
+#custom-network.wifi-poor    { color: #fb4934; }
+#custom-network.disconnected { color: #fb4934; }
 
 #cpu.warning,
 #memory.warning,
 #battery.warning {
-    color: #ebcb8b;
+    color: #fabd2f;
 }
 
 #cpu.critical,
 #memory.critical,
 #battery.critical {
-    color: #bf616a;
+    color: #fb4934;
 }

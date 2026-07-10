@@ -41,3 +41,7 @@ scripts/.local/bin/hyprland-ws-migrate
 scripts/.local/bin/httpx
 scripts/.local/bin/nuclei
 scripts/.local/bin/loom-ui
+
+# Machine-local caches and state
+scripts/.local/cache/
+scripts/.local/state/

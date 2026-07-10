@@ -36,11 +36,11 @@ WALLPAPER_PREVIEW="$STATE_DIR/wallpaper-preview"
 
 mkdir -p "$STATE_DIR" "$(dirname "$WAYBAR_COLORS")" "$(dirname "$HYPRLOCK_COLORS")"
 
-# Kara palette defaults — used when pywal is off or as bootstrap.
-KARA_ACCENT="#8fd3d3"
-KARA_ACCENT_DIM="#6bacac"
-KARA_WARN="#ebcb8b"
-KARA_ERR="#bf616a"
+# Gruvbox defaults — used when pywal is off or as bootstrap.
+GRUV_ACCENT="#fe8019"
+GRUV_ACCENT_DIM="#d79921"
+GRUV_WARN="#fabd2f"
+GRUV_ERR="#fb4934"
 
 write_waybar_colors() {
     accent=$1; accent_dim=$2; warn=$3; err=$4
@@ -123,9 +123,9 @@ apply_path() {
 }
 
 restore_defaults() {
-    write_waybar_colors "$KARA_ACCENT" "$KARA_ACCENT_DIM" "$KARA_WARN" "$KARA_ERR"
-    write_hyprlock_colors "$KARA_ACCENT" "$KARA_ACCENT_DIM"
-    push_hyprland_colors "$KARA_ACCENT" "$KARA_ACCENT_DIM"
+    write_waybar_colors "$GRUV_ACCENT" "$GRUV_ACCENT_DIM" "$GRUV_WARN" "$GRUV_ERR"
+    write_hyprlock_colors "$GRUV_ACCENT" "$GRUV_ACCENT_DIM"
+    push_hyprland_colors "$GRUV_ACCENT" "$GRUV_ACCENT_DIM"
     reload_waybar
 }
 
@@ -172,10 +172,10 @@ case "$action" in
         [ -f "$FLAG_FILE" ]
         ;;
     init)
-        [ -f "$WAYBAR_COLORS" ] || write_waybar_colors \
-            "$KARA_ACCENT" "$KARA_ACCENT_DIM" "$KARA_WARN" "$KARA_ERR"
-        [ -f "$HYPRLOCK_COLORS" ] || write_hyprlock_colors \
-            "$KARA_ACCENT" "$KARA_ACCENT_DIM"
+    [ -f "$WAYBAR_COLORS" ] || write_waybar_colors \
+        "$GRUV_ACCENT" "$GRUV_ACCENT_DIM" "$GRUV_WARN" "$GRUV_ERR"
+    [ -f "$HYPRLOCK_COLORS" ] || write_hyprlock_colors \
+        "$GRUV_ACCENT" "$GRUV_ACCENT_DIM"
         ;;
     *)
         echo "usage: hyprland-pywal {apply <path>|enable|disable|toggle|is-enabled|init}" >&2

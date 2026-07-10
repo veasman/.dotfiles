@@ -34,3 +34,6 @@ export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 # get reaped by a future stow re-run.
 [ -d "$HOME/.dotfiles/sway/.local/bin" ] && \
     PATH="$HOME/.dotfiles/sway/.local/bin:$PATH"
+
+# nvm global binaries
+export PATH="$NVM_DIR/versions/node/v24.18.0/bin:$PATH"

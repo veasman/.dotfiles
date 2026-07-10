@@ -19,8 +19,8 @@ mode="${1:-output}"
 DIR="$HOME/Pictures"
 mkdir -p "$DIR"
 
-DIM='#5c5c5c'
-VAL='#a8a8a8'
+DIM='#665c54'
+VAL='#bdae93'
 
 case "$mode" in
     region)
@@ -50,11 +50,11 @@ filename=$(basename "$path")
 # NOT upscale), so a tiny region screenshot lands as a tiny
 # thumbnail in an otherwise-empty card. Pre-render a fixed-size
 # 200x125 letterboxed thumbnail via magick — fits the source while
-# preserving aspect, pads with the kara surface color so the card
+# preserving aspect, pads with the gruvbox surface color so the card
 # always looks the same shape regardless of source dimensions.
 thumb="${XDG_CACHE_HOME:-$HOME/.cache}/screenshot-thumb.png"
 mkdir -p "$(dirname "$thumb")"
-magick "$path" -resize 200x125 -background '#1b1b1b' -gravity center \
+magick "$path" -resize 200x125 -background '#282828' -gravity center \
     -extent 200x125 "$thumb" 2>/dev/null || cp "$path" "$thumb"
 
 # image-path hint puts the screenshot in swaync's body image slot.
