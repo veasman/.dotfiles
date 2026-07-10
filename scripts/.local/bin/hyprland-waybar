@@ -1,1 +1,8 @@
-/home/oracle/.dotfiles/hyprland/.local/bin/hyprland-waybar
+#!/usr/bin/env sh
+# hyprland-waybar — start waybar with the hyprland-specific config.
+
+pkill -x waybar 2>/dev/null || true
+sleep 0.2
+exec waybar \
+  -c "$HOME/.config/waybar/hyprland.jsonc" \
+  -s "$HOME/.config/waybar/hyprland-style.css"

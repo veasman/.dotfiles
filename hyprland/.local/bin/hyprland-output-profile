@@ -141,6 +141,37 @@ apply_profile_computer() {
         hyprctl keyword monitor "$name,preferred,auto,1" >/dev/null 2>&1 || true
     done
 
+    # Bind workspace ranges by X position, matching hyprland-ws dispatch.
+    # hyprland-ws computes: first non-eDP-1 monitor → base=10 (ws 11-19),
+    # second → base=20 (ws 21-29), etc. Range syntax r[N-M] doesn't
+    # support the monitor: property via hyprctl keyword, so bind each
+    # ID individually.
+    sorted=$(printf '%s\n' "$all" | jq -rs 'sort_by(.x) | .[] | .name')
+    index=0
+    for mon in $sorted; do
+        case $index in
+            0)
+                for i in $(seq 1 9); do
+                    hyprctl keyword workspace "$i,monitor:$mon,default:true" >/dev/null 2>&1 || true
+                done
+                for i in $(seq 11 19); do
+                    hyprctl keyword workspace "$i,monitor:$mon,default:true" >/dev/null 2>&1 || true
+                done
+                ;;
+            1)
+                for i in $(seq 21 29); do
+                    hyprctl keyword workspace "$i,monitor:$mon,default:true" >/dev/null 2>&1 || true
+                done
+                ;;
+            2)
+                for i in $(seq 31 39); do
+                    hyprctl keyword workspace "$i,monitor:$mon,default:true" >/dev/null 2>&1 || true
+                done
+                ;;
+        esac
+        index=$((index + 1))
+    done
+
     hyprctl dispatch focusmonitor "$(echo "$all" | jq -r '.name' | head -1)" >/dev/null 2>&1 || true
 }
 

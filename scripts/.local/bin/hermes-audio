@@ -1,1 +1,20 @@
-/home/oracle/.dotfiles/hyprland/.local/bin/hermes-audio
+#!/usr/bin/env sh
+# hermes-audio — waybar audio module using wpctl.
+# Outputs JSON: { "text": "VOL%", "class": "normal|warning|critical|muted" }
+
+raw=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null) || raw="Volume: 0"
+muted=$(printf '%s' "$raw" | grep -cq '\[MUTED\]' 2>/dev/null && echo 1 || echo 0)
+pct=$(printf '%s' "$raw" | sed 's/Volume: //;s/ *\[MUTED\]//' | awk '{printf "%d", $1 * 100}')
+pct="${pct:-0}"
+
+if [ "$muted" -gt 0 ]; then
+  printf '{"text":"  %d%%","class":"muted"}\n' "$pct"
+elif [ "$pct" -ge 80 ]; then
+  printf '{"text":"  %d%%","class":"critical"}\n' "$pct"
+elif [ "$pct" -ge 50 ]; then
+  printf '{"text":"  %d%%","class":"warning"}\n' "$pct"
+elif [ "$pct" -ge 1 ]; then
+  printf '{"text":"  %d%%","class":"normal"}\n' "$pct"
+else
+  printf '{"text":"  %d%%","class":"normal"}\n' "$pct"
+fi
