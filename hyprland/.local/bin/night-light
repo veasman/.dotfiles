@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+# night-light — warm display between 8pm and 6am CST.
+
+TEMP=3500
+LAT=-89
+LONG=0
+
+command -v wlsunset >/dev/null 2>&1 || { echo "night-light: wlsunset not found"; exit 1; }
+
+pkill -x wlsunset 2>/dev/null
+sleep 0.3
+
+while true; do
+  hour=$(TZ=America/Chicago date +%-H)
+  if [ "$hour" -ge 20 ] || [ "$hour" -lt 6 ]; then
+    if ! pgrep -x wlsunset >/dev/null; then
+      wlsunset -l "$LAT" -L "$LONG" -t "$TEMP" &
+    fi
+  else
+    pgrep -x wlsunset >/dev/null && pkill -x wlsunset
+  fi
+  sleep 30
+done
