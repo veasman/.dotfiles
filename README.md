@@ -2,7 +2,7 @@
 
 Artix Linux (OpenRC) dotfiles using:
 
-- sway (Wayland)
+- Hyprland (Wayland)
 - stow-managed configs
 
 ---

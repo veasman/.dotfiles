@@ -45,10 +45,6 @@ providers:
       hf.co/Qwen/Qwen3-4B-GGUF:Q5_K_M:
         context_length: 32768
 
-# Fallback provider when primary is unavailable (rate-limited, overloaded)
-fallback_providers:
-  - provider: freellmapi
-
 # ── Agent behavior ──────────────────────────────────────────────────────
 agent:
   max_turns: 150

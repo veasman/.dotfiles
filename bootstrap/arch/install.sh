@@ -770,6 +770,7 @@ stow_package_force() {
 
 stow_dotfiles() {
     local packages=(
+        claude
         floorp
         fonts
         foot
@@ -1093,34 +1094,34 @@ main() {
     step 59 "Installing xdg-desktop-portal-termfilechooser (lf for GTK file dialogs)"
     install_termfilechooser
 
-    step 59 "Installing hyprland-share-picker-preview (visual screencast picker)"
+    step 61 "Installing hyprland-share-picker-preview (visual screencast picker)"
     install_hyprland_share_picker_preview
 
-    step 60 "Enabling Bluetooth"
+    step 63 "Enabling Bluetooth"
     enable_bluetooth
 
-    step 73 "Installing pmux"
+    step 66 "Installing pmux"
     install_pmux
 
-    step 76 "Installing Hermes agent"
+    step 69 "Installing Hermes agent"
     install_hermes
 
-    step 80 "Stowing dotfiles"
+    step 72 "Installing FreeLLMAPI (free LLM proxy)"
+    install_freellmapi
+
+    step 75 "Starting FreeLLMAPI"
+    freellmapi_post
+
+    step 78 "Stowing dotfiles"
     stow_dotfiles
 
     step 81 "Configuring GTK dark mode"
     configure_gtk_dark_mode
 
-    step 82 "Seeding default wallpaper"
+    step 84 "Seeding default wallpaper"
     seed_default_wallpaper
 
-    step 77 "Installing FreeLLMAPI (free LLM proxy)"
-    install_freellmapi
-
-    step 78 "Starting FreeLLMAPI"
-    freellmapi_post
-
-    step 90 "Setting default shell to zsh"
+    step 87 "Setting default shell to zsh"
     ensure_zsh_default_shell
 
     if [[ "$INSTALL_SUNSHINE" -eq 1 ]]; then

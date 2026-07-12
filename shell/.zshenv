@@ -27,13 +27,5 @@ export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
 export PYTHONHISTFILE="$XDG_STATE_HOME/python/history"
 export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 
-# Sway helpers live in the sway stow package (they can't go under
-# scripts/.local/bin because the scripts package has absolute-symlink
-# artifacts that abort stow). Add the dir to PATH directly so the
-# helpers are reachable even if the manual symlinks in ~/.local/bin
-# get reaped by a future stow re-run.
-[ -d "$HOME/.dotfiles/sway/.local/bin" ] && \
-    PATH="$HOME/.dotfiles/sway/.local/bin:$PATH"
-
-# nvm global binaries
-export PATH="$NVM_DIR/versions/node/v24.18.0/bin:$PATH"
+# nvm global binaries — version is auto-managed by nvm, don't hardcode
+export PATH="$NVM_DIR/versions/node/$(ls "$NVM_DIR/versions/node/" | sort -V | tail -1)/bin:$PATH"
