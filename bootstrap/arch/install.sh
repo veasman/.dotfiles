@@ -515,7 +515,7 @@ install_base_packages() {
     step 12 "Installing Hyprland desktop stack"
     pacman_install \
         hyprland hyprpaper hypridle hyprlock hyprshot hyprpicker \
-        waybar fuzzel mako swaync libnotify \
+        waybar fuzzel swaync libnotify \
         grim slurp wl-clipboard socat playerctl brightnessctl \
         xdg-utils xdg-desktop-portal xdg-desktop-portal-gtk \
         xdg-desktop-portal-hyprland
