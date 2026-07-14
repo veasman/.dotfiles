@@ -1,0 +1,88 @@
+#!/usr/bin/env sh
+# hyprland-ws-orphans — recover windows stranded on "dead" workspaces.
+#
+# After a hyprctl reload + profile re-apply, workspace bindings change.
+# Windows on old IDs become unreachable via mod+digit because
+# hyprland-ws only dispatches to the current valid ranges. This script
+# finds workspaces whose ID falls outside the valid range for their
+# monitor and moves every client to the corresponding in-range workspace
+# (base + digit).
+#
+# Reads the monitor→base mapping from the state file written by
+# hyprland-output-profile. Falls back to X-position computation if
+# the file is missing. Idempotent — no-op when all windows are already
+# on valid workspaces.
+
+set -eu
+
+WORKSPACE_BASES="$HOME/.local/state/hypr/workspace-bases"
+
+# Lookup base for a monitor name. Tries the state file first, then
+# falls back to computing from X positions.
+base_for() {
+    local m="$1"
+    if [ -f "$WORKSPACE_BASES" ]; then
+        local b
+        b=$(awk -v m="$m" '$1 == m { print $2; exit }' "$WORKSPACE_BASES")
+        [ -n "$b" ] && { printf '%s' "$b"; return; }
+    fi
+    # Fallback: compute from sorted X positions.
+    [ "$m" = "eDP-1" ] && { printf '0'; return; }
+    local sorted idx
+    sorted=$(hyprctl monitors -j 2>/dev/null | jq -r 'sort_by(.x) | .[] | .name')
+    idx=$(printf '%s\n' "$sorted" | grep -v '^eDP-1$' | grep -nFx "$m" | cut -d: -f1)
+    [ -z "$idx" ] && { printf -- '-1'; return; }
+    printf '%s' "$((idx * 10))"
+}
+
+# Check whether workspace id is reachable on the given monitor.
+# hyprland-ws dispatches to base + n where n is 1-9, so the only
+# reachable workspace IDs for a monitor are base+1 through base+9.
+ws_is_valid() {
+    local id="$1" base="$2"
+    local digit=$((id - base))
+    [ "$digit" -ge 1 ] && [ "$digit" -le 9 ]
+}
+
+ws_data=$(hyprctl workspaces -j 2>/dev/null)
+clients=$(hyprctl clients -j 2>/dev/null)
+
+# Find workspaces with windows that are outside valid ranges.
+orphans=$(printf '%s' "$ws_data" \
+    | jq -r '.[] | select(.windows > 0 and .id > 0) | "\(.id) \(.monitor)"')
+
+if [ -z "$orphans" ]; then
+    echo "no orphans."
+    exit 0
+fi
+
+moved=0
+while IFS=' ' read -r id monitor; do
+    base=$(base_for "$monitor")
+    if [ "$base" = "-1" ]; then
+        echo "skip ws $id: unknown monitor '$monitor'" >&2
+        continue
+    fi
+
+    if ws_is_valid "$id" "$base"; then
+        continue
+    fi
+
+    # Target: base + (id mod 10). Preserves the user's digit (1-9).
+    digit=$((id % 10))
+    [ "$digit" -eq 0 ] && digit=10
+    target=$((base + digit))
+
+    printf '%s' "$clients" \
+        | jq -r --argjson ws "$id" '.[] | select(.workspace.id == $ws) | .address' \
+        | while IFS= read -r addr; do
+            hyprctl dispatch movetoworkspacesilent "$target,address:$addr" \
+                >/dev/null 2>&1 || true
+            echo "  $addr  ws $id → ws $target ($monitor)"
+        done
+    moved=1
+done <<EOF
+$orphans
+EOF
+
+[ "$moved" -eq 0 ] && echo "no orphans."

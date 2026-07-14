@@ -20,12 +20,27 @@ HOSTNAME=$(uname -n)
 # --- state file (persists connector→side mapping across renames) -----
 STATE_DIR="$HOME/.local/state/hypr"
 STATE="$STATE_DIR/output-layout"
+MONITOR_CACHE="$STATE_DIR/output-monitors-cache"
+WORKSPACE_BASES="$STATE_DIR/workspace-bases"
 mkdir -p "$STATE_DIR" 2>/dev/null || true
 
 read_state()  { [ -f "$STATE" ] && . "$STATE" || true; }
 write_state() {
     printf 'left=%s\nleft_t=%s\ncenter=%s\nright=%s\nright_t=%s\n' \
         "$left" "${left_t:-3}" "$center" "$right" "${right_t:-1}" > "$STATE"
+}
+
+# Check whether the connected monitor set has changed since the last apply.
+# Returns 0 (true) if the set is identical (no re-bind needed), 1 if changed.
+# Includes X positions so position shifts (different port, re-plug order)
+# also trigger a re-bind — keeps workspace bases in sync.
+monitors_unchanged() {
+    current=$(hyprctl monitors -j 2>/dev/null | jq -r 'sort_by(.name) | .[] | "\(.name) \(.x)"' | tr '\n' ' ')
+    [ -f "$MONITOR_CACHE" ] && [ "$(cat "$MONITOR_CACHE")" = "$current" ]
+}
+
+save_monitor_cache() {
+    hyprctl monitors -j 2>/dev/null | jq -r 'sort_by(.name) | .[] | "\(.name) \(.x)"' | tr '\n' ' ' > "$MONITOR_CACHE"
 }
 
 # --- logging ---------------------------------------------------------
@@ -36,6 +51,12 @@ log() {
     printf '%s %s\n' \
         "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '?')" "$*" \
         >>"$LOGFILE" 2>/dev/null || true
+}
+
+# Write monitor→base mapping so hyprland-ws uses the same offsets.
+# One line per monitor: "monitor_name base_offset"
+write_workspace_bases() {
+    printf '%s\n' "$@" > "$WORKSPACE_BASES"
 }
 
 # --- window migration ---------------------------------------------------
@@ -66,6 +87,14 @@ apply_profile_universe() {
     all=$(hyprctl monitors -j 2>/dev/null | jq -c '.[]' || true)
     names_connected=$(printf '%s\n' "$all" | jq -r '.name' | tr '\n' ' ')
     log "universe: connected = $names_connected"
+
+    # Skip re-binding if the monitor set hasn't changed — avoids
+    # workspace drift from spurious DPMS / connector-flap events.
+    if monitors_unchanged; then
+        log "universe: monitor set unchanged, skipping re-bind"
+        return 0
+    fi
+    save_monitor_cache
 
     laptop="eDP-1"
     center=$(printf '%s\n' "$all" | jq -r 'select(.availableModes | any(startswith("2560x1440"))) | .name' | head -1)
@@ -117,6 +146,9 @@ apply_profile_universe() {
                                hyprctl keyword workspace "r[21-29],monitor:$center,default:true" >/dev/null 2>&1 || true
         [ -n "$right" ] && hyprctl keyword workspace "r[31-39],monitor:$right,default:true"  >/dev/null 2>&1 || true
 
+        # Write base offsets so hyprland-ws stays in sync.
+        write_workspace_bases "$laptop 0" "$left 10" "$center 20" "$right 30"
+
         hyprctl dispatch focusmonitor "$center"                           >/dev/null 2>&1 || true
     else
         log "universe: undocked -> enabling $laptop"
@@ -124,6 +156,7 @@ apply_profile_universe() {
         hyprctl keyword monitor "$laptop,preferred,auto,1"                >/dev/null 2>&1 || true
         sleep 0.3
         migrate_from_monitor "$laptop" 1
+        write_workspace_bases "$laptop 0"
         hyprctl dispatch focusmonitor "$laptop"                           >/dev/null 2>&1 || true
     fi
 }
@@ -133,12 +166,50 @@ apply_profile_computer() {
     names_connected=$(printf '%s\n' "$all" | jq -r '.name' | sort | tr '\n' ' ')
     log "computer: connected = $names_connected"
 
-    # Use preferred mode for every monitor — no aggressive refresh hunt.
-    # DP-to-HDMI adapters often advertise 1440p in EDID but can't drive
-    # it at a usable mode; "preferred" lets the driver negotiate safely.
-    echo "$all" | jq -r '.name' | while read -r name; do
+    # Skip re-binding if the monitor set hasn't changed — avoids
+    # workspace drift where re-binding recreates workspace instances
+    # and orphans windows on the old IDs (e.g. after DPMS wake).
+    if monitors_unchanged; then
+        log "computer: monitor set unchanged, skipping re-bind"
+        return 0
+    fi
+    save_monitor_cache
+
+    # DP-to-HDMI adapters often advertise resolutions > 1080p in EDID
+    # but can't drive them reliably. Detect these monitors and force
+    # 1080p at the highest available refresh rate instead of "preferred".
+    echo "$all" | while read -r mon_json; do
+        name=$(printf '%s' "$mon_json" | jq -r '.name')
         [ -z "$name" ] && continue
-        hyprctl keyword monitor "$name,preferred,auto,1" >/dev/null 2>&1 || true
+
+        high_res=$(printf '%s' "$mon_json" | jq -r '
+            [.availableModes[] | select(
+                startswith("2560x1440") or
+                startswith("3440x1440") or
+                startswith("3840x2160") or
+                startswith("5120x1440") or
+                startswith("5120x2160") or
+                startswith("7680x4320")
+            )] | length > 0
+        ')
+
+        if [ "$high_res" = "true" ]; then
+            best=$(printf '%s' "$mon_json" | jq -r '
+                [.availableModes[]
+                 | select(startswith("1920x1080@"))
+                 | ltrimstr("1920x1080@")
+                 | gsub("Hz"; "")
+                 | tonumber] | max
+            ')
+            if [ -n "$best" ] && [ "$best" != "null" ]; then
+                log "computer: $name has >1080p EDID, forcing 1920x1080@${best}"
+                hyprctl keyword monitor "$name,1920x1080@${best},auto,1" >/dev/null 2>&1 || true
+            else
+                hyprctl keyword monitor "$name,preferred,auto,1" >/dev/null 2>&1 || true
+            fi
+        else
+            hyprctl keyword monitor "$name,preferred,auto,1" >/dev/null 2>&1 || true
+        fi
     done
 
     # Bind workspace ranges by X position, matching hyprland-ws dispatch.
@@ -147,8 +218,10 @@ apply_profile_computer() {
     # support the monitor: property via hyprctl keyword, so bind each
     # ID individually.
     sorted=$(printf '%s\n' "$all" | jq -rs 'sort_by(.x) | .[] | .name')
+    bases_file=$(mktemp)
     index=0
     for mon in $sorted; do
+        base=$((index * 10))
         case $index in
             0)
                 for i in $(seq 1 9); do
@@ -169,8 +242,11 @@ apply_profile_computer() {
                 done
                 ;;
         esac
+        printf '%s %s\n' "$mon" "$base" >> "$bases_file"
         index=$((index + 1))
     done
+    # Write base offsets so hyprland-ws stays in sync.
+    mv "$bases_file" "$WORKSPACE_BASES"
 
     hyprctl dispatch focusmonitor "$(echo "$all" | jq -r '.name' | head -1)" >/dev/null 2>&1 || true
 }
@@ -202,26 +278,27 @@ swap_sides() {
 }
 
 # --- CLI (runs BEFORE the daemon lock so --swap isn't blocked) --------
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 case "${1:-}" in
     --swap|--swap-sides)
         swap_sides
         exit 0
         ;;
     --redetect)
-        rm -f "$STATE"
+        rm -f "$STATE" "$MONITOR_CACHE"
         apply_profile
         exit 0
         ;;
     --once)
         pid=$(cat "$RUNTIME/hyprland-output-profile.pid" 2>/dev/null || true)
         [ -n "$pid" ] && kill "$pid" 2>/dev/null && sleep 0.3 || true
+        rm -f "$MONITOR_CACHE"
         apply_profile
         exit 0
         ;;
 esac
 
 # --- daemon lock ------------------------------------------------------
-RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 PIDFILE="$RUNTIME/hyprland-output-profile.pid"
 LOCK="$RUNTIME/hyprland-output-profile.lock"
 exec 9>"$LOCK"
@@ -240,6 +317,10 @@ schedule_apply() {
 }
 
 # --- daemon entry point -----------------------------------------------
+# Clear monitor cache on startup so workspace bindings are always
+# established fresh — the cache only guards against spurious re-binds
+# within a single session (e.g. DPMS wake).
+rm -f "$MONITOR_CACHE"
 log "start (settle=${SETTLE}s)"
 apply_profile
 

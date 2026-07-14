@@ -1,11 +1,10 @@
 #!/usr/bin/env sh
 # hyprland-ws — per-output workspace switcher.
 #
-# Computes the base offset (0, 10, 20, 30) dynamically from monitor
-# positions, so connector-name flapping (DisplayLink/evdi) doesn't
-# break the mapping.  Waybar's format-icons map in hyprland.jsonc
-# already collapses the tens-digit so the bar shows 1-9 on every
-# monitor regardless of the absolute workspace ID.
+# Reads the base offset (0, 10, 20, 30) from the state file written
+# by hyprland-output-profile, so workspace bindings and dispatch
+# always agree.  Falls back to computing from X positions if the
+# state file is missing (e.g. profile hasn't run yet).
 #
 # Usage:
 #   hyprland-ws switch <1..9>   focus workspace N on focused output
@@ -17,12 +16,8 @@ set -eu
 usage='usage: hyprland-ws (switch|move) <N> | center'
 cmd="${1:?$usage}"
 
-# All monitors sorted by X position (left → right).
-sorted=$(hyprctl monitors -j | jq -r 'sort_by(.x) | .[] | .name')
-
 if [ "$cmd" = "center" ]; then
-    # Find the 1440p monitor (LG center).  Fall back to the first
-    # external (skip eDP-1) or just eDP-1.
+    sorted=$(hyprctl monitors -j | jq -r 'sort_by(.x) | .[] | .name')
     center=$(hyprctl monitors -j | jq -r '.[] | select(.width == 2560) | .name' 2>/dev/null | head -1)
     if [ -n "$center" ]; then
         printf '%s' "$center"
@@ -36,19 +31,26 @@ n="${2:?usage}"
 
 monitor=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | .name')
 
-# Base offset by monitor position among EXTERNAL monitors only.
-# eDP-1 (laptop) always gets base 0 regardless of its position.
-# If there's only one monitor (desktop, no laptop), also use base 0.
-total_monitors=$(hyprctl monitors -j | jq length)
-if [ "$monitor" = "eDP-1" ] || [ "$total_monitors" -le 1 ]; then
-    base=0
-else
-    # 1-based index among non-eDP-1 monitors sorted by X:
-    #   first  external → base 10
-    #   second external → base 20
-    #   third  external → base 30
-    index=$(printf '%s\n' "$sorted" | grep -v '^eDP-1$' | grep -nFx "$monitor" | cut -d: -f1)
-    base=$((index * 10))
+# Read base from the state file written by hyprland-output-profile.
+# This ensures hyprland-ws and the profile always agree on which
+# workspace range belongs to which monitor, even after position
+# changes (DPMS wake, hot-plug, reconnect).
+WORKSPACE_BASES="$HOME/.local/state/hypr/workspace-bases"
+base=""
+if [ -f "$WORKSPACE_BASES" ]; then
+    base=$(awk -v m="$monitor" '$1 == m { print $2; exit }' "$WORKSPACE_BASES")
+fi
+
+# Fallback: compute from X positions (matches profile's sorted order).
+if [ -z "$base" ]; then
+    sorted=$(hyprctl monitors -j | jq -r 'sort_by(.x) | .[] | .name')
+    total_monitors=$(hyprctl monitors -j | jq length)
+    if [ "$monitor" = "eDP-1" ] || [ "$total_monitors" -le 1 ]; then
+        base=0
+    else
+        index=$(printf '%s\n' "$sorted" | grep -v '^eDP-1$' | grep -nFx "$monitor" | cut -d: -f1)
+        base=$((index * 10))
+    fi
 fi
 
 ws=$((base + n))
