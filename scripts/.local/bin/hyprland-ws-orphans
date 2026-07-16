@@ -21,7 +21,9 @@ count=$(echo "$monitors" | wc -l)
 [ "$count" -le 1 ] && exit 0
 
 moved=0
-hyprctl clients -j 2>/dev/null | jq -r '.[] | "\(.address) \(.monitor) \(.workspace.id)"' | while read -r addr mon ws; do
+hyprctl clients -j 2>/dev/null | jq -r '.[] | "\(.address) \(.monitor) \(.workspace.id) \(.workspace.name)"' | while read -r addr mon ws wsname; do
+    # Skip scratchpads (special workspaces) — they should never move.
+    echo "$wsname" | grep -q "^special:" && continue
     # Check if the window's monitor is still connected.
     echo "$monitors" | grep -q "^${mon}$" && continue
     # Monitor is gone — move window to focused monitor's workspace 1.
