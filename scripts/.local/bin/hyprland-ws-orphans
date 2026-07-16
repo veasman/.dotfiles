@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+# hyprland-ws-orphans — fix stray windows after monitor changes.
+#
+# After hot-plug or profile reapply, windows can end up on the wrong
+# monitor. This finds any window whose .monitor field doesn't match
+# the monitor it should be on (per workspace-bases), and moves it to
+# the focused monitor's workspace 1.
+#
+# Called by Super+Shift+R after hyprland-output-profile --once.
+
+set -eu
+
+WORKSPACE_BASES="$HOME/.local/state/hypr/workspace-bases"
+
+# Get all monitor names.
+monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
+focused=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name')
+
+# If only one monitor, nothing to fix.
+count=$(echo "$monitors" | wc -l)
+[ "$count" -le 1 ] && exit 0
+
+moved=0
+hyprctl clients -j 2>/dev/null | jq -r '.[] | "\(.address) \(.monitor) \(.workspace.id)"' | while read -r addr mon ws; do
+    # Check if the window's monitor is still connected.
+    echo "$monitors" | grep -q "^${mon}$" && continue
+    # Monitor is gone — move window to focused monitor's workspace 1.
+    base=0
+    if [ -f "$WORKSPACE_BASES" ]; then
+        b=$(awk -v m="$focused" '$1 == m { print $2; exit }' "$WORKSPACE_BASES")
+        [ -n "$b" ] && base="$b"
+    fi
+    target=$((base + 1))
+    hyprctl dispatch movetoworkspacesilent "$target,address:$addr" >/dev/null 2>&1 || true
+    moved=$((moved + 1))
+done
+
+# Focus back to primary monitor so keyboard shortcuts land correctly.
+hyprctl dispatch focusmonitor "${focused}" >/dev/null 2>&1 || true
