@@ -28,8 +28,7 @@ case "$name" in
 scratch-glances|footclient --app-id=scratch-glances glances --time 5"
         ;;
     media)
-        windows='spotatui|footclient --app-id=spotatui tmux new-session -A -s spotify spotatui
-pulsemixer|footclient --app-id=pulsemixer pulsemixer'
+        windows='pulsemixer|footclient --app-id=pulsemixer pulsemixer'
         ;;
     *)
         echo "hyprland-scratch-show: unknown scratchpad '$name'" >&2
