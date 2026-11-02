@@ -13,9 +13,12 @@ set -eu
 floating=$(hyprctl activewindow -j 2>/dev/null | jq -r '.floating // false')
 
 if [ "$floating" = "true" ]; then
-    hyprctl dispatch togglefloating >/dev/null
+    hyprctl dispatch 'hl.dsp.window.float()' >/dev/null
 else
-    hyprctl dispatch togglefloating >/dev/null
-    hyprctl dispatch resizeactive exact 70% 75% >/dev/null
-    hyprctl dispatch centerwindow >/dev/null
+    hyprctl dispatch 'hl.dsp.window.float()' >/dev/null
+    dims=$(hyprctl monitors -j | jq -r '.[] | select(.focused) | "\(.width) \(.height)"')
+    width=$(( ${dims%% *} * 70 / 100 ))
+    height=$(( ${dims#* } * 75 / 100 ))
+    hyprctl dispatch "hl.dsp.window.resize({ x = $width, y = $height })" >/dev/null
+    hyprctl dispatch 'hl.dsp.window.center()' >/dev/null
 fi

@@ -72,7 +72,7 @@ printf '%s\n' "$legacy" | while read -r id monitor; do
     printf '%s' "$clients" \
         | jq -r --argjson ws "$id" '.[] | select(.workspace.id == $ws) | .address' \
         | while read -r addr; do
-            hyprctl dispatch movetoworkspacesilent "$target,address:$addr" \
+            hyprctl dispatch "hl.dsp.window.move({ window = \"address:$addr\", workspace = $target })" \
                 >/dev/null 2>&1 || true
             echo "  $addr  ws $id → ws $target ($monitor)"
         done

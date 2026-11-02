@@ -12,8 +12,8 @@ set -eu
 
 WORKSPACE_BASES="$HOME/.local/state/hypr/workspace-bases"
 
-# Get all monitor names.
-monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].name')
+# Get all connected monitor IDs (clients report .monitor as an ID).
+monitors=$(hyprctl monitors -j 2>/dev/null | jq -r '.[].id')
 focused=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .name')
 
 # If only one monitor, nothing to fix.
@@ -33,9 +33,9 @@ hyprctl clients -j 2>/dev/null | jq -r '.[] | "\(.address) \(.monitor) \(.worksp
         [ -n "$b" ] && base="$b"
     fi
     target=$((base + 1))
-    hyprctl dispatch movetoworkspacesilent "$target,address:$addr" >/dev/null 2>&1 || true
+    hyprctl dispatch "hl.dsp.window.move({ window = \"address:$addr\", workspace = $target })" >/dev/null 2>&1 || true
     moved=$((moved + 1))
 done
 
 # Focus back to primary monitor so keyboard shortcuts land correctly.
-hyprctl dispatch focusmonitor "${focused}" >/dev/null 2>&1 || true
+hyprctl dispatch "hl.dsp.focus({ monitor = \"${focused}\" })" >/dev/null 2>&1 || true

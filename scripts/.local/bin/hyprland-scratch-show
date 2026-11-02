@@ -54,4 +54,4 @@ EOF
 # wait if nothing was spawned — toggling is instant in that case.
 [ "$spawned" -eq 1 ] && sleep 0.5
 
-hyprctl dispatch togglespecialworkspace "$name" >/dev/null 2>&1
+hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$name\")" >/dev/null 2>&1

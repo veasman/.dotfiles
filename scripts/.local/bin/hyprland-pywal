@@ -16,7 +16,7 @@
 #  * We rewrite ~/.config/waybar/hyprland-colors.css with @define-color
 #    overrides for accent / accent_dim / warn / err. The main waybar CSS
 #    @imports this file, so a SIGUSR2 reload picks the new palette up.
-#  * Hyprland border colors are pushed live via `hyprctl keyword`, so
+#  * Hyprland border colors are pushed live via `hyprctl eval`, so
 #    no full reload is needed — colors swap in step with the preview.
 #
 # Pywal palette index choices:
@@ -77,13 +77,11 @@ push_hyprland_colors() {
     a_hex="${accent#\#}"
     d_hex="${accent_dim#\#}"
     # Active border gradient.
-    hyprctl keyword general:col.active_border \
-        "rgb(${a_hex}) rgb(${d_hex}) rgb(${a_hex}) 45deg" >/dev/null 2>&1 || true
+    hyprctl eval "hl.config({ general = { col = { active_border = { colors = { \"rgb(${a_hex})\", \"rgb(${d_hex})\", \"rgb(${a_hex})\" }, angle = 45 } } } })" >/dev/null 2>&1 || true
     # Active-window shadow glow at alpha 0x55 (~33%) — soft accent halo
     # that reads as light, not a tinted shadow. Inactive shadow stays
-    # neutral (set in hyprland.conf) so only the focus picks up color.
-    hyprctl keyword decoration:shadow:color \
-        "rgba(${a_hex}55)" >/dev/null 2>&1 || true
+    # neutral (set in hyprland.lua) so only the focus picks up color.
+    hyprctl eval "hl.config({ decoration = { shadow = { color = \"rgba(${a_hex}55)\" } } })" >/dev/null 2>&1 || true
 }
 
 reload_waybar() {

@@ -20,5 +20,5 @@ fi
 
 case "${1:-}" in
     lock)    loginctl lock-session ;;
-    dpms-off) hyprctl dispatch dpms off ;;
+    dpms-off) hyprctl dispatch 'hl.dsp.dpms({ action = "disable" })' ;;
 esac

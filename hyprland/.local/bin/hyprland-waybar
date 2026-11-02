@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
-# hyprland-waybar — auto-restarting waybar wrapper
-# Survives WirePlumber / PipeWire restarts.
+# hyprland-waybar — launch waybar with the hyprland-specific config.
+# Run as a systemd user service (waybar.service, Restart=always) so a
+# crash comes right back instead of leaving the bar dead.
+
 set -eu
 
 # Hyprland manages instance sockets under $XDG_RUNTIME_DIR/hypr/.
@@ -13,7 +15,4 @@ SIG=$(ls "$RUNTIME_DIR/hypr/" 2>/dev/null | head -1)
 CONFIG="$HOME/.config/waybar/hyprland.jsonc"
 STYLE="$HOME/.config/waybar/hyprland-style.css"
 
-while true; do
-    waybar -c "$CONFIG" -s "$STYLE"
-    sleep 2
-done
+exec waybar -c "$CONFIG" -s "$STYLE"

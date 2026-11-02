@@ -66,9 +66,9 @@ case "$action" in
         # `fullscreenstate INTERNAL CLIENT`: -1 leaves CLIENT alone.
         # If currently 1, set to 0; otherwise set to 1.
         if [ "$(fs_internal)" = "1" ]; then
-            hyprctl dispatch fullscreenstate 0 -1 >/dev/null
+            hyprctl dispatch 'hl.dsp.window.fullscreen_state({ action = "set", internal = 0, client = -1 })' >/dev/null
         else
-            hyprctl dispatch fullscreenstate 1 -1 >/dev/null
+            hyprctl dispatch 'hl.dsp.window.fullscreen_state({ action = "set", internal = 1, client = -1 })' >/dev/null
         fi
         ;;
     cycle-next|cycle-prev)
@@ -79,7 +79,7 @@ case "$action" in
 
         if [ "$(fs_internal)" = "0" ]; then
             # Not in monocle — just move focus.
-            hyprctl dispatch focuswindow "address:$target" >/dev/null
+            hyprctl dispatch "hl.dsp.focus({ window = \"address:$target\" })" >/dev/null
         else
             # Atomic swap: clear maximize on current, focus target,
             # set maximize on target. The explicit fullscreenstate=0
@@ -88,7 +88,7 @@ case "$action" in
             # cycle.
             #
             # Animations off around the swap so the maximize-in of the
-            # new window is instant; the keyword change has to be its
+            # new window is instant; the config change has to be its
             # own IPC because inside `--batch` it doesn't apply before
             # the dispatch animation gets queued.
             #
@@ -97,10 +97,10 @@ case "$action" in
             # (tiled size → max size) without animation races Floorp's
             # buffer commit and leaves stale fragments. Forcing a full
             # re-render once the swap has settled paints a clean frame.
-            hyprctl keyword animations:enabled 0 >/dev/null
-            hyprctl --batch "dispatch fullscreenstate 0 -1; dispatch focuswindow address:$target; dispatch fullscreenstate 1 -1" >/dev/null
-            hyprctl keyword animations:enabled 1 >/dev/null
-            hyprctl dispatch forcerendererreload >/dev/null 2>&1 || true
+            hyprctl eval 'hl.config({ animations = { enabled = false } })' >/dev/null
+            hyprctl --batch "dispatch hl.dsp.window.fullscreen_state({ action = \"set\", internal = 0, client = -1 }); dispatch hl.dsp.focus({ window = \"address:$target\" }); dispatch hl.dsp.window.fullscreen_state({ action = \"set\", internal = 1, client = -1 })" >/dev/null
+            hyprctl eval 'hl.config({ animations = { enabled = true } })' >/dev/null
+            hyprctl dispatch 'hl.dsp.force_renderer_reload()' >/dev/null 2>&1 || true
         fi
         ;;
     is-active)

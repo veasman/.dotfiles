@@ -108,7 +108,7 @@ cycle() {
 # Backgrounded so the cycle command itself returns immediately.
 refire_submap_if_needed() {
     [ -f "$STATE_DIR/pywal-enabled" ] || return 0
-    ( sleep 0.25 && hyprctl dispatch submap wallpaper >/dev/null 2>&1 ) &
+    ( sleep 0.25 && hyprctl dispatch 'hl.dsp.submap("wallpaper")' >/dev/null 2>&1 ) &
 }
 
 action="${1:-apply}"
@@ -141,7 +141,7 @@ case "$action" in
         esac
         # The toggle implies a waybar reload, which blanks the picker
         # indicator. Refire to keep the user oriented.
-        ( sleep 0.25 && hyprctl dispatch submap wallpaper >/dev/null 2>&1 ) &
+        ( sleep 0.25 && hyprctl dispatch 'hl.dsp.submap("wallpaper")' >/dev/null 2>&1 ) &
         ;;
     *)
         echo "usage: hyprland-wallpaper {apply|next|prev|commit|revert|pywal-on|pywal-off|pywal-toggle}" >&2

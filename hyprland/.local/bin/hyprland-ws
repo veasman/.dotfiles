@@ -56,8 +56,8 @@ fi
 ws=$((base + n))
 
 case "$cmd" in
-    switch) hyprctl dispatch workspace "$ws" >/dev/null ;;
-    move)   hyprctl dispatch movetoworkspace "$ws" >/dev/null ;;
+    switch) hyprctl dispatch "hl.dsp.focus({ workspace = $ws })" >/dev/null ;;
+    move)   hyprctl dispatch "hl.dsp.window.move({ workspace = $ws, follow = true })" >/dev/null ;;
     *)
         echo "usage: hyprland-ws {switch|move} <N>" >&2
         exit 1

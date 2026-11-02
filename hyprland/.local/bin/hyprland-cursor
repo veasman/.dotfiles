@@ -70,7 +70,7 @@ apply() {
     # Caller must ensure the renderer is up before invoking — at
     # session start the exec-once delays by ~0.5s so the reload is
     # fast (running it before the renderer is ready stalls ~3s).
-    hyprctl dispatch forcerendererreload >/dev/null 2>&1 || true
+    hyprctl dispatch 'hl.dsp.force_renderer_reload()' >/dev/null 2>&1 || true
 }
 
 # Pop a transient swaync notification so the picker has visible

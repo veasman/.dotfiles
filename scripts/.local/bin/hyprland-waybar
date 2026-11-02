@@ -1,8 +1,18 @@
 #!/usr/bin/env sh
-# hyprland-waybar — start waybar with the hyprland-specific config.
+# hyprland-waybar — launch waybar with the hyprland-specific config.
+# Run as a systemd user service (waybar.service, Restart=always) so a
+# crash comes right back instead of leaving the bar dead.
 
-pkill -x waybar 2>/dev/null || true
-sleep 0.2
-exec waybar \
-  -c "$HOME/.config/waybar/hyprland.jsonc" \
-  -s "$HOME/.config/waybar/hyprland-style.css"
+set -eu
+
+# Hyprland manages instance sockets under $XDG_RUNTIME_DIR/hypr/.
+# The env var may be stale from a prior session; always use the
+# live instance so waybar finds the IPC socket.
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+SIG=$(ls "$RUNTIME_DIR/hypr/" 2>/dev/null | head -1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+CONFIG="$HOME/.config/waybar/hyprland.jsonc"
+STYLE="$HOME/.config/waybar/hyprland-style.css"
+
+exec waybar -c "$CONFIG" -s "$STYLE"

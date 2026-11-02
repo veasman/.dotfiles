@@ -50,20 +50,24 @@ warp_cursor_to() {
     coords=$(printf '%s' "$data" \
         | jq -r --arg m "$1" '.[] | select(.name==$m)
                               | "\((.x + (.width / .scale)/2) | floor) \((.y + (.height / .scale)/2) | floor)"')
-    [ -n "$coords" ] && hyprctl dispatch movecursor $coords >/dev/null
+    if [ -n "$coords" ]; then
+        cx=${coords%% *}
+        cy=${coords#* }
+        hyprctl dispatch "hl.dsp.cursor.move({ x = $cx, y = $cy })" >/dev/null
+    fi
 }
 
 case "$action" in
     focus)
-        hyprctl dispatch focusmonitor "$target" >/dev/null
+        hyprctl dispatch "hl.dsp.focus({ monitor = \"$target\" })" >/dev/null
         warp_cursor_to "$target"
         ;;
     move)
         # Move the window AND follow it so the next bind acts on the
         # same window in its new home (matches sway's `move container`
         # behavior with focus_follows_focus).
-        hyprctl dispatch movewindow mon:"$target" >/dev/null
-        hyprctl dispatch focusmonitor "$target"  >/dev/null
+        hyprctl dispatch "hl.dsp.window.move({ monitor = \"$target\", follow = true })" >/dev/null
+        hyprctl dispatch "hl.dsp.focus({ monitor = \"$target\" })" >/dev/null
         warp_cursor_to "$target"
         ;;
     *) echo "$usage" >&2; exit 1 ;;
