@@ -506,7 +506,7 @@ install_base_packages() {
     run_cmd sudo pacman -Sy
 
     step 5 "Installing bootstrap prerequisites"
-    pacman_install base-devel git stow curl wget unzip pkgconf libnewt openssh
+    pacman_install base-devel git stow curl wget unzip p7zip pkgconf libnewt openssh
 
     step 8 "Installing shell and terminal tools"
     pacman_install zsh tmux fzf tree ripgrep fd jq htop glances foot \
@@ -604,7 +604,7 @@ install_steam() {
 install_gaming_tweaks() {
     enable_multilib_if_needed
     pacman_install gamescope mangohud gamemode lib32-gamemode
-    paru_install proton-ge-custom-bin 2>/dev/null || true
+    paru_install proton-ge-custom-bin xpadneo-dkms 2>/dev/null || true
 
     # Deploy sysctl tweaks
     local sysctl_src="$DOTFILES_DIR/gaming/etc/sysctl.d/99-gaming.conf"

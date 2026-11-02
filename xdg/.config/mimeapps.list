@@ -24,6 +24,7 @@ image/gif=imv.desktop
 image/bmp=imv.desktop
 image/avif=imv.desktop
 image/tiff=imv.desktop
+x-scheme-handler/discord-424004941485572097=discord-424004941485572097.desktop
 
 [Added Associations]
 x-scheme-handler/http=userapp-Floorp-TVDXM3.desktop;

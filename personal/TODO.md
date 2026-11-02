@@ -1,3 +1,57 @@
+exploit spotify artist hijacking at mass scale to all artists to cause the downfall of spotify and the subsequent death of online music streaming
+
+A rabbit and a dog find eachother in the woods, what made the rabbit run?
+
+For the average person, technology is best used as a minimal aid in a self-sufficient life.
+
+# Protocol for Instagram Reels algorithmic optimization for minimal damage to mental stability
+1. Only things that make you happy
+2. Ignore all social proof factors (likes, comments)
+3. Ignore captions unless strictly necessary
+4. Ignore videos that may lead you to question the video's authenticity itself
+5. When faced with the inevitable feeling of wanting to scroll past what started as an engaging and enjoyable video, hold yourself to it for longer
+  - This aids with preventing the deterioration of one's patience
+
+
+# What I know 
+
+## 2000-2005 ish ticker performances (post 1999 crash)
+(CHN) China soared after 1999 crash, 274%
+(B) Barrick Mining Corperation, 66.6%
+(NEM) Newmont Goldcorp Corp, 101.1%
+(XAUUSD) Gold Spot US Dollar, 56.5%
+
+### Treasuries
+
+(VFISX) Vanguard Short-Term Treasury Fund, 30.5%
+(VFITX) Vanguard Immediate Treasury Fund, 46.6% | Lowest volatility, growth flatted quicker
+(VUSTX) Vanguard Long-Term Treasury Fund, 51.2%
+
+### Personal notes
+I know I have seen talk of china's deepseek starting to make its own chips.
+
+My personal sentiment is that the USA's push to become independant has only pushed other countries to show they dont need us.
+
+China's previous soar in our 99 tech crash seems inevitable to happen again in my head. Feel free to weigh in.
+
+Could a recession actually happen this year? I'm not sure, the government did just drop the new stable coin openusd with the t bills but i dont know what that means in all of this noise
+
+# What I don't know
+When to enter for how much in what positions?
+Any leverage?
+Any short positoins to take? Any hedging?
+More consideration around other factors for better timing?
+More questions I can't even think of?
+
+
+# What I have
+$1000 right now, and $1000 extra every month to invest
+A fidelity account
+
+# What my goal is
+I want to make sure I not only surive the crash but prevail during it. I want to use the following 3 years during this crash to catapult my capital if possible. A crash is happening. I want to be one to capitalize on it as much as possible. This is how the wealthy are made.
+
+
 1) Is the 401k useless? (Tax exempt, matching from company does not compare to gains from no taxes)
 
 

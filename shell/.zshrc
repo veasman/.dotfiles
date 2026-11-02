@@ -214,3 +214,8 @@ alias claudeA='CLAUDE_CONFIG_DIR=~/.claudeA claude'
 alias claudeB='CLAUDE_CONFIG_DIR=~/.claudeB claude'
 
 alias tclaude='export ANTHROPIC_BASE_URL=http://localhost:3456 && nvm use node && teamclaude run'
+
+# Skate 3 Skater Switcher
+alias skater="~/skate3-saves/skater-switch.sh"
+
+export WINEPREFIX=~/.local/share/games/prefixes/default

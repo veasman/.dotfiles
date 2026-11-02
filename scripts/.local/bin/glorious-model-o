@@ -1,0 +1,5 @@
+#!/bin/sh
+export WINEPREFIX="$HOME/.local/share/wineprefixes/modelo"
+export WINEDLLOVERRIDES="mscoree,mshtml="
+cd "$WINEPREFIX/drive_c/Program Files (x86)/Glorious Model O Software" || exit 1
+exec wine OemDrv.exe "$@"

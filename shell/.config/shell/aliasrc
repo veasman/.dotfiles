@@ -36,4 +36,7 @@ hhh() { hermes chat -m "z-ai/glm-5.2" "$@"; }                  # ~$1.40/M — da
 hhhh(){ hermes chat -m "anthropic/claude-opus-4.8" "$@"; }      # ~$15/M — audit
 hhhhh(){ hermes chat -m "anthropic/claude-fable-5" "$@"; }      # ~$10/$50/M — 1M ctx, novel hypotheses, deep research
 
+# Run any .exe inside the FL Studio wine prefix
+flwine() { WINEPREFIX="$HOME/.local/share/games/prefixes/flstudio" wine "$@"; }
+
 

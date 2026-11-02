@@ -133,6 +133,8 @@ cmd_edit() {
 
 cmd_connect() {
     local name="${1:-}"
+    shift || true
+    local cmd_args=("$@")
     if [[ -z "$name" ]]; then
         echo "usage: sshm <name>" >&2
         return 2
@@ -166,8 +168,8 @@ cmd_connect() {
         dest="$SSHM_HOST"
     fi
 
-    echo "sshm: ssh ${args[*]:+${args[*]} }$dest" >&2
-    exec ssh "${args[@]}" "$dest"
+    echo "sshm: ssh ${args[*]:+${args[*]} }$dest ${cmd_args[*]:+-- ${cmd_args[*]}}" >&2
+    exec ssh "${args[@]}" "$dest" "${cmd_args[@]}"
 }
 
 cmd_pick() {
@@ -202,5 +204,5 @@ case "${1:-}" in
     edit)                 cmd_edit ;;
     path)                 echo "$SSHM_CONNECTIONS_FILE" ;;
     connect)              shift; cmd_connect "$@" ;;
-    *)                    cmd_connect "$1" ;;
+    *)                    cmd_connect "$@" ;;
 esac

@@ -1,0 +1,12 @@
+PMUX_EDITOR_CMD='exec nvim .'
+PMUX_SHELL_CMD='exec "$SHELL" -l'
+PMUX_CHOOSER_CMD='fzf --prompt="Project > "'
+
+PMUX_FIXED_PROJECTS=(
+    "$HOME/.dotfiles"
+)
+
+PMUX_PROJECT_ROOTS=(
+    "$HOME/repos"
+    "$HOME/work"
+)

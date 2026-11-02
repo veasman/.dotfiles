@@ -21,6 +21,15 @@ scripts/.local/bin/uv
 scripts/.local/bin/uvx
 scripts/.local/bin/spotdl
 
+# pip/pipx-generated console scripts and local toolchain shims
+scripts/.local/bin/node
+scripts/.local/bin/npm
+scripts/.local/bin/npx
+scripts/.local/bin/yt-dlp
+scripts/.local/bin/onnxruntime_test
+scripts/.local/bin/rapidocr_onnxruntime
+scripts/.local/bin/winetricks
+
 # Generated at runtime by hyprland-hyprpaper wrapper — conflicts with stow
 hyprland/.config/hypr/hyprpaper-generated.conf
 
@@ -38,6 +47,7 @@ scripts/.local/bin/hyprland-output-profile
 scripts/.local/bin/hyprland-wallpaper
 scripts/.local/bin/hyprland-ws
 scripts/.local/bin/hyprland-ws-migrate
+scripts/.local/bin/hypridle-action
 scripts/.local/bin/httpx
 scripts/.local/bin/nuclei
 scripts/.local/bin/loom-ui
@@ -46,6 +56,12 @@ scripts/.local/bin/loom-ui
 scripts/.local/cache/
 scripts/.local/state/
 scripts/.local/share/
+
+# Generated font metadata
+fonts/**/.uuid
+
+# dconf runtime database
+xdg/.config/dconf/user
 
 # Hermes session logs
 2026*
